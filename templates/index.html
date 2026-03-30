@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Steven's Wine Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { background: #1a0a00; color: #f5e6d3; }
+    .navbar { background: #3d0f0f !important; }
+    .navbar-brand { color: #c9a96e !important; font-size: 1.4rem; font-weight: bold; }
+    .card { background: #2a1200; border: 1px solid #5a2d0c; }
+    .stat-card { border-top: 3px solid #c9a96e; }
+    .stat-value { font-size: 2rem; font-weight: bold; color: #c9a96e; }
+    .table { color: #f5e6d3; }
+    .table-hover tbody tr:hover { background: #3d1a00; color: #f5e6d3; }
+    .badge-apt { background: #1a5c2a; }
+    .badge-house { background: #3d1a5c; }
+    .badge-not_shipped { background: #5c4a1a; }
+    .badge-drank { background: #5c1a1a; }
+    .status-badge { cursor: pointer; user-select: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; }
+    .status-badge:hover { opacity: 0.85; filter: brightness(1.2); }
+    #status-picker-popup {
+      display: none; position: fixed; z-index: 9999;
+      background: #2a1200; border: 1px solid #c9a96e; border-radius: 8px;
+      padding: 6px 8px; gap: 6px; flex-direction: column; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+    }
+    #status-picker-popup.visible { display: flex; }
+    .status-option {
+      cursor: pointer; padding: 4px 12px; border-radius: 4px; font-size: 0.8rem;
+      color: #f5e6d3; text-align: center;
+    }
+    .status-option:hover { opacity: 0.8; }
+    .form-control, .form-select { background: #fff; border-color: #c9a96e; color: #222; }
+    .form-control:focus, .form-select:focus { background: #fff; border-color: #c9a96e; color: #222; box-shadow: 0 0 0 0.2rem rgba(201,169,110,0.25); }
+    .form-control::placeholder { color: #999; }
+    .btn-wine { background: #8b1a1a; border-color: #8b1a1a; color: #f5e6d3; }
+    .btn-wine:hover { background: #a02020; color: #fff; }
+    a { color: #c9a96e; }
+    a:hover { color: #e8c98a; }
+    th a { color: #c9a96e; text-decoration: none; }
+    .color-dot { width: 18px; height: 18px; border-radius: 50%; display: inline-block; border: 2px solid rgba(255,255,255,0.3); flex-shrink: 0; cursor: pointer; user-select: none; }
+    .color-dot:hover { transform: scale(1.2); transition: transform 0.1s; }
+    .color-dot.color-selected { border: 2px solid #c9a96e; box-shadow: 0 0 0 3px rgba(201,169,110,0.5); transform: scale(1.2); }
+    .color-dot-Red    { background: #c0392b; }
+    .color-dot-Blue   { background: #2980b9; }
+    .color-dot-Orange { background: #e67e22; }
+    .color-dot-Yellow { background: #f1c40f; }
+    .color-dot-Green  { background: #27ae60; }
+    #color-picker-popup {
+      display: none; position: fixed; z-index: 9999;
+      background: #2a1200; border: 1px solid #c9a96e; border-radius: 8px;
+      padding: 8px 10px; gap: 8px; align-items: center; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+    }
+    #color-picker-popup.visible { display: flex; }
+    .picker-dot {
+      width: 20px; height: 20px; border-radius: 50%; cursor: pointer;
+      border: 2px solid transparent; flex-shrink: 0;
+    }
+    .picker-dot:hover { border-color: #fff; transform: scale(1.2); }
+    .picker-dot-clear { background: transparent; border: 2px solid #888; }
+    .col-date { min-width: 110px; }
+    .col-wine { min-width: 280px; }
+    #size-picker-popup {
+      display: none; position: fixed; z-index: 9999;
+      background: #2a1200; border: 1px solid #c9a96e; border-radius: 8px;
+      padding: 6px 8px; gap: 4px; flex-direction: column; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      min-width: 110px;
+    }
+    #size-picker-popup.visible { display: flex; }
+    .size-option { cursor: pointer; padding: 4px 12px; border-radius: 4px; font-size: 0.85rem; color: #f5e6d3; text-align: center; }
+    .size-option:hover { background: #3d1a00; }
+    .type-badge { font-size: 0.8rem; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+    .type-Red       { background: #5a1010; color: #f5c0c0; }
+    .type-White     { background: #4a4820; color: #f5f0c0; }
+    .type-Rose      { background: #5c2040; color: #f5c0d8; }
+    .type-Sparkling { background: #1a3a5c; color: #c0d8f5; }
+    .type-Dessert   { background: #4a3010; color: #f5d8a0; }
+    .type-Fortified { background: #2a1a40; color: #d0c0f5; }
+    .type-Orange    { background: #4a2800; color: #f5c890; }
+    .type-none      { color: #555; }
+    #type-picker-popup {
+      display: none; position: fixed; z-index: 9999;
+      background: #2a1200; border: 1px solid #c9a96e; border-radius: 8px;
+      padding: 6px 8px; gap: 6px; flex-direction: column; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      min-width: 120px;
+    }
+    #type-picker-popup.visible { display: flex; }
+    .type-option { cursor: pointer; padding: 4px 12px; border-radius: 10px; font-size: 0.8rem; font-weight: 600; text-align: center; }
+    .type-option:hover { opacity: 0.8; }
+    .rating-cell { cursor: pointer; min-width: 80px; white-space: nowrap; }
+    .rating-cell:hover .rating-display { text-decoration: underline dotted #c9a96e; }
+    .rating-input {
+      width: 60px; background: #1a0a00; border: 1px solid #c9a96e; border-radius: 4px;
+      color: #f5e6d3; text-align: center; font-size: 0.9rem; padding: 1px 4px;
+    }
+    .rating-input:focus { outline: none; box-shadow: 0 0 0 0.15rem rgba(201,169,110,0.4); }
+    .price-cell { user-select: none; cursor: cell; }
+    .price-cell.selected { background: rgba(201,169,110,0.55) !important; outline: 1px solid #c9a96e; color: #1a0a00; }
+    .status-badge.status-selected { outline: 2px solid #c9a96e; box-shadow: 0 0 0 3px rgba(201,169,110,0.35); }
+    #bulk-status-bar { display: none; }
+    #bulk-status-bar.visible { display: flex; }
+    #price-summary {
+      display: none; position: fixed; bottom: 18px; right: 24px; z-index: 8888;
+      background: #2a1200; border: 1px solid #c9a96e; border-radius: 8px;
+      padding: 8px 16px; color: #f5e6d3; font-size: 0.9rem;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6); gap: 20px;
+    }
+    #price-summary.visible { display: flex; }
+    #price-summary span { color: #c9a96e; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg mb-4">
+    <div class="container d-flex justify-content-between align-items-center">
+      <span class="navbar-brand">🍷 Steven's Wine Tracker</span>
+      <div class="d-flex gap-2">
+        <button type="button" class="btn btn-wine btn-sm" data-bs-toggle="modal" data-bs-target="#addWineModal">+ Add Wine</button>
+        <form method="POST" action="/refresh" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').textContent='Refreshing…';">
+          <button type="submit" class="btn btn-wine btn-sm">&#8635; Refresh Emails</button>
+        </form>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid px-4" style="max-width: 1600px;">
+
+    <!-- Stats Row -->
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-md-3">
+        <div class="card stat-card p-3 text-center">
+          <div class="stat-value">{{ stats.total_bottles or 0 }}</div>
+          <div style="color:#f5e6d3;">Total Bottles Bought</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card stat-card p-3 text-center">
+          <div class="stat-value">{{ stats.in_cellar or 0 }}</div>
+          <div style="color:#f5e6d3;">Bottles in Cellar</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card stat-card p-3 text-center">
+          <div class="stat-value">{{ stats.unique_wines or 0 }}</div>
+          <div style="color:#f5e6d3;">Unique Wines</div>
+        </div>
+      </div>
+      <div class="col-6 col-md-3">
+        <div class="card stat-card p-3 text-center">
+          <div class="stat-value">${{ "%.0f"|format(stats.total_spent or 0) }}</div>
+          <div style="color:#f5e6d3;">Total Spent</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search & Filter -->
+    <div class="card p-3 mb-4">
+      <form method="get" class="row g-2 align-items-end">
+        <!-- Row 1: search + status -->
+        <div class="col-md-6">
+          <input type="text" name="q" class="form-control" placeholder="Search wine name..." value="{{ search }}">
+        </div>
+        <div class="col-md-3">
+          <select name="status" class="form-select">
+            <option value="">All statuses</option>
+            <option value="apt" {% if status_filter=='apt' %}selected{% endif %}>Apt</option>
+            <option value="house" {% if status_filter=='house' %}selected{% endif %}>House</option>
+            <option value="not_shipped" {% if status_filter=='not_shipped' %}selected{% endif %}>Not Shipped</option>
+            <option value="drank" {% if status_filter=='drank' %}selected{% endif %}>Drank</option>
+          </select>
+        </div>
+        <!-- Row 2: dropdowns -->
+        <div class="col-md-3">
+          <select name="varietal" class="form-select">
+            <option value="">All varietals</option>
+            {% for v in varietals %}
+            <option value="{{ v }}" {% if varietal_filter==v %}selected{% endif %}>{{ v }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <select name="region" class="form-select">
+            <option value="">All regions</option>
+            {% for r in regions %}
+            <option value="{{ r }}" {% if region_filter==r %}selected{% endif %}>{{ r }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <select name="location" class="form-select">
+            <option value="">All locations</option>
+            {% for l in locations %}
+            <option value="{{ l }}" {% if location_filter==l %}selected{% endif %}>{{ l }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <select name="color_code" class="form-select">
+            <option value="">All colors</option>
+            <option value="Red"    {% if color_filter=='Red'    %}selected{% endif %}>🔴 Red</option>
+            <option value="Blue"   {% if color_filter=='Blue'   %}selected{% endif %}>🔵 Blue</option>
+            <option value="Orange" {% if color_filter=='Orange' %}selected{% endif %}>🟠 Orange</option>
+            <option value="Yellow" {% if color_filter=='Yellow' %}selected{% endif %}>🟡 Yellow</option>
+            <option value="Green"  {% if color_filter=='Green'  %}selected{% endif %}>🟢 Green</option>
+          </select>
+        </div>
+        <!-- Row 3: vintage + price ranges -->
+        <div class="col-6 col-md-2">
+          <input type="number" name="vintage_min" class="form-control" placeholder="Vintage from" value="{{ vintage_min }}" min="1900" max="2099">
+        </div>
+        <div class="col-6 col-md-2">
+          <input type="number" name="vintage_max" class="form-control" placeholder="Vintage to" value="{{ vintage_max }}" min="1900" max="2099">
+        </div>
+        <div class="col-6 col-md-2">
+          <input type="number" name="price_min" class="form-control" placeholder="Price min $" value="{{ price_min }}" min="0" step="1">
+        </div>
+        <div class="col-6 col-md-2">
+          <input type="number" name="price_max" class="form-control" placeholder="Price max $" value="{{ price_max }}" min="0" step="1">
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-wine w-100">Filter</button>
+        </div>
+        {% if search or status_filter or varietal_filter or region_filter or location_filter or vintage_min or vintage_max or price_min or price_max %}
+        <div class="col-md-2">
+          <a href="/" class="btn btn-outline-secondary w-100">Clear</a>
+        </div>
+        {% endif %}
+      </form>
+    </div>
+
+    <!-- Wine Table -->
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead>
+            <tr>
+              {% macro sort_link(field, label, cls='') %}
+                {% set new_order = 'asc' if (sort == field and order == 'desc') else 'desc' %}
+                <th class="{{ cls }}"><a href="?q={{ search }}&status={{ status_filter }}&varietal={{ varietal_filter }}&region={{ region_filter }}&location={{ location_filter }}&color_code={{ color_filter }}&vintage_min={{ vintage_min }}&vintage_max={{ vintage_max }}&price_min={{ price_min }}&price_max={{ price_max }}&sort={{ field }}&order={{ new_order }}">
+                  {{ label }}{% if sort == field %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}
+                </a></th>
+              {% endmacro %}
+              {{ sort_link('order_date', 'Date', 'col-date') }}
+              {{ sort_link('color_code', 'Color') }}
+              {{ sort_link('wine_name', 'Wine', 'col-wine') }}
+              {{ sort_link('vintage', 'Vintage') }}
+              {{ sort_link('region', 'Region') }}
+              {{ sort_link('location', 'Location') }}
+              {{ sort_link('varietal', 'Varietal') }}
+              {{ sort_link('wine_type', 'Type') }}
+              {{ sort_link('size_ml', 'Size') }}
+              {{ sort_link('quantity', 'Qty') }}
+              {{ sort_link('unit_price', 'Paid Price') }}
+              {{ sort_link('retail_price', 'Retail Price') }}
+              {{ sort_link('retailer', 'Source') }}
+              {{ sort_link('my_rating', 'My Rating') }}
+              <th>Notes</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for wine in wines %}
+            <tr>
+              <td>{{ (wine.order_date[5:7] + '/' + wine.order_date[8:10] + '/' + wine.order_date[:4]) if wine.order_date else '—' }}</td>
+              <td class="text-center" style="vertical-align:middle;">
+                <span class="color-dot color-dot-{{ wine.color_code or '' }}"
+                      data-wine-id="{{ wine.id }}"
+                      data-color="{{ wine.color_code or '' }}"
+                      {% if not wine.color_code %}style="background:transparent;border-color:#444;"{% endif %}
+                      title="Click to change color"></span>
+              </td>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  {% if wine.image_url %}
+                  <img src="{{ wine.image_url }}" class="wine-thumb" data-src="{{ wine.image_url }}" data-name="{{ wine.wine_name or '' }}" style="width:36px;height:48px;object-fit:cover;border-radius:3px;flex-shrink:0;cursor:zoom-in;" alt="" onclick="event.stopPropagation();openImagePopup(this)">
+                  {% endif %}
+                  <a href="https://www.vivino.com/search/wines?q={{ wine.wine_name | replace(' ', '+') }}{% if wine.vintage %}+{{ wine.vintage }}{% endif %}" target="_blank" onclick="event.stopPropagation()" style="color:inherit;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'"><strong>{{ wine.wine_name or '—' }}</strong></a>
+                </div>
+              </td>
+              <td>{{ wine.vintage or '—' }}</td>
+              <td>{{ wine.region or '—' }}</td>
+              <td>{{ wine.location or '—' }}</td>
+              <td>{{ wine.varietal or '—' }}</td>
+              <td class="type-cell" data-wine-id="{{ wine.id }}" data-type="{{ wine.wine_type or '' }}" onclick="event.stopPropagation()" title="Click to change type" style="cursor:pointer;white-space:nowrap;">
+                <span class="type-badge type-{{ wine.wine_type or 'none' }}">{{ wine.wine_type or '—' }}</span>
+              </td>
+              <td class="size-cell" data-wine-id="{{ wine.id }}" data-size="{{ wine.size_ml or '' }}" onclick="event.stopPropagation()" title="Click to change size" style="cursor:pointer;white-space:nowrap;">
+                {{ wine.size_ml or '—' }}{% if wine.size_ml %}ml{% endif %}
+              </td>
+              <td>{{ wine.quantity or '—' }}</td>
+              <td class="price-cell" data-col="paid" data-value="{{ wine.unit_price or '' }}" onclick="event.stopPropagation()">{% if wine.unit_price %}${{ "%.2f"|format(wine.unit_price) }}{% else %}—{% endif %}</td>
+              <td class="price-cell" data-col="retail" data-value="{{ wine.retail_price or '' }}" onclick="event.stopPropagation()">{% if wine.retail_price %}${{ "%.2f"|format(wine.retail_price) }}{% else %}—{% endif %}</td>
+              <td class="source-cell" data-wine-id="{{ wine.id }}" data-retailer="{{ wine.retailer or '' }}" onclick="event.stopPropagation()" title="Click to edit source" style="cursor:pointer;white-space:nowrap;">
+                <span class="source-display">{{ wine.retailer or '—' }}</span>
+              </td>
+              <td class="rating-cell" data-wine-id="{{ wine.id }}" data-rating="{{ wine.my_rating or '' }}" onclick="event.stopPropagation()" title="Click to rate">
+                <span class="rating-display">{{ "%.1f"|format(wine.my_rating) if wine.my_rating is not none else '—' }}</span>
+              </td>
+              <td class="notes-cell" data-wine-id="{{ wine.id }}" data-wine-name="{{ wine.wine_name or '' }}" data-notes="{{ wine.notes | e if wine.notes else '' }}" onclick="event.stopPropagation()" title="{{ wine.notes or 'Click to add notes' }}" style="cursor:pointer;max-width:160px;">
+                <span class="notes-preview">{% if wine.notes %}<span style="color:#c9a96e;">&#x1F4DD;</span> {{ wine.notes[:40] }}{% if wine.notes|length > 40 %}…{% endif %}{% else %}<span style="color:#555;">—</span>{% endif %}</span>
+              </td>
+              <td onclick="event.stopPropagation()">
+                <span class="badge status-badge badge-{{ wine.status or '' }}"
+                      data-wine-id="{{ wine.id }}"
+                      data-status="{{ wine.status or '' }}"
+                      title="Click to change status">
+                  {% if wine.status == 'apt' %}Apt
+                  {% elif wine.status == 'house' %}House
+                  {% elif wine.status == 'not_shipped' %}Not Shipped
+                  {% elif wine.status == 'drank' %}Drank
+                  {% else %}—{% endif %}
+                </span>
+              </td>
+              <td onclick="event.stopPropagation()" style="white-space:nowrap;">
+                <button class="btn btn-sm delete-btn" data-wine-id="{{ wine.id }}" data-wine-name="{{ wine.wine_name | e }}" title="Delete" style="background:none;border:none;color:#5c1a1a;font-size:1rem;padding:2px 6px;cursor:pointer;">🗑</button>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="text-center text-muted py-4">No wines found. Run the import scripts to get started.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="mt-2 text-muted small">{{ wines|length }} result(s)</div>
+  </div>
+
+  <div style="height:80px;"></div>
+  <footer style="text-align:center;padding:16px;color:#5a3a1a;font-size:0.8rem;">
+    Steven's Wine Tracker
+  </footer>
+
+  <!-- Price summary bar -->
+  <div id="price-summary">
+    Count: <span id="ps-count"></span>
+    Sum: <span id="ps-sum"></span>
+    Avg: <span id="ps-avg"></span>
+  </div>
+
+  <!-- Shared backdrop -->
+  <div id="popup-backdrop" style="display:none;position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,0.6);" onclick="closeAllPopups()"></div>
+
+  <!-- Image popup -->
+  <div id="image-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;max-width:90vw;">
+    <div style="background:#2a1200;border:1px solid #c9a96e;border-radius:6px;box-shadow:0 8px 40px rgba(0,0,0,0.8);overflow:hidden;width:min(640px,90vw);">
+      <div style="background:#3d1a00;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+        <span id="image-popup-title" style="font-weight:bold;color:#c9a96e;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80%;"></span>
+        <button onclick="closeAllPopups()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:#c9a96e;line-height:1;padding:0 0 0 8px;">&times;</button>
+      </div>
+      <div style="padding:12px;text-align:center;background:#1a0a00;">
+        <img id="image-popup-img" src="" alt="" style="max-width:100%;max-height:75vh;object-fit:contain;border-radius:3px;">
+      </div>
+    </div>
+  </div>
+
+  <!-- Notes popup -->
+  <div id="notes-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;width:min(400px,90vw);">
+    <div style="background:#f5f0c8;border-radius:6px;box-shadow:0 8px 40px rgba(0,0,0,0.8);overflow:hidden;">
+      <div style="background:#e8d96a;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+        <span id="notes-popup-title" style="font-weight:bold;color:#3a3000;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80%;"></span>
+        <button onclick="closeNotesPopup()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:#3a3000;line-height:1;padding:0 0 0 8px;">&times;</button>
+      </div>
+      <div style="padding:10px;">
+        <textarea id="notes-popup-text" rows="6" style="width:100%;background:#fdfbe8;border:1px solid #d4c84a;border-radius:3px;color:#2a2000;font-size:0.85rem;padding:7px;resize:vertical;font-family:inherit;outline:none;box-shadow:inset 0 1px 3px rgba(0,0,0,0.1);" placeholder="Tasting notes, food pairings, when to drink..."></textarea>
+        <div style="display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:7px;">
+          <span id="notes-popup-saved" style="color:#5a8a5a;font-size:0.8rem;display:none;">Saved!</span>
+          <button onclick="saveNotesPopup()" style="background:#8b1a1a;border:none;color:#f5e6d3;padding:5px 16px;border-radius:4px;font-size:0.85rem;cursor:pointer;">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rating popup -->
+  <div id="rating-popup" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;width:min(320px,90vw);">
+    <div style="background:#2a1200;border:1px solid #c9a96e;border-radius:6px;box-shadow:0 8px 40px rgba(0,0,0,0.8);overflow:hidden;">
+      <div style="background:#3d1a00;padding:8px 12px;display:flex;justify-content:space-between;align-items:center;">
+        <span id="rating-popup-title" style="font-weight:bold;color:#c9a96e;font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80%;"></span>
+        <button onclick="closeRatingPopup()" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:#c9a96e;line-height:1;padding:0 0 0 8px;">&times;</button>
+      </div>
+      <div style="padding:16px;display:flex;flex-direction:column;gap:12px;">
+        <input id="rating-popup-input" type="number" min="0" max="5" step="0.1" style="background:#1a0a00;border:1px solid #c9a96e;border-radius:4px;color:#f5e6d3;font-size:1.4rem;text-align:center;padding:8px;width:100%;outline:none;" placeholder="0.0 – 5.0">
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button onclick="closeRatingPopup()" style="background:none;border:1px solid #555;color:#aaa;padding:5px 16px;border-radius:4px;font-size:0.85rem;cursor:pointer;">Cancel</button>
+          <button onclick="saveRatingPopup()" style="background:#8b1a1a;border:none;color:#f5e6d3;padding:5px 16px;border-radius:4px;font-size:0.85rem;cursor:pointer;">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Size picker popup -->
+  <div id="size-picker-popup">
+    <div class="size-option" data-size="187">187ml — Split</div>
+    <div class="size-option" data-size="375">375ml — Half</div>
+    <div class="size-option" data-size="750">750ml — Standard</div>
+    <div class="size-option" data-size="1000">1000ml — 1L</div>
+    <div class="size-option" data-size="1500">1500ml — Magnum</div>
+    <div class="size-option" data-size="3000">3000ml — Double Magnum</div>
+    <div class="size-option" data-size="6000">6000ml — Imperial</div>
+  </div>
+
+  <!-- Type picker popup -->
+  <div id="type-picker-popup">
+    <div class="type-option type-Red"       data-type="Red">Red</div>
+    <div class="type-option type-White"     data-type="White">White</div>
+    <div class="type-option type-Rose"      data-type="Rose">Rosé</div>
+    <div class="type-option type-Sparkling" data-type="Sparkling">Sparkling</div>
+    <div class="type-option type-Dessert"   data-type="Dessert">Dessert</div>
+    <div class="type-option type-Fortified" data-type="Fortified">Fortified</div>
+    <div class="type-option type-Orange"    data-type="Orange">Orange</div>
+  </div>
+
+  <!-- Status picker popup -->
+  <div id="status-picker-popup">
+    <div class="status-option" style="background:#1a5c2a;" data-status="apt">Apt</div>
+    <div class="status-option" style="background:#3d1a5c;" data-status="house">House</div>
+    <div class="status-option" style="background:#5c4a1a;" data-status="not_shipped">Not Shipped</div>
+    <div class="status-option" style="background:#5c1a1a;" data-status="drank">Drank</div>
+  </div>
+
+  <!-- Color picker popup -->
+  <div id="color-picker-popup">
+    <span class="picker-dot picker-dot-clear" data-color="" title="Clear"></span>
+    <span class="picker-dot" style="background:#27ae60;" data-color="Green" title="Green"></span>
+    <span class="picker-dot" style="background:#f1c40f;" data-color="Yellow" title="Yellow"></span>
+    <span class="picker-dot" style="background:#e67e22;" data-color="Orange" title="Orange"></span>
+    <span class="picker-dot" style="background:#c0392b;" data-color="Red" title="Red"></span>
+    <span class="picker-dot" style="background:#2980b9;" data-color="Blue" title="Blue"></span>
+  </div>
+
+  <!-- Add Wine Modal -->
+  <div class="modal fade" id="addWineModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content" style="background:#2a1200; border:1px solid #5a2d0c; color:#f5e6d3;">
+        <div class="modal-header" style="border-bottom:1px solid #5a2d0c;">
+          <h5 class="modal-title" style="color:#c9a96e;">Add Wine Manually</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <form method="POST" action="/wine/add" enctype="multipart/form-data" onsubmit="this.querySelector('[type=submit]').disabled=true; this.querySelector('[type=submit]').textContent='Adding…';">
+          <div class="modal-body d-flex flex-column gap-3">
+            <div>
+              <label class="form-label fw-bold" style="color:#c9a96e;">Wine Name <span style="color:#e05050;">*</span></label>
+              <input type="text" name="wine_name" class="form-control" placeholder="e.g. 2019 Opus One Napa Valley Cabernet Sauvignon" required>
+            </div>
+            <div>
+              <label class="form-label fw-bold" style="color:#c9a96e;">Label Photo <span style="color:#888; font-weight:normal;">(optional — take a pic or upload)</span></label>
+              <input type="file" name="image" accept="image/*" capture="environment" class="form-control" id="imageUploadInput" onchange="previewImage(this)">
+              <img id="imagePreview" src="" alt="" style="display:none;margin-top:8px;max-height:120px;border-radius:4px;object-fit:contain;">
+            </div>
+            <div class="row g-2">
+              <div class="col">
+                <label class="form-label fw-bold" style="color:#c9a96e;">Vintage</label>
+                <input type="number" name="vintage" class="form-control" placeholder="e.g. 2019" min="1900" max="2100">
+              </div>
+              <div class="col">
+                <label class="form-label fw-bold" style="color:#c9a96e;">Price Per Bottle ($)</label>
+                <input type="number" name="unit_price" class="form-control" placeholder="e.g. 49.99" min="0" step="0.01">
+              </div>
+              <div class="col">
+                <label class="form-label fw-bold" style="color:#c9a96e;">Quantity</label>
+                <input type="number" name="quantity" class="form-control" value="1" min="1">
+              </div>
+            </div>
+            <div class="row g-2">
+              <div class="col">
+                <label class="form-label fw-bold" style="color:#c9a96e;">Source <span style="color:#888; font-weight:normal;">(optional)</span></label>
+                <input type="text" name="retailer" class="form-control" placeholder="e.g. Vivino, Wine.com">
+              </div>
+              <div class="col">
+                <label class="form-label fw-bold" style="color:#c9a96e;">Date <span style="color:#888; font-weight:normal;">(optional)</span></label>
+                <input type="date" name="order_date" class="form-control">
+              </div>
+            </div>
+            <div>
+              <label class="form-label fw-bold" style="color:#c9a96e;">Notes <span style="color:#888; font-weight:normal;">(optional)</span></label>
+              <textarea name="notes" class="form-control" rows="2" placeholder="Tasting notes, occasion, etc."></textarea>
+            </div>
+            <div style="font-size:0.82rem; color:#aaa;">Region, varietal, type, and image will be filled in automatically based on the wine name.</div>
+          </div>
+          <div class="modal-footer" style="border-top:1px solid #5a2d0c;">
+            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-wine btn-sm">Add Wine</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const colorBg = { Red: '#c0392b', Blue: '#2980b9', Orange: '#e67e22', Yellow: '#f1c40f', Green: '#27ae60' };
+    const popup = document.getElementById('color-picker-popup');
+    let activeDot = null;
+
+    const allColorDots = [...document.querySelectorAll('.color-dot[data-wine-id]')];
+    let colorDragging = false, colorStartIdx = 0;
+    let suppressNextColorClose = false;
+
+    function getColorIdx(dot) { return allColorDots.indexOf(dot); }
+
+    function setColorSelection(fromIdx, toIdx) {
+      const lo = Math.min(fromIdx, toIdx), hi = Math.max(fromIdx, toIdx);
+      allColorDots.forEach((d, i) => d.classList.toggle('color-selected', i >= lo && i <= hi));
+    }
+
+    function clearColorSelection() {
+      allColorDots.forEach(d => d.classList.remove('color-selected'));
+      popup.classList.remove('visible');
+    }
+
+    function showColorPopup(rect) {
+      popup.style.left = rect.left + 'px';
+      popup.style.top  = (rect.bottom + 6) + 'px';
+      popup.classList.add('visible');
+      suppressNextColorClose = true;
+    }
+
+    allColorDots.forEach(dot => {
+      dot.addEventListener('mousedown', e => {
+        e.preventDefault();
+        colorDragging = true;
+        colorStartIdx = getColorIdx(dot);
+        setColorSelection(colorStartIdx, colorStartIdx);
+      });
+      dot.addEventListener('mouseover', () => {
+        if (!colorDragging) return;
+        setColorSelection(colorStartIdx, getColorIdx(dot));
+      });
+    });
+
+    document.addEventListener('mouseup', e => {
+      if (!colorDragging) return;
+      colorDragging = false;
+      const selected = allColorDots.filter(d => d.classList.contains('color-selected'));
+      if (!selected.length) return;
+      showColorPopup(selected[selected.length - 1].getBoundingClientRect());
+    });
+
+    popup.querySelectorAll('.picker-dot').forEach(p => {
+      p.addEventListener('mousedown', e => e.preventDefault());
+      p.addEventListener('click', e => {
+        e.stopPropagation();
+        const color = p.dataset.color;
+        const selected = allColorDots.filter(d => d.classList.contains('color-selected'));
+        selected.forEach(dot => {
+          fetch(`/wine/${dot.dataset.wineId}/color`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `color_code=${encodeURIComponent(color)}`
+          }).then(r => {
+            if (r.ok) {
+              dot.className = 'color-dot' + (color ? ` color-dot-${color}` : '');
+              dot.style.background = color ? '' : 'transparent';
+              dot.style.borderColor = color ? '' : '#444';
+              dot.dataset.color = color;
+            }
+          });
+        });
+        clearColorSelection();
+      });
+    });
+
+    document.addEventListener('click', e => {
+      if (suppressNextColorClose) { suppressNextColorClose = false; return; }
+      if (!e.target.closest('.color-dot') && !e.target.closest('#color-picker-popup')) {
+        clearColorSelection();
+      }
+    });
+
+    // Price cell selection
+    const summary = document.getElementById('price-summary');
+    let isDragging = false;
+    let dragCol = null;
+    let startCell = null;
+
+    function getCellIndex(cell) {
+      return Array.from(document.querySelectorAll(`.price-cell[data-col="${cell.dataset.col}"]`)).indexOf(cell);
+    }
+
+    function updateSelection(col, fromIdx, toIdx) {
+      const cells = document.querySelectorAll(`.price-cell[data-col="${col}"]`);
+      const lo = Math.min(fromIdx, toIdx), hi = Math.max(fromIdx, toIdx);
+      document.querySelectorAll('.price-cell.selected').forEach(c => c.classList.remove('selected'));
+      const values = [];
+      cells.forEach((c, i) => {
+        if (i >= lo && i <= hi) {
+          c.classList.add('selected');
+          const v = parseFloat(c.dataset.value);
+          if (!isNaN(v)) values.push(v);
+        }
+      });
+      if (values.length) {
+        const sum = values.reduce((a, b) => a + b, 0);
+        document.getElementById('ps-count').textContent = values.length;
+        document.getElementById('ps-sum').textContent = '$' + sum.toFixed(2);
+        document.getElementById('ps-avg').textContent = '$' + (sum / values.length).toFixed(2);
+        summary.classList.add('visible');
+      } else {
+        summary.classList.remove('visible');
+      }
+    }
+
+    document.querySelectorAll('.price-cell').forEach(cell => {
+      cell.addEventListener('mousedown', e => {
+        e.preventDefault();
+        isDragging = true;
+        dragCol = cell.dataset.col;
+        startCell = cell;
+        updateSelection(dragCol, getCellIndex(cell), getCellIndex(cell));
+      });
+      cell.addEventListener('mouseover', e => {
+        if (isDragging && cell.dataset.col === dragCol) {
+          updateSelection(dragCol, getCellIndex(startCell), getCellIndex(cell));
+        }
+      });
+    });
+
+    document.addEventListener('mouseup', () => { isDragging = false; });
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('.price-cell')) {
+        document.querySelectorAll('.price-cell.selected').forEach(c => c.classList.remove('selected'));
+        summary.classList.remove('visible');
+      }
+    });
+
+    // Size picker
+    const sizePopup = document.getElementById('size-picker-popup');
+    let activeSizeCell = null;
+
+    document.querySelectorAll('.size-cell').forEach(cell => {
+      cell.addEventListener('click', e => {
+        e.stopPropagation();
+        activeSizeCell = cell;
+        const rect = cell.getBoundingClientRect();
+        const spH = 220; // approx popup height
+        const top = (rect.bottom + 6 + spH > window.innerHeight) ? (rect.top - spH - 6) : (rect.bottom + 6);
+        sizePopup.style.left = rect.left + 'px';
+        sizePopup.style.top  = top + 'px';
+        sizePopup.classList.add('visible');
+      });
+    });
+
+    sizePopup.querySelectorAll('.size-option').forEach(opt => {
+      opt.addEventListener('click', e => {
+        e.stopPropagation();
+        const newSize = opt.dataset.size;
+        fetch(`/wine/${activeSizeCell.dataset.wineId}/size`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `size_ml=${encodeURIComponent(newSize)}`
+        }).then(r => {
+          if (r.ok) {
+            activeSizeCell.dataset.size = newSize;
+            activeSizeCell.textContent = newSize + 'ml';
+          }
+        });
+        sizePopup.classList.remove('visible');
+      });
+    });
+
+    document.addEventListener('click', () => sizePopup.classList.remove('visible'));
+
+    // Type picker
+    const typePopup = document.getElementById('type-picker-popup');
+    let activeTypeCell = null;
+
+    document.querySelectorAll('.type-cell').forEach(cell => {
+      cell.addEventListener('click', e => {
+        e.stopPropagation();
+        activeTypeCell = cell;
+        const rect = cell.getBoundingClientRect();
+        const tpH = 200; // approx popup height
+        const top = (rect.bottom + 6 + tpH > window.innerHeight) ? (rect.top - tpH - 6) : (rect.bottom + 6);
+        typePopup.style.left = rect.left + 'px';
+        typePopup.style.top  = top + 'px';
+        typePopup.classList.add('visible');
+      });
+    });
+
+    typePopup.querySelectorAll('.type-option').forEach(opt => {
+      opt.addEventListener('click', e => {
+        e.stopPropagation();
+        const newType = opt.dataset.type;
+        const wineId = activeTypeCell.dataset.wineId;
+        fetch(`/wine/${wineId}/type`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: `wine_type=${encodeURIComponent(newType)}`
+        }).then(r => {
+          if (r.ok) {
+            const badge = activeTypeCell.querySelector('.type-badge');
+            badge.className = `type-badge type-${newType}`;
+            badge.textContent = opt.textContent;
+            activeTypeCell.dataset.type = newType;
+          }
+        });
+        typePopup.classList.remove('visible');
+      });
+    });
+
+    document.addEventListener('click', () => typePopup.classList.remove('visible'));
+
+    // Status — click to select, drag to multi-select, popup stays until action or click-outside
+    const statusLabels = { apt: 'Apt', house: 'House', not_shipped: 'Not Shipped', drank: 'Drank' };
+    const statusPopup = document.getElementById('status-picker-popup');
+    const allStatusBadges = [...document.querySelectorAll('.status-badge')];
+    let statusDragging = false, statusStartIdx = 0;
+    let suppressNextStatusClose = false;
+
+    function getStatusIdx(badge) { return allStatusBadges.indexOf(badge); }
+
+    function showStatusPopup(rect) {
+      const popH = 160;
+      const top = (rect.bottom + 6 + popH > window.innerHeight) ? (rect.top - popH - 6) : (rect.bottom + 6);
+      statusPopup.style.left = rect.left + 'px';
+      statusPopup.style.top  = top + 'px';
+      statusPopup.classList.add('visible');
+      suppressNextStatusClose = true; // swallow the click that follows mouseup
+    }
+
+    function setStatusSelection(fromIdx, toIdx) {
+      const lo = Math.min(fromIdx, toIdx), hi = Math.max(fromIdx, toIdx);
+      allStatusBadges.forEach((b, i) => b.classList.toggle('status-selected', i >= lo && i <= hi));
+    }
+
+    function clearStatusSelection() {
+      allStatusBadges.forEach(b => b.classList.remove('status-selected'));
+      statusPopup.classList.remove('visible');
+    }
+
+    allStatusBadges.forEach(badge => {
+      badge.addEventListener('mousedown', e => {
+        e.preventDefault();
+        statusDragging = true;
+        statusStartIdx = getStatusIdx(badge);
+        setStatusSelection(statusStartIdx, statusStartIdx);
+      });
+      badge.addEventListener('mouseover', () => {
+        if (!statusDragging) return;
+        setStatusSelection(statusStartIdx, getStatusIdx(badge));
+      });
+    });
+
+    document.addEventListener('mouseup', () => {
+      if (!statusDragging) return;
+      statusDragging = false;
+      const selected = allStatusBadges.filter(b => b.classList.contains('status-selected'));
+      if (!selected.length) return;
+      showStatusPopup(selected[selected.length - 1].getBoundingClientRect());
+    });
+
+    statusPopup.querySelectorAll('.status-option').forEach(opt => {
+      opt.addEventListener('mousedown', e => e.preventDefault()); // prevent blur/close before click
+      opt.addEventListener('click', e => {
+        e.stopPropagation();
+        const newStatus = opt.dataset.status;
+        const selected = allStatusBadges.filter(b => b.classList.contains('status-selected'));
+        if (!selected.length) return;
+        const ids = selected.map(b => b.dataset.wineId);
+        const body = ids.map(id => `ids=${encodeURIComponent(id)}`).join('&') + `&status=${encodeURIComponent(newStatus)}`;
+        fetch('/wines/bulk-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body
+        }).then(r => {
+          if (r.ok) {
+            selected.forEach(b => {
+              b.className = `badge status-badge badge-${newStatus}`;
+              b.dataset.status = newStatus;
+              b.textContent = statusLabels[newStatus];
+            });
+          }
+        });
+        clearStatusSelection();
+      });
+    });
+
+    document.addEventListener('click', e => {
+      if (suppressNextStatusClose) { suppressNextStatusClose = false; return; }
+      if (!e.target.closest('.status-badge') && !e.target.closest('#status-picker-popup')) {
+        clearStatusSelection();
+      }
+    });
+
+    // Shared backdrop / close
+    function closeAllPopups() {
+      document.getElementById('image-popup').style.display = 'none';
+      document.getElementById('rating-popup').style.display = 'none';
+      document.getElementById('popup-backdrop').style.display = 'none';
+      closeNotesPopup();
+    }
+
+    // Image popup
+    const imagePopup = document.getElementById('image-popup');
+    function openImagePopup(img) {
+      document.getElementById('image-popup-img').src = img.dataset.src;
+      document.getElementById('image-popup-title').textContent = img.dataset.name;
+      imagePopup.style.display = 'block';
+      document.getElementById('popup-backdrop').style.display = 'block';
+    }
+
+    // Notes popup
+    const notesPopup = document.getElementById('notes-popup');
+    let activeNotesCell = null;
+
+    function openNotesPopup(cell) {
+      activeNotesCell = cell;
+      document.getElementById('notes-popup-title').textContent = cell.dataset.wineName;
+      document.getElementById('notes-popup-text').value = cell.dataset.notes;
+      document.getElementById('notes-popup-saved').style.display = 'none';
+      notesPopup.style.display = 'block';
+      document.getElementById('popup-backdrop').style.display = 'block';
+      document.getElementById('notes-popup-text').focus();
+    }
+
+    function closeNotesPopup() {
+      notesPopup.style.display = 'none';
+      document.getElementById('popup-backdrop').style.display = 'none';
+      activeNotesCell = null;
+    }
+
+    function saveNotesPopup() {
+      if (!activeNotesCell) return;
+      const text = document.getElementById('notes-popup-text').value;
+      fetch(`/wine/${activeNotesCell.dataset.wineId}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'notes=' + encodeURIComponent(text)
+      }).then(r => {
+        if (r.ok) {
+          activeNotesCell.dataset.notes = text;
+          activeNotesCell.title = text || 'Click to add notes';
+          const preview = activeNotesCell.querySelector('.notes-preview');
+          if (text) {
+            preview.innerHTML = '<span style="color:#c9a96e;">&#x1F4DD;</span> ' + text.slice(0, 40) + (text.length > 40 ? '…' : '');
+          } else {
+            preview.innerHTML = '<span style="color:#555;">—</span>';
+          }
+          const msg = document.getElementById('notes-popup-saved');
+          msg.style.display = 'inline';
+          setTimeout(() => msg.style.display = 'none', 2000);
+        }
+      });
+    }
+
+    document.querySelectorAll('.notes-cell').forEach(cell => {
+      cell.addEventListener('click', e => openNotesPopup(cell));
+    });
+
+    // Ctrl+Enter saves, Escape closes
+    document.getElementById('notes-popup-text').addEventListener('keydown', e => {
+      if (e.key === 'Escape') closeNotesPopup();
+      if (e.key === 'Enter' && e.ctrlKey) saveNotesPopup();
+    });
+
+
+    // Image upload preview
+    function previewImage(input) {
+      const preview = document.getElementById('imagePreview');
+      if (input.files && input.files[0]) {
+        preview.src = URL.createObjectURL(input.files[0]);
+        preview.style.display = 'block';
+      } else {
+        preview.style.display = 'none';
+      }
+    }
+
+    // Delete buttons
+    document.querySelectorAll('.delete-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        if (!confirm(`Delete "${btn.dataset.wineName}"?\nThis cannot be undone.`)) return;
+        fetch(`/wine/${btn.dataset.wineId}/delete`, { method: 'POST' })
+          .then(() => btn.closest('tr').remove());
+      });
+    });
+
+    // Inline source editing
+    document.querySelectorAll('.source-cell').forEach(cell => {
+      cell.addEventListener('click', e => {
+        if (cell.querySelector('.source-input')) return;
+        const display = cell.querySelector('.source-display');
+        const current = cell.dataset.retailer;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'source-input rating-input';
+        input.style.width = '120px';
+        input.value = current;
+        input.placeholder = 'e.g. Vivino';
+        display.replaceWith(input);
+        input.focus();
+        input.select();
+        const save = () => {
+          const val = input.value.trim();
+          fetch(`/wine/${cell.dataset.wineId}/retailer`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `retailer=${encodeURIComponent(val)}`
+          });
+          cell.dataset.retailer = val;
+          const span = document.createElement('span');
+          span.className = 'source-display';
+          span.textContent = val || '—';
+          input.replaceWith(span);
+        };
+        input.addEventListener('blur', save);
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+          if (e.key === 'Escape') {
+            input.removeEventListener('blur', save);
+            const span = document.createElement('span');
+            span.className = 'source-display';
+            span.textContent = current || '—';
+            input.replaceWith(span);
+          }
+        });
+      });
+    });
+
+    // Rating popup
+    let activeRatingCell = null;
+    function closeRatingPopup() {
+      document.getElementById('rating-popup').style.display = 'none';
+      document.getElementById('popup-backdrop').style.display = 'none';
+      activeRatingCell = null;
+    }
+    function saveRatingPopup() {
+      if (!activeRatingCell) return;
+      const val = document.getElementById('rating-popup-input').value.trim();
+      const num = parseFloat(val);
+      const valid = val === '' || (!isNaN(num) && num >= 0 && num <= 5);
+      if (!valid) return;
+      fetch(`/wine/${activeRatingCell.dataset.wineId}/rating`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `my_rating=${encodeURIComponent(val)}`
+      }).then(r => {
+        if (r.ok) {
+          activeRatingCell.dataset.rating = val;
+          activeRatingCell.querySelector('.rating-display').textContent = val !== '' ? parseFloat(val).toFixed(1) : '—';
+        }
+      });
+      closeRatingPopup();
+    }
+    document.querySelectorAll('.rating-cell').forEach(cell => {
+      cell.addEventListener('click', e => {
+        activeRatingCell = cell;
+        const wineName = cell.closest('tr').querySelector('strong')?.textContent || '';
+        document.getElementById('rating-popup-title').textContent = wineName;
+        document.getElementById('rating-popup-input').value = cell.dataset.rating || '';
+        document.getElementById('rating-popup').style.display = 'block';
+        document.getElementById('popup-backdrop').style.display = 'block';
+        document.getElementById('rating-popup-input').focus();
+        document.getElementById('rating-popup-input').select();
+      });
+    });
+    document.getElementById('rating-popup-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') saveRatingPopup();
+      if (e.key === 'Escape') closeRatingPopup();
+    });
+  </script>
+</body>
+</html>

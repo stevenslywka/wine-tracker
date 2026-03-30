@@ -1,0 +1,7 @@
+config.py
+token.json
+credentials.json
+*.db
+raw_emails.json
+parsed_wines.json
+__pycache__/
