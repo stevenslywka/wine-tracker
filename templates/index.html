@@ -206,6 +206,7 @@
             <option value="color_code">Sticker</option>
             <option value="wine_type">Type</option>
             <option value="size_ml">Size</option>
+            <option value="retailer" {% if retailer_filter %}selected{% endif %}>Source</option>
             <option value="vintage">Vintage</option>
             <option value="price">Price</option>
           </select>
@@ -256,6 +257,12 @@
               {% for s in sizes %}<option value="{{ s }}" {% if size_filter==s|string %}selected{% endif %}>{{ s }}ml</option>{% endfor %}
             </select>
           </div>
+          <div id="fi-retailer" class="filter-input" style="display:none;flex:1;min-width:150px;">
+            <select name="retailer" class="form-select">
+              <option value="">All sources</option>
+              {% for r in retailers %}<option value="{{ r }}" {% if retailer_filter==r %}selected{% endif %}>{{ r }}</option>{% endfor %}
+            </select>
+          </div>
           <div id="fi-vintage" class="filter-input" style="display:none;gap:4px;min-width:200px;">
             <input type="number" name="vintage_min" class="form-control" placeholder="From" value="{{ vintage_min }}" min="1900" max="2099">
             <input type="number" name="vintage_max" class="form-control" placeholder="To"   value="{{ vintage_max }}" min="1900" max="2099">
@@ -265,7 +272,7 @@
             <input type="number" name="price_max" class="form-control" placeholder="$ max" value="{{ price_max }}" min="0" step="1">
           </div>
           <button type="submit" class="btn btn-wine">Filter</button>
-          {% if search or status_filter or varietal_filter or region_filter or location_filter or vintage_min or vintage_max or price_min or price_max or color_filter or type_filter or size_filter %}
+          {% if search or status_filter or varietal_filter or region_filter or location_filter or vintage_min or vintage_max or price_min or price_max or color_filter or type_filter or size_filter or retailer_filter %}
           <a href="/" class="btn btn-outline-secondary">Clear</a>
           {% endif %}
         </div>
@@ -1040,26 +1047,56 @@
           if (!wines.length) { status.textContent = 'No wines found on receipt.'; return; }
           status.textContent = `Found ${wines.length} wine(s). Review and add below.`;
           status.style.color = '#7ecb7e';
+          // Store scanned wines for bulk submit
+          window._receiptWines = wines;
           const container = document.getElementById('receiptResults');
           container.style.display = 'block';
-          container.innerHTML = wines.map((w, i) => `
-            <form method="POST" action="/wine/add" style="background:#1a0a00;border:1px solid #3a1a00;border-radius:6px;padding:10px;margin-bottom:8px;">
-              <div style="font-weight:bold;color:#c9a96e;margin-bottom:6px;">${w.wine_name || 'Unknown Wine'}</div>
-              <input type="hidden" name="wine_name" value="${(w.wine_name||'').replace(/"/g,'&quot;')}">
-              <div class="row g-2">
-                <div class="col"><label style="font-size:0.8rem;color:#aaa;">Vintage</label><input type="number" name="vintage" class="form-control form-control-sm" value="${w.vintage||''}"></div>
-                <div class="col"><label style="font-size:0.8rem;color:#aaa;">Price ($)</label><input type="number" name="unit_price" class="form-control form-control-sm" value="${w.unit_price||''}" step="0.01"></div>
-                <div class="col"><label style="font-size:0.8rem;color:#aaa;">Qty</label><input type="number" name="quantity" class="form-control form-control-sm" value="${w.quantity||1}" min="1"></div>
-              </div>
-              <div class="row g-2 mt-1">
-                <div class="col"><label style="font-size:0.8rem;color:#aaa;">Source</label><input type="text" name="retailer" class="form-control form-control-sm" value="${w.retailer||''}"></div>
-                <div class="col"><label style="font-size:0.8rem;color:#aaa;">Date</label><input type="date" name="order_date" class="form-control form-control-sm" value="${w.order_date||''}"></div>
-              </div>
-              <button type="submit" class="btn btn-wine btn-sm mt-2 w-100" onsubmit="this.disabled=true;">Add This Wine</button>
+          container.innerHTML = `
+            <div id="receiptWineList">
+              ${wines.map((w, i) => `
+                <div style="background:#1a0a00;border:1px solid #3a1a00;border-radius:6px;padding:10px;margin-bottom:8px;">
+                  <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <input type="checkbox" id="rw-check-${i}" checked style="width:18px;height:18px;cursor:pointer;">
+                    <label for="rw-check-${i}" style="font-weight:bold;color:#c9a96e;cursor:pointer;margin:0;">${w.wine_name || 'Unknown Wine'}</label>
+                  </div>
+                  <div class="row g-2">
+                    <div class="col"><label style="font-size:0.8rem;color:#aaa;">Vintage</label><input type="number" id="rw-vintage-${i}" class="form-control form-control-sm" value="${w.vintage||''}"></div>
+                    <div class="col"><label style="font-size:0.8rem;color:#aaa;">Price ($)</label><input type="number" id="rw-price-${i}" class="form-control form-control-sm" value="${w.unit_price||''}" step="0.01"></div>
+                    <div class="col"><label style="font-size:0.8rem;color:#aaa;">Qty</label><input type="number" id="rw-qty-${i}" class="form-control form-control-sm" value="${w.quantity||1}" min="1"></div>
+                  </div>
+                  <div class="row g-2 mt-1">
+                    <div class="col"><label style="font-size:0.8rem;color:#aaa;">Source</label><input type="text" id="rw-retailer-${i}" class="form-control form-control-sm" value="${w.retailer||''}"></div>
+                    <div class="col"><label style="font-size:0.8rem;color:#aaa;">Date</label><input type="date" id="rw-date-${i}" class="form-control form-control-sm" value="${w.order_date||''}"></div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+            <form method="POST" action="/wine/add-bulk" id="receiptBulkForm">
+              <input type="hidden" name="wines_json" id="receiptWinesJson">
+              <button type="button" class="btn btn-wine w-100" onclick="submitReceiptWines()">Add Selected Wines</button>
             </form>
-          `).join('');
+          `;
         })
         .catch(() => { status.textContent = 'Scan failed — try again.'; });
+    }
+
+    function submitReceiptWines() {
+      const wines = window._receiptWines || [];
+      const selected = wines.map((w, i) => {
+        const checked = document.getElementById('rw-check-' + i)?.checked;
+        if (!checked) return null;
+        return {
+          wine_name: w.wine_name,
+          vintage:   document.getElementById('rw-vintage-' + i)?.value || null,
+          unit_price: document.getElementById('rw-price-' + i)?.value || null,
+          quantity:  document.getElementById('rw-qty-' + i)?.value || 1,
+          retailer:  document.getElementById('rw-retailer-' + i)?.value || null,
+          order_date: document.getElementById('rw-date-' + i)?.value || null,
+        };
+      }).filter(Boolean);
+      if (!selected.length) { alert('No wines selected.'); return; }
+      document.getElementById('receiptWinesJson').value = JSON.stringify(selected);
+      document.getElementById('receiptBulkForm').submit();
     }
 
     function scanLabel(input) {

@@ -198,6 +198,10 @@ def index():
     if color_filter:
         query += f" AND color_code = {p}"
         params.append(color_filter)
+    retailer_filter = request.args.get("retailer", "")
+    if retailer_filter:
+        query += f" AND retailer = {p}"
+        params.append(retailer_filter)
     type_filter = request.args.get("wine_type", "")
     if type_filter:
         query += f" AND wine_type = {p}"
@@ -236,13 +240,16 @@ def index():
     vintages = [r["vintage"] for r in cur.fetchall()]
     cur.execute("SELECT DISTINCT size_ml FROM wines WHERE size_ml IS NOT NULL ORDER BY size_ml")
     sizes = [r["size_ml"] for r in cur.fetchall()]
+    cur.execute("SELECT DISTINCT retailer FROM wines WHERE retailer IS NOT NULL ORDER BY retailer")
+    retailers = [r["retailer"] for r in cur.fetchall()]
 
     conn.close()
     return render_template("index.html", wines=wines, stats=stats,
                            search=search, status_filter=status_filter,
                            varietal_filter=varietal_filter, region_filter=region_filter,
                            location_filter=location_filter, color_filter=color_filter,
-                           type_filter=type_filter, size_filter=size_filter,
+                           type_filter=type_filter, size_filter=size_filter, retailer_filter=retailer_filter,
+                           retailers=retailers,
                            vintage_min=vintage_min, vintage_max=vintage_max,
                            price_min=price_min, price_max=price_max,
                            sort=sort, order=order,
@@ -572,7 +579,7 @@ def lookup_drinking_window(wine_name, vintage, varietal, region):
     client = anthropic.Anthropic(api_key=api_key)
     prompt = (f"What is the estimated drinking window for this wine: {wine_name} "
               f"({vintage or 'NV'}), {varietal or ''}, {region or ''}? "
-              f"Return ONLY a JSON object like {{\"window\": \"2025-2032\"}} or {{\"window\": \"Now-2030\"}}. No other text.")
+              f"Return ONLY a JSON object like {{\"window\": \"2025-2032\"}}. Always use a 4-digit year for both start and end — never use 'Now'. No other text.")
     message = client.messages.create(
         model="claude-haiku-4-5-20251001",
         max_tokens=64,
@@ -659,7 +666,7 @@ def _run_enrich_drinking_windows():
             for j, w in enumerate(batch)
         )
         prompt = (f"For each wine below, provide the estimated drinking window. "
-                  f"Return ONLY a JSON array with objects having 'index' (1-based) and 'window' (e.g. '2025-2032' or 'Now-2030') keys.\n\n{lines}")
+                  f"Return ONLY a JSON array with objects having 'index' (1-based) and 'window' (e.g. '2025-2032') keys. Always use 4-digit years for both start and end — never use 'Now'.\n\n{lines}")
         try:
             message = client.messages.create(
                 model="claude-haiku-4-5-20251001",
@@ -685,6 +692,56 @@ def _run_enrich_drinking_windows():
             conn.close()
         except Exception as e:
             print(f"Enrich batch error: {e}")
+
+
+@app.route("/wine/add-bulk", methods=["POST"])
+@edit_required
+def add_bulk_wines():
+    import json as json_lib
+    from enrich_wines import extract_varietal, extract_region, extract_location, infer_wine_type, infer_size
+    wines_json = request.form.get("wines_json", "[]")
+    try:
+        wines = json_lib.loads(wines_json)
+    except Exception:
+        return ("Bad request", 400)
+    p = ph()
+    conn = get_db()
+    cur = conn.cursor()
+    import db as db_module
+    for w in wines:
+        wine_name = (w.get("wine_name") or "").strip()
+        if not wine_name:
+            continue
+        try:    vintage    = int(w["vintage"])    if w.get("vintage")    else None
+        except: vintage    = None
+        try:    unit_price = float(w["unit_price"]) if w.get("unit_price") else None
+        except: unit_price = None
+        try:    quantity   = max(1, int(w["quantity"])) if w.get("quantity") else 1
+        except: quantity   = 1
+        retailer   = (w.get("retailer") or "").strip() or None
+        order_date = (w.get("order_date") or "").strip() or date.today().isoformat()
+        total_price = round(unit_price * quantity, 2) if unit_price else None
+        varietal  = extract_varietal(wine_name)
+        region    = extract_region(wine_name, varietal)
+        location  = extract_location(region)
+        wine_type = infer_wine_type(varietal)
+        size_ml   = infer_size(wine_name)
+        drinking_window = lookup_drinking_window(wine_name, vintage, varietal, region)
+        if db_module.is_postgres():
+            cur.execute(f"""INSERT INTO wines (wine_name, vintage, unit_price, total_price, quantity,
+                varietal, region, location, wine_type, size_ml, retailer, order_date, status, drinking_window)
+                VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'cellar',{p})""",
+                (wine_name, vintage, unit_price, total_price, quantity,
+                 varietal, region, location, wine_type, size_ml, retailer, order_date, drinking_window))
+        else:
+            cur.execute(f"""INSERT INTO wines (wine_name, vintage, unit_price, total_price, quantity,
+                varietal, region, location, wine_type, size_ml, retailer, order_date, status, drinking_window)
+                VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'cellar',{p})""",
+                (wine_name, vintage, unit_price, total_price, quantity,
+                 varietal, region, location, wine_type, size_ml, retailer, order_date, drinking_window))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("index"))
 
 
 @app.route("/wine/enrich-drinking-windows", methods=["POST"])
