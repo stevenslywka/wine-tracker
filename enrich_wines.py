@@ -5,6 +5,7 @@ Run this after parse_emails.py to fill in the varietal/region columns.
 
 import re
 import sqlite3
+import db as db_module
 
 DB_FILE = "wines.db"
 
@@ -276,9 +277,11 @@ def infer_size(wine_name):
 
 
 def enrich():
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    wines = conn.execute("SELECT id, wine_name, wine_type, size_ml FROM wines").fetchall()
+    ph = db_module.placeholder
+    conn = db_module.get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, wine_name, wine_type, size_ml FROM wines")
+    wines = cur.fetchall()
 
     updated = 0
     for wine in wines:
@@ -288,8 +291,8 @@ def enrich():
         wine_type = wine["wine_type"] or infer_wine_type(varietal)
         size_ml = wine["size_ml"] if wine["size_ml"] is not None else infer_size(wine["wine_name"])
 
-        conn.execute(
-            "UPDATE wines SET varietal = ?, region = ?, location = ?, wine_type = ?, size_ml = ? WHERE id = ?",
+        cur.execute(
+            f"UPDATE wines SET varietal = {ph}, region = {ph}, location = {ph}, wine_type = {ph}, size_ml = {ph} WHERE id = {ph}",
             (varietal, region, location, wine_type, size_ml, wine["id"])
         )
         updated += 1
@@ -299,10 +302,12 @@ def enrich():
     print(f"Updated {updated} wines.")
 
     # Quick summary
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
-    no_varietal = conn.execute("SELECT wine_name FROM wines WHERE varietal IS NULL").fetchall()
-    no_region = conn.execute("SELECT wine_name FROM wines WHERE region IS NULL").fetchall()
+    conn = db_module.get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT wine_name FROM wines WHERE varietal IS NULL")
+    no_varietal = cur.fetchall()
+    cur.execute("SELECT wine_name FROM wines WHERE region IS NULL")
+    no_region = cur.fetchall()
     conn.close()
 
     if no_varietal:

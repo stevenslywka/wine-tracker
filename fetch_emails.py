@@ -10,6 +10,7 @@ import sqlite3
 from datetime import datetime
 from email.header import decode_header
 from config import GMAIL_ADDRESS, GMAIL_APP_PASSWORD
+import db as db_module
 
 DB_FILE = "wines.db"
 
@@ -66,8 +67,10 @@ def get_body(msg):
 def get_since_date():
     """Return the most recent order_date from the DB as a DD-Mon-YYYY string, or None."""
     try:
-        conn = sqlite3.connect(DB_FILE)
-        row = conn.execute("SELECT MAX(order_date) FROM wines").fetchone()
+        conn = db_module.get_connection()
+        cur = conn.cursor()
+        cur.execute("SELECT MAX(order_date) FROM wines")
+        row = cur.fetchone()
         conn.close()
         if row and row[0]:
             dt = datetime.strptime(row[0], "%Y-%m-%d")

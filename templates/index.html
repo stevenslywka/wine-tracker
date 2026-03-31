@@ -114,11 +114,16 @@
   <nav class="navbar navbar-expand-lg mb-4">
     <div class="container d-flex justify-content-between align-items-center">
       <span class="navbar-brand">🍷 Steven's Wine Tracker</span>
-      <div class="d-flex gap-2">
+      <div class="d-flex gap-2 align-items-center">
+        {% if not auth_enabled or access_level == 'edit' %}
         <button type="button" class="btn btn-wine btn-sm" data-bs-toggle="modal" data-bs-target="#addWineModal">+ Add Wine</button>
         <form method="POST" action="/refresh" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').textContent='Refreshing…';">
           <button type="submit" class="btn btn-wine btn-sm">&#8635; Refresh Emails</button>
         </form>
+        {% endif %}
+        {% if auth_enabled %}
+        <a href="{{ url_for('logout') }}" class="btn btn-sm" style="background:#3d0f0f; border:1px solid #5a2d0c; color:#c9a96e;">Log out</a>
+        {% endif %}
       </div>
     </div>
   </nav>

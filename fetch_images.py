@@ -7,6 +7,7 @@ import sqlite3
 import urllib.request
 import re
 import time
+import db as db_module
 
 DB_FILE = "wines.db"
 
@@ -104,14 +105,16 @@ def search_and_fetch_image(wine_name):
 
 
 def fetch_all_images():
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row
+    ph = db_module.placeholder
+    conn = db_module.get_connection()
+    cur = conn.cursor()
 
-    wines = conn.execute("""
+    cur.execute("""
         SELECT id, wine_name, product_url
         FROM wines
         WHERE product_url IS NOT NULL AND image_url IS NULL
-    """).fetchall()
+    """)
+    wines = cur.fetchall()
 
     if not wines:
         print("No wines with product URLs missing images.")
@@ -125,7 +128,8 @@ def fetch_all_images():
         print(f"  {wine['wine_name'][:60]}...")
         image_url = fetch_image_url(wine['product_url'])
         if image_url:
-            conn.execute("UPDATE wines SET image_url = ? WHERE id = ?", (image_url, wine['id']))
+            cur2 = conn.cursor()
+            cur2.execute(f"UPDATE wines SET image_url = {ph} WHERE id = {ph}", (image_url, wine['id']))
             conn.commit()
             updated += 1
             print(f"    Got image.")

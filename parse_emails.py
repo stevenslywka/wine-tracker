@@ -8,6 +8,7 @@ import re
 import sqlite3
 from bs4 import BeautifulSoup
 from email.utils import parsedate_to_datetime
+import db as db_module
 
 RAW_EMAILS_FILE = "raw_emails.json"
 PARSED_FILE = "parsed_wines.json"
@@ -15,25 +16,46 @@ DB_FILE = "wines.db"
 
 
 def init_db():
-    conn = sqlite3.connect(DB_FILE)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS wines (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email_id TEXT UNIQUE,
-            order_date TEXT,
-            retailer TEXT,
-            wine_name TEXT,
-            vintage INTEGER,
-            varietal TEXT,
-            region TEXT,
-            quantity INTEGER,
-            unit_price REAL,
-            total_price REAL,
-            order_number TEXT,
-            notes TEXT,
-            status TEXT DEFAULT 'cellar'
-        )
-    """)
+    conn = db_module.get_connection()
+    ph = db_module.placeholder
+    if db_module.is_postgres():
+        conn.cursor().execute("""
+            CREATE TABLE IF NOT EXISTS wines (
+                id SERIAL PRIMARY KEY,
+                email_id TEXT UNIQUE,
+                order_date TEXT,
+                retailer TEXT,
+                wine_name TEXT,
+                vintage INTEGER,
+                varietal TEXT,
+                region TEXT,
+                quantity INTEGER,
+                unit_price REAL,
+                total_price REAL,
+                order_number TEXT,
+                notes TEXT,
+                status TEXT DEFAULT 'cellar'
+            )
+        """)
+    else:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS wines (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email_id TEXT UNIQUE,
+                order_date TEXT,
+                retailer TEXT,
+                wine_name TEXT,
+                vintage INTEGER,
+                varietal TEXT,
+                region TEXT,
+                quantity INTEGER,
+                unit_price REAL,
+                total_price REAL,
+                order_number TEXT,
+                notes TEXT,
+                status TEXT DEFAULT 'cellar'
+            )
+        """)
     conn.commit()
     return conn
 
@@ -242,6 +264,7 @@ def parse_all_emails():
     ]
 
     conn = init_db()
+    ph = db_module.placeholder
     all_wines = []
     errors = 0
 
@@ -253,21 +276,38 @@ def parse_all_emails():
 
             for wine in wines:
                 try:
-                    conn.execute("""
-                        INSERT OR IGNORE INTO wines
-                        (email_id, order_date, retailer, wine_name, vintage, varietal,
-                         region, quantity, unit_price, total_price, order_number,
-                         retail_price, product_url)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (
-                        wine['email_id'], wine['order_date'], wine['retailer'],
-                        wine['wine_name'], wine['vintage'], wine['varietal'],
-                        wine['region'], wine['quantity'], wine['unit_price'],
-                        wine['total_price'], wine['order_number'],
-                        wine.get('retail_price'), wine.get('product_url'),
-                    ))
+                    cur = conn.cursor()
+                    if db_module.is_postgres():
+                        cur.execute(f"""
+                            INSERT INTO wines
+                            (email_id, order_date, retailer, wine_name, vintage, varietal,
+                             region, quantity, unit_price, total_price, order_number,
+                             retail_price, product_url)
+                            VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+                            ON CONFLICT (email_id) DO NOTHING
+                        """, (
+                            wine['email_id'], wine['order_date'], wine['retailer'],
+                            wine['wine_name'], wine['vintage'], wine['varietal'],
+                            wine['region'], wine['quantity'], wine['unit_price'],
+                            wine['total_price'], wine['order_number'],
+                            wine.get('retail_price'), wine.get('product_url'),
+                        ))
+                    else:
+                        cur.execute("""
+                            INSERT OR IGNORE INTO wines
+                            (email_id, order_date, retailer, wine_name, vintage, varietal,
+                             region, quantity, unit_price, total_price, order_number,
+                             retail_price, product_url)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (
+                            wine['email_id'], wine['order_date'], wine['retailer'],
+                            wine['wine_name'], wine['vintage'], wine['varietal'],
+                            wine['region'], wine['quantity'], wine['unit_price'],
+                            wine['total_price'], wine['order_number'],
+                            wine.get('retail_price'), wine.get('product_url'),
+                        ))
                     conn.commit()
-                except sqlite3.Error as e:
+                except Exception as e:
                     print(f"  DB error: {e}")
 
                 all_wines.append(wine)
