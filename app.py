@@ -489,14 +489,18 @@ def add_wine():
 @app.route("/refresh", methods=["POST"])
 @edit_required
 def refresh():
-    from fetch_emails import fetch_emails
-    from parse_emails import parse_all_emails
-    from enrich_wines import enrich
-    from fetch_images import fetch_all_images
-    fetch_emails()
-    parse_all_emails()
-    enrich()
-    fetch_all_images()
+    import threading
+    def run_refresh():
+        from fetch_emails import fetch_emails
+        from parse_emails import parse_all_emails
+        from enrich_wines import enrich
+        from fetch_images import fetch_all_images
+        fetch_emails()
+        parse_all_emails()
+        enrich()
+        fetch_all_images()
+    t = threading.Thread(target=run_refresh, daemon=True)
+    t.start()
     return redirect(url_for("index"))
 
 
