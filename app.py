@@ -210,13 +210,13 @@ def index():
     stats = cur.fetchone()
 
     cur.execute("SELECT DISTINCT varietal FROM wines WHERE varietal IS NOT NULL ORDER BY varietal")
-    varietals = [r[0] for r in cur.fetchall()]
+    varietals = [r["varietal"] for r in cur.fetchall()]
     cur.execute("SELECT DISTINCT region FROM wines WHERE region IS NOT NULL ORDER BY region")
-    regions = [r[0] for r in cur.fetchall()]
+    regions = [r["region"] for r in cur.fetchall()]
     cur.execute("SELECT DISTINCT location FROM wines WHERE location IS NOT NULL ORDER BY location")
-    locations = [r[0] for r in cur.fetchall()]
+    locations = [r["location"] for r in cur.fetchall()]
     cur.execute("SELECT DISTINCT vintage FROM wines WHERE vintage IS NOT NULL ORDER BY vintage DESC")
-    vintages = [r[0] for r in cur.fetchall()]
+    vintages = [r["vintage"] for r in cur.fetchall()]
 
     conn.close()
     return render_template("index.html", wines=wines, stats=stats,
