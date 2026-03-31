@@ -5,12 +5,18 @@ Then open http://localhost:5000 in your browser.
 
 import os
 from datetime import date
+from dotenv import load_dotenv
+load_dotenv()
 from functools import wraps
 from flask import (Flask, render_template, request, redirect, url_for,
                    jsonify, session, flash)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-prod")
+
+# Run DB migrations on startup
+import db as _db_module
+_db_module.migrate()
 
 # --- Auth configuration ---
 VIEW_PASSWORD = os.environ.get("VIEW_PASSWORD")
@@ -192,6 +198,17 @@ def index():
     if color_filter:
         query += f" AND color_code = {p}"
         params.append(color_filter)
+    type_filter = request.args.get("wine_type", "")
+    if type_filter:
+        query += f" AND wine_type = {p}"
+        params.append(type_filter)
+    size_filter = request.args.get("size_ml", "")
+    if size_filter:
+        try:
+            query += f" AND size_ml = {p}"
+            params.append(int(size_filter))
+        except ValueError:
+            pass
 
     query += f" ORDER BY {sort} {order}"
 
@@ -217,17 +234,20 @@ def index():
     locations = [r["location"] for r in cur.fetchall()]
     cur.execute("SELECT DISTINCT vintage FROM wines WHERE vintage IS NOT NULL ORDER BY vintage DESC")
     vintages = [r["vintage"] for r in cur.fetchall()]
+    cur.execute("SELECT DISTINCT size_ml FROM wines WHERE size_ml IS NOT NULL ORDER BY size_ml")
+    sizes = [r["size_ml"] for r in cur.fetchall()]
 
     conn.close()
     return render_template("index.html", wines=wines, stats=stats,
                            search=search, status_filter=status_filter,
                            varietal_filter=varietal_filter, region_filter=region_filter,
                            location_filter=location_filter, color_filter=color_filter,
+                           type_filter=type_filter, size_filter=size_filter,
                            vintage_min=vintage_min, vintage_max=vintage_max,
                            price_min=price_min, price_max=price_max,
                            sort=sort, order=order,
                            varietals=varietals, regions=regions,
-                           locations=locations, vintages=vintages,
+                           locations=locations, vintages=vintages, sizes=sizes,
                            access_level=session.get("access_level", "edit"),
                            auth_enabled=AUTH_ENABLED)
 
@@ -380,6 +400,46 @@ def update_retailer(wine_id):
     return ("", 204)
 
 
+@app.route("/wine/<int:wine_id>/region", methods=["POST"])
+@edit_required
+def update_region(wine_id):
+    value = request.form.get("region", "").strip() or None
+    p = ph(); conn = get_db(); cur = conn.cursor()
+    cur.execute(f"UPDATE wines SET region = {p} WHERE id = {p}", (value, wine_id))
+    conn.commit(); conn.close()
+    return ("", 204)
+
+
+@app.route("/wine/<int:wine_id>/location", methods=["POST"])
+@edit_required
+def update_location(wine_id):
+    value = request.form.get("location", "").strip() or None
+    p = ph(); conn = get_db(); cur = conn.cursor()
+    cur.execute(f"UPDATE wines SET location = {p} WHERE id = {p}", (value, wine_id))
+    conn.commit(); conn.close()
+    return ("", 204)
+
+
+@app.route("/wine/<int:wine_id>/varietal", methods=["POST"])
+@edit_required
+def update_varietal(wine_id):
+    value = request.form.get("varietal", "").strip() or None
+    p = ph(); conn = get_db(); cur = conn.cursor()
+    cur.execute(f"UPDATE wines SET varietal = {p} WHERE id = {p}", (value, wine_id))
+    conn.commit(); conn.close()
+    return ("", 204)
+
+
+@app.route("/wine/<int:wine_id>/drinking_window", methods=["POST"])
+@edit_required
+def update_drinking_window(wine_id):
+    value = request.form.get("drinking_window", "").strip() or None
+    p = ph(); conn = get_db(); cur = conn.cursor()
+    cur.execute(f"UPDATE wines SET drinking_window = {p} WHERE id = {p}", (value, wine_id))
+    conn.commit(); conn.close()
+    return ("", 204)
+
+
 @app.route("/wine/<int:wine_id>/notes", methods=["POST"])
 @edit_required
 def update_notes(wine_id):
@@ -420,10 +480,19 @@ def add_wine():
     order_date  = raw_order_date if raw_order_date else date.today().isoformat()
     total_price = round(unit_price * quantity, 2) if unit_price else None
 
-    varietal  = extract_varietal(wine_name)
-    region    = extract_region(wine_name, varietal)
-    location  = extract_location(region)
-    wine_type = infer_wine_type(varietal)
+    # Use scan results if provided, otherwise fall back to rule-based enrichment
+    scan_varietal        = request.form.get("scan_varietal", "").strip() or None
+    scan_region          = request.form.get("scan_region", "").strip() or None
+    scan_wine_type       = request.form.get("scan_wine_type", "").strip() or None
+    scan_location        = request.form.get("scan_location", "").strip() or None
+    scan_drinking_window = request.form.get("scan_drinking_window", "").strip() or None
+    color_code           = request.form.get("color_code", "").strip() or None
+
+    varietal  = scan_varietal  or extract_varietal(wine_name)
+    region    = scan_region    or extract_region(wine_name, varietal)
+    location  = scan_location  or extract_location(region)
+    wine_type = scan_wine_type or infer_wine_type(varietal)
+    drinking_window = scan_drinking_window or lookup_drinking_window(wine_name, vintage, varietal, region)
     size_ml   = infer_size(wine_name)
 
     p = ph()
@@ -436,11 +505,11 @@ def add_wine():
             INSERT INTO wines
                 (wine_name, vintage, unit_price, total_price, quantity, notes,
                  varietal, region, location, wine_type, size_ml,
-                 retailer, order_date, status)
-            VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, 'cellar')
+                 retailer, order_date, status, color_code, drinking_window)
+            VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, 'cellar', {p}, {p})
             RETURNING id
         """, (wine_name, vintage, unit_price, total_price, quantity, notes,
-              varietal, region, location, wine_type, size_ml, retailer, order_date))
+              varietal, region, location, wine_type, size_ml, retailer, order_date, color_code, drinking_window))
         row = cur.fetchone()
         wine_id = row["id"] if row else None
     else:
@@ -448,10 +517,10 @@ def add_wine():
             INSERT INTO wines
                 (wine_name, vintage, unit_price, total_price, quantity, notes,
                  varietal, region, location, wine_type, size_ml,
-                 retailer, order_date, status)
-            VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, 'cellar')
+                 retailer, order_date, status, color_code, drinking_window)
+            VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, 'cellar', {p}, {p})
         """, (wine_name, vintage, unit_price, total_price, quantity, notes,
-              varietal, region, location, wine_type, size_ml, retailer, order_date))
+              varietal, region, location, wine_type, size_ml, retailer, order_date, color_code, drinking_window))
         wine_id = cur.lastrowid
 
     conn.commit()
@@ -461,7 +530,6 @@ def add_wine():
     image_url = None
     uploaded = request.files.get("image")
     if uploaded and uploaded.filename:
-        # Upload to Cloudinary if configured, otherwise skip
         cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME")
         if cloud_name:
             import cloudinary
@@ -473,6 +541,15 @@ def add_wine():
             )
             result = cloudinary.uploader.upload(uploaded, folder="wine-tracker")
             image_url = result.get("secure_url")
+        else:
+            # Save locally
+            import uuid
+            ext = os.path.splitext(uploaded.filename)[1] or ".jpg"
+            filename = f"{uuid.uuid4().hex}{ext}"
+            upload_dir = os.path.join(app.root_path, "static", "uploads")
+            os.makedirs(upload_dir, exist_ok=True)
+            uploaded.save(os.path.join(upload_dir, filename))
+            image_url = f"/static/uploads/{filename}"
     else:
         image_url = search_and_fetch_image(wine_name)
 
@@ -484,6 +561,127 @@ def add_wine():
         conn.close()
 
     return redirect(url_for("index"))
+
+
+def lookup_drinking_window(wine_name, vintage, varietal, region):
+    """Ask Claude for the drinking window of a single wine. Returns a string like '2025-2032' or None."""
+    import anthropic, json as json_lib
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return None
+    client = anthropic.Anthropic(api_key=api_key)
+    prompt = (f"What is the estimated drinking window for this wine: {wine_name} "
+              f"({vintage or 'NV'}), {varietal or ''}, {region or ''}? "
+              f"Return ONLY a JSON object like {{\"window\": \"2025-2032\"}} or {{\"window\": \"Now-2030\"}}. No other text.")
+    message = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=64,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    try:
+        raw = message.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        return json_lib.loads(raw.strip()).get("window")
+    except Exception:
+        return None
+
+
+def _run_enrich_drinking_windows():
+    """Background task: fill drinking_window for all wines that are missing it."""
+    import anthropic, json as json_lib
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return
+    client = anthropic.Anthropic(api_key=api_key)
+    p = ph()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id, wine_name, vintage, varietal, region FROM wines WHERE drinking_window IS NULL OR drinking_window = ''")
+    wines = list(cur.fetchall())
+    conn.close()
+
+    batch_size = 10
+    for i in range(0, len(wines), batch_size):
+        batch = wines[i:i + batch_size]
+        lines = "\n".join(
+            f"{j+1}. {w['wine_name']} ({w['vintage'] or 'NV'}), {w['varietal'] or ''}, {w['region'] or ''}"
+            for j, w in enumerate(batch)
+        )
+        prompt = (f"For each wine below, provide the estimated drinking window. "
+                  f"Return ONLY a JSON array with objects having 'index' (1-based) and 'window' (e.g. '2025-2032' or 'Now-2030') keys.\n\n{lines}")
+        try:
+            message = client.messages.create(
+                model="claude-haiku-4-5-20251001",
+                max_tokens=512,
+                messages=[{"role": "user", "content": prompt}]
+            )
+            raw = message.content[0].text.strip()
+            if raw.startswith("```"):
+                raw = raw.split("```")[1]
+                if raw.startswith("json"):
+                    raw = raw[4:]
+            results = json_lib.loads(raw.strip())
+            conn = get_db()
+            cur = conn.cursor()
+            for r in results:
+                idx = r.get("index", 0) - 1
+                if 0 <= idx < len(batch):
+                    cur.execute(f"UPDATE wines SET drinking_window = {p} WHERE id = {p}",
+                                (r.get("window"), batch[idx]["id"]))
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            print(f"Enrich batch error: {e}")
+
+
+@app.route("/wine/enrich-drinking-windows", methods=["POST"])
+@edit_required
+def enrich_drinking_windows():
+    import threading
+    threading.Thread(target=_run_enrich_drinking_windows, daemon=True).start()
+    return redirect(url_for("index"))
+
+
+@app.route("/wine/scan-label", methods=["POST"])
+@edit_required
+def scan_label():
+    import anthropic, base64, json as json_lib
+    uploaded = request.files.get("image")
+    if not uploaded or not uploaded.filename:
+        return jsonify({"error": "No image provided"}), 400
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return jsonify({"error": "ANTHROPIC_API_KEY not configured"}), 500
+    image_data = base64.standard_b64encode(uploaded.read()).decode("utf-8")
+    media_type = uploaded.content_type or "image/jpeg"
+    client = anthropic.Anthropic(api_key=api_key)
+    message = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=512,
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_data}},
+                {"type": "text", "text": "Look at this wine label and extract information. Read all text EXACTLY as it appears on the label — do not guess or correct spelling. For varietal, location, and drinking_window, use your wine knowledge to fill them in even if not printed on the label. Return ONLY a JSON object with these exact keys (use null for anything you cannot determine):\n{\"wine_name\": \"producer + wine name exactly as written\", \"vintage\": 2019, \"region\": \"appellation + broader region when applicable, e.g. Chateauneuf-du-Pape, Rhone or Saint-Emilion, Bordeaux or just Napa Valley if no sub-appellation\", \"varietal\": \"grape variety or blend (infer from appellation if needed)\", \"wine_type\": \"one of: Red, White, Rose, Sparkling, Dessert, Fortified, Orange\", \"location\": \"country (e.g. France, Italy, USA)\", \"drinking_window\": \"estimated drinking window e.g. 2025-2032 or Now-2030\"}\nReturn only the JSON, no other text."}
+            ]
+        }]
+    )
+    try:
+        raw = message.content[0].text.strip()
+        # Strip markdown code fences if present
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        result = json_lib.loads(raw.strip())
+    except Exception as e:
+        print("scan-label parse error:", e)
+        print("raw response:", message.content[0].text)
+        return jsonify({"error": "Could not parse AI response"}), 500
+    return jsonify(result)
 
 
 @app.route("/refresh", methods=["POST"])

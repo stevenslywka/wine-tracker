@@ -120,6 +120,9 @@
         <form method="POST" action="/refresh" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').textContent='Refreshing…';">
           <button type="submit" class="btn btn-wine btn-sm">&#8635; Refresh Emails</button>
         </form>
+        <form method="POST" action="/wine/enrich-drinking-windows" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').textContent='Enriching…';">
+          <button type="submit" class="btn btn-sm" style="background:#1a3a1a;border:1px solid #3a6a3a;color:#7ecb7e;">🍷 Fill Drinking Windows</button>
+        </form>
         {% endif %}
         {% if auth_enabled %}
         <a href="{{ url_for('logout') }}" class="btn btn-sm" style="background:#3d0f0f; border:1px solid #5a2d0c; color:#c9a96e;">Log out</a>
@@ -159,85 +162,97 @@
     </div>
 
     <!-- Search & Filter -->
-    <div class="card p-3 mb-4">
-      <form method="get" class="row g-2 align-items-end">
-        <!-- Row 1: search + status -->
-        <div class="col-md-6">
-          <input type="text" name="q" class="form-control" placeholder="Search wine name..." value="{{ search }}">
-        </div>
-        <div class="col-md-3">
-          <select name="status" class="form-select">
+    <div class="card p-3 mb-2">
+      <form method="get" id="filterForm">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <input type="text" name="q" class="form-control" placeholder="Search wine name..." value="{{ search }}" style="flex:2;min-width:180px;">
+          <select name="status" class="form-select" style="flex:1;min-width:130px;">
             <option value="">All statuses</option>
-            <option value="apt" {% if status_filter=='apt' %}selected{% endif %}>Apt</option>
-            <option value="house" {% if status_filter=='house' %}selected{% endif %}>House</option>
+            <option value="apt"         {% if status_filter=='apt'         %}selected{% endif %}>Apt</option>
+            <option value="house"       {% if status_filter=='house'       %}selected{% endif %}>House</option>
             <option value="not_shipped" {% if status_filter=='not_shipped' %}selected{% endif %}>Not Shipped</option>
-            <option value="drank" {% if status_filter=='drank' %}selected{% endif %}>Drank</option>
+            <option value="drank"       {% if status_filter=='drank'       %}selected{% endif %}>Drank</option>
           </select>
-        </div>
-        <!-- Row 2: dropdowns -->
-        <div class="col-md-3">
-          <select name="varietal" class="form-select">
-            <option value="">All varietals</option>
-            {% for v in varietals %}
-            <option value="{{ v }}" {% if varietal_filter==v %}selected{% endif %}>{{ v }}</option>
-            {% endfor %}
+          <select id="filterCategory" class="form-select" style="flex:1;min-width:130px;" onchange="updateFilterInput(this.value)">
+            <option value="">+ Add filter</option>
+            <option value="varietal">Varietal</option>
+            <option value="region">Region</option>
+            <option value="location">Location</option>
+            <option value="color_code">Sticker</option>
+            <option value="wine_type">Type</option>
+            <option value="size_ml">Size</option>
+            <option value="vintage">Vintage</option>
+            <option value="price">Price</option>
           </select>
+          <!-- Dynamic filter value inputs -->
+          <div id="fi-varietal" class="filter-input" style="display:none;flex:1;min-width:160px;">
+            <select name="varietal" class="form-select">
+              <option value="">All varietals</option>
+              {% for v in varietals %}<option value="{{ v }}" {% if varietal_filter==v %}selected{% endif %}>{{ v }}</option>{% endfor %}
+            </select>
+          </div>
+          <div id="fi-region" class="filter-input" style="display:none;flex:1;min-width:160px;">
+            <select name="region" class="form-select">
+              <option value="">All regions</option>
+              {% for r in regions %}<option value="{{ r }}" {% if region_filter==r %}selected{% endif %}>{{ r }}</option>{% endfor %}
+            </select>
+          </div>
+          <div id="fi-location" class="filter-input" style="display:none;flex:1;min-width:140px;">
+            <select name="location" class="form-select">
+              <option value="">All locations</option>
+              {% for l in locations %}<option value="{{ l }}" {% if location_filter==l %}selected{% endif %}>{{ l }}</option>{% endfor %}
+            </select>
+          </div>
+          <div id="fi-color_code" class="filter-input" style="display:none;flex:1;min-width:130px;">
+            <select name="color_code" class="form-select">
+              <option value="">All stickers</option>
+              <option value="Red"    {% if color_filter=='Red'    %}selected{% endif %}>🔴 Red</option>
+              <option value="Blue"   {% if color_filter=='Blue'   %}selected{% endif %}>🔵 Blue</option>
+              <option value="Orange" {% if color_filter=='Orange' %}selected{% endif %}>🟠 Orange</option>
+              <option value="Yellow" {% if color_filter=='Yellow' %}selected{% endif %}>🟡 Yellow</option>
+              <option value="Green"  {% if color_filter=='Green'  %}selected{% endif %}>🟢 Green</option>
+            </select>
+          </div>
+          <div id="fi-wine_type" class="filter-input" style="display:none;flex:1;min-width:140px;">
+            <select name="wine_type" class="form-select">
+              <option value="">All types</option>
+              <option value="Red"       {% if type_filter=='Red'       %}selected{% endif %}>Red</option>
+              <option value="White"     {% if type_filter=='White'     %}selected{% endif %}>White</option>
+              <option value="Rose"      {% if type_filter=='Rose'      %}selected{% endif %}>Rosé</option>
+              <option value="Sparkling" {% if type_filter=='Sparkling' %}selected{% endif %}>Sparkling</option>
+              <option value="Dessert"   {% if type_filter=='Dessert'   %}selected{% endif %}>Dessert</option>
+              <option value="Fortified" {% if type_filter=='Fortified' %}selected{% endif %}>Fortified</option>
+              <option value="Orange"    {% if type_filter=='Orange'    %}selected{% endif %}>Orange</option>
+            </select>
+          </div>
+          <div id="fi-size_ml" class="filter-input" style="display:none;flex:1;min-width:140px;">
+            <select name="size_ml" class="form-select">
+              <option value="">All sizes</option>
+              {% for s in sizes %}<option value="{{ s }}" {% if size_filter==s|string %}selected{% endif %}>{{ s }}ml</option>{% endfor %}
+            </select>
+          </div>
+          <div id="fi-vintage" class="filter-input" style="display:none;gap:4px;min-width:200px;">
+            <input type="number" name="vintage_min" class="form-control" placeholder="From" value="{{ vintage_min }}" min="1900" max="2099">
+            <input type="number" name="vintage_max" class="form-control" placeholder="To"   value="{{ vintage_max }}" min="1900" max="2099">
+          </div>
+          <div id="fi-price" class="filter-input" style="display:none;gap:4px;min-width:200px;">
+            <input type="number" name="price_min" class="form-control" placeholder="$ min" value="{{ price_min }}" min="0" step="1">
+            <input type="number" name="price_max" class="form-control" placeholder="$ max" value="{{ price_max }}" min="0" step="1">
+          </div>
+          <button type="submit" class="btn btn-wine">Filter</button>
+          {% if search or status_filter or varietal_filter or region_filter or location_filter or vintage_min or vintage_max or price_min or price_max or color_filter or type_filter or size_filter %}
+          <a href="/" class="btn btn-outline-secondary">Clear</a>
+          {% endif %}
         </div>
-        <div class="col-md-3">
-          <select name="region" class="form-select">
-            <option value="">All regions</option>
-            {% for r in regions %}
-            <option value="{{ r }}" {% if region_filter==r %}selected{% endif %}>{{ r }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-3">
-          <select name="location" class="form-select">
-            <option value="">All locations</option>
-            {% for l in locations %}
-            <option value="{{ l }}" {% if location_filter==l %}selected{% endif %}>{{ l }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-3">
-          <select name="color_code" class="form-select">
-            <option value="">All colors</option>
-            <option value="Red"    {% if color_filter=='Red'    %}selected{% endif %}>🔴 Red</option>
-            <option value="Blue"   {% if color_filter=='Blue'   %}selected{% endif %}>🔵 Blue</option>
-            <option value="Orange" {% if color_filter=='Orange' %}selected{% endif %}>🟠 Orange</option>
-            <option value="Yellow" {% if color_filter=='Yellow' %}selected{% endif %}>🟡 Yellow</option>
-            <option value="Green"  {% if color_filter=='Green'  %}selected{% endif %}>🟢 Green</option>
-          </select>
-        </div>
-        <!-- Row 3: vintage + price ranges -->
-        <div class="col-6 col-md-2">
-          <input type="number" name="vintage_min" class="form-control" placeholder="Vintage from" value="{{ vintage_min }}" min="1900" max="2099">
-        </div>
-        <div class="col-6 col-md-2">
-          <input type="number" name="vintage_max" class="form-control" placeholder="Vintage to" value="{{ vintage_max }}" min="1900" max="2099">
-        </div>
-        <div class="col-6 col-md-2">
-          <input type="number" name="price_min" class="form-control" placeholder="Price min $" value="{{ price_min }}" min="0" step="1">
-        </div>
-        <div class="col-6 col-md-2">
-          <input type="number" name="price_max" class="form-control" placeholder="Price max $" value="{{ price_max }}" min="0" step="1">
-        </div>
-        <div class="col-md-2">
-          <button type="submit" class="btn btn-wine w-100">Filter</button>
-        </div>
-        {% if search or status_filter or varietal_filter or region_filter or location_filter or vintage_min or vintage_max or price_min or price_max %}
-        <div class="col-md-2">
-          <a href="/" class="btn btn-outline-secondary w-100">Clear</a>
-        </div>
-        {% endif %}
       </form>
+      <div id="activeFilters" style="display:none;flex-wrap:wrap;gap:6px;margin-top:8px;"></div>
     </div>
 
     <!-- Wine Table -->
     <div class="card">
-      <div class="table-responsive">
+      <div class="table-responsive" id="tableScroll" style="overflow-y:auto;">
         <table class="table table-hover mb-0">
-          <thead>
+          <thead style="position:sticky;top:0;z-index:10;background:#1a0a00;">
             <tr>
               {% macro sort_link(field, label, cls='') %}
                 {% set new_order = 'asc' if (sort == field and order == 'desc') else 'desc' %}
@@ -246,7 +261,7 @@
                 </a></th>
               {% endmacro %}
               {{ sort_link('order_date', 'Date', 'col-date') }}
-              {{ sort_link('color_code', 'Color') }}
+              {{ sort_link('color_code', 'Sticker') }}
               {{ sort_link('wine_name', 'Wine', 'col-wine') }}
               {{ sort_link('vintage', 'Vintage') }}
               {{ sort_link('region', 'Region') }}
@@ -259,6 +274,7 @@
               {{ sort_link('retail_price', 'Retail Price') }}
               {{ sort_link('retailer', 'Source') }}
               {{ sort_link('my_rating', 'My Rating') }}
+              <th>Drinking Window</th>
               <th>Notes</th>
               <th>Status</th>
               <th></th>
@@ -280,13 +296,13 @@
                   {% if wine.image_url %}
                   <img src="{{ wine.image_url }}" class="wine-thumb" data-src="{{ wine.image_url }}" data-name="{{ wine.wine_name or '' }}" style="width:36px;height:48px;object-fit:cover;border-radius:3px;flex-shrink:0;cursor:zoom-in;" alt="" onclick="event.stopPropagation();openImagePopup(this)">
                   {% endif %}
-                  <a href="https://www.vivino.com/search/wines?q={{ wine.wine_name | replace(' ', '+') }}{% if wine.vintage %}+{{ wine.vintage }}{% endif %}" target="_blank" onclick="event.stopPropagation()" style="color:inherit;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'"><strong>{{ wine.wine_name or '—' }}</strong></a>
+                  <a href="https://www.wine-searcher.com/find/{{ wine.wine_name | replace(' ', '+') }}{% if wine.vintage %}+{{ wine.vintage }}{% endif %}#t2" target="_blank" onclick="event.stopPropagation()" style="color:inherit;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'"><strong>{{ wine.wine_name or '—' }}</strong></a>
                 </div>
               </td>
               <td>{{ wine.vintage or '—' }}</td>
-              <td>{{ wine.region or '—' }}</td>
-              <td>{{ wine.location or '—' }}</td>
-              <td>{{ wine.varietal or '—' }}</td>
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="region" data-value="{{ wine.region or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.region or '—' }}</span></td>
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="location" data-value="{{ wine.location or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.location or '—' }}</span></td>
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="varietal" data-value="{{ wine.varietal or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.varietal or '—' }}</span></td>
               <td class="type-cell" data-wine-id="{{ wine.id }}" data-type="{{ wine.wine_type or '' }}" onclick="event.stopPropagation()" title="Click to change type" style="cursor:pointer;white-space:nowrap;">
                 <span class="type-badge type-{{ wine.wine_type or 'none' }}">{{ wine.wine_type or '—' }}</span>
               </td>
@@ -302,6 +318,7 @@
               <td class="rating-cell" data-wine-id="{{ wine.id }}" data-rating="{{ wine.my_rating or '' }}" onclick="event.stopPropagation()" title="Click to rate">
                 <span class="rating-display">{{ "%.1f"|format(wine.my_rating) if wine.my_rating is not none else '—' }}</span>
               </td>
+              <td class="drinking-window-cell editable-cell" data-wine-id="{{ wine.id }}" data-field="drinking_window" data-value="{{ wine.drinking_window or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;white-space:nowrap;"><span class="editable-display">{{ wine.drinking_window or '—' }}</span></td>
               <td class="notes-cell" data-wine-id="{{ wine.id }}" data-wine-name="{{ wine.wine_name or '' }}" data-notes="{{ wine.notes | e if wine.notes else '' }}" onclick="event.stopPropagation()" title="{{ wine.notes or 'Click to add notes' }}" style="cursor:pointer;max-width:160px;">
                 <span class="notes-preview">{% if wine.notes %}<span style="color:#c9a96e;">&#x1F4DD;</span> {{ wine.notes[:40] }}{% if wine.notes|length > 40 %}…{% endif %}{% else %}<span style="color:#555;">—</span>{% endif %}</span>
               </td>
@@ -331,8 +348,7 @@
     <div class="mt-2 text-muted small">{{ wines|length }} result(s)</div>
   </div>
 
-  <div style="height:80px;"></div>
-  <footer style="text-align:center;padding:16px;color:#5a3a1a;font-size:0.8rem;">
+  <footer style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:8px;color:#5a3a1a;font-size:0.8rem;background:#1a0a00;z-index:100;">
     Steven's Wine Tracker
   </footer>
 
@@ -448,9 +464,15 @@
               <input type="text" name="wine_name" class="form-control" placeholder="e.g. 2019 Opus One Napa Valley Cabernet Sauvignon" required>
             </div>
             <div>
-              <label class="form-label fw-bold" style="color:#c9a96e;">Label Photo <span style="color:#888; font-weight:normal;">(optional — take a pic or upload)</span></label>
-              <input type="file" name="image" accept="image/*" capture="environment" class="form-control" id="imageUploadInput" onchange="previewImage(this)">
+              <label class="form-label fw-bold" style="color:#c9a96e;">Label Photo <span style="color:#888; font-weight:normal;">(optional — upload to auto-fill details)</span></label>
+              <input type="file" name="image" accept="image/*" capture="environment" class="form-control" id="imageUploadInput" onchange="previewImage(this); scanLabel(this);">
               <img id="imagePreview" src="" alt="" style="display:none;margin-top:8px;max-height:120px;border-radius:4px;object-fit:contain;">
+              <div id="scanStatus" style="display:none;margin-top:6px;font-size:0.85rem;color:#c9a96e;"></div>
+              <input type="hidden" name="scan_varietal" id="scanVarietal">
+              <input type="hidden" name="scan_region" id="scanRegion">
+              <input type="hidden" name="scan_wine_type" id="scanWineType">
+              <input type="hidden" name="scan_location" id="scanLocation">
+              <input type="hidden" name="scan_drinking_window" id="scanDrinkingWindow">
             </div>
             <div class="row g-2">
               <div class="col">
@@ -474,6 +496,17 @@
               <div class="col">
                 <label class="form-label fw-bold" style="color:#c9a96e;">Date <span style="color:#888; font-weight:normal;">(optional)</span></label>
                 <input type="date" name="order_date" class="form-control">
+              </div>
+              <div class="col">
+                <label class="form-label fw-bold" style="color:#c9a96e;">Sticker <span style="color:#888; font-weight:normal;">(optional)</span></label>
+                <select name="color_code" class="form-select">
+                  <option value="">None</option>
+                  <option value="Red">🔴 Red</option>
+                  <option value="Blue">🔵 Blue</option>
+                  <option value="Orange">🟠 Orange</option>
+                  <option value="Yellow">🟡 Yellow</option>
+                  <option value="Green">🟢 Green</option>
+                </select>
               </div>
             </div>
             <div>
@@ -871,6 +904,94 @@
       }
     }
 
+    function scanLabel(input) {
+      if (!input.files || !input.files[0]) return;
+      const status = document.getElementById('scanStatus');
+      status.style.display = 'block';
+      status.textContent = 'Scanning label…';
+      const formData = new FormData();
+      formData.append('image', input.files[0]);
+      fetch('/wine/scan-label', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) { status.textContent = 'Scan failed: ' + data.error; return; }
+          const modal = document.getElementById('addWineModal');
+          if (data.wine_name) modal.querySelector('[name=wine_name]').value = data.wine_name;
+          if (data.vintage)   modal.querySelector('[name=vintage]').value = data.vintage;
+          if (data.varietal)  document.getElementById('scanVarietal').value = data.varietal;
+          if (data.region)    document.getElementById('scanRegion').value = data.region;
+          if (data.wine_type) document.getElementById('scanWineType').value = data.wine_type;
+          if (data.location)         document.getElementById('scanLocation').value = data.location;
+          if (data.drinking_window)  document.getElementById('scanDrinkingWindow').value = data.drinking_window;
+          status.textContent = 'Label scanned! Review the fields below and adjust if needed.';
+          status.style.color = '#7ecb7e';
+        })
+        .catch(() => { status.textContent = 'Scan failed — fill in manually.'; });
+    }
+
+    // Drinking window color coding
+    (function() {
+      const currentYear = new Date().getFullYear();
+      document.querySelectorAll('.drinking-window-cell').forEach(cell => {
+        const text = cell.textContent.trim();
+        if (text === '—') return;
+        const match = text.match(/(\d{4})\s*[-–]\s*(\d{4})/);
+        if (!match) return;
+        const endYear = parseInt(match[2]);
+        const yearsLeft = endYear - currentYear;
+        if (yearsLeft < 0)       cell.style.color = '#666';       // past window
+        else if (yearsLeft <= 2) cell.style.color = '#7ecb7e';    // green  - drink soon
+        else if (yearsLeft <= 5) cell.style.color = '#e8a94a';    // orange - getting there
+        else                     cell.style.color = '#c04040';    // red    - hold
+      });
+    })();
+
+    // Active filter chips
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const filterMap = {
+        varietal: 'Varietal', region: 'Region', location: 'Location',
+        color_code: 'Sticker', wine_type: 'Type', size_ml: 'Size',
+        vintage_min: 'Vintage from', vintage_max: 'Vintage to',
+        price_min: 'Price min $', price_max: 'Price max $'
+      };
+      const container = document.getElementById('activeFilters');
+      const chips = [];
+      for (const [key, label] of Object.entries(filterMap)) {
+        const val = params.get(key);
+        if (val) {
+          const url = new URL(window.location.href);
+          url.searchParams.delete(key);
+          chips.push(`<span style="background:#3d1a00;border:1px solid #c9a96e;border-radius:12px;padding:2px 10px;font-size:0.8rem;color:#f5e6d3;display:inline-flex;align-items:center;gap:6px;">${label}: <strong>${val}</strong><a href="${url}" style="color:#c9a96e;text-decoration:none;font-size:1rem;line-height:1;">&times;</a></span>`);
+        }
+      }
+      if (chips.length) {
+        container.innerHTML = chips.join('');
+        container.style.display = 'flex';
+      }
+    })();
+
+    // Filter category picker
+    function updateFilterInput(val) {
+      document.querySelectorAll('.filter-input').forEach(el => el.style.display = 'none');
+      if (val) {
+        const el = document.getElementById('fi-' + val);
+        if (el) el.style.display = 'flex';
+      }
+    }
+    updateFilterInput(document.getElementById('filterCategory').value);
+
+    // Dynamic table height
+    function resizeTable() {
+      const table = document.getElementById('tableScroll');
+      if (!table) return;
+      const top = table.getBoundingClientRect().top;
+      const footerHeight = 34;
+      table.style.height = (window.innerHeight - top - footerHeight - 8) + 'px';
+    }
+    resizeTable();
+    window.addEventListener('resize', resizeTable);
+
     // Delete buttons
     document.querySelectorAll('.delete-btn').forEach(btn => {
       btn.addEventListener('click', e => {
@@ -880,6 +1001,58 @@
           .then(() => btn.closest('tr').remove());
       });
     });
+
+    // Generic inline editing for region, location, varietal, drinking_window
+    document.querySelectorAll('.editable-cell').forEach(cell => {
+      cell.addEventListener('click', () => {
+        if (cell.querySelector('input')) return;
+        const display = cell.querySelector('.editable-display');
+        const current = cell.dataset.value;
+        const field = cell.dataset.field;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'rating-input';
+        input.style.width = '130px';
+        input.value = current;
+        display.replaceWith(input);
+        input.focus(); input.select();
+        const save = () => {
+          const val = input.value.trim();
+          fetch(`/wine/${cell.dataset.wineId}/${field}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `${field}=${encodeURIComponent(val)}`
+          });
+          cell.dataset.value = val;
+          const span = document.createElement('span');
+          span.className = 'editable-display';
+          span.textContent = val || '—';
+          input.replaceWith(span);
+          if (field === 'drinking_window') applyDrinkingWindowColor(cell, val);
+        };
+        input.addEventListener('blur', save);
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+          if (e.key === 'Escape') {
+            input.removeEventListener('blur', save);
+            const span = document.createElement('span');
+            span.className = 'editable-display';
+            span.textContent = current || '—';
+            input.replaceWith(span);
+          }
+        });
+      });
+    });
+
+    function applyDrinkingWindowColor(cell, text) {
+      const match = text && text.match(/(\d{4})\s*[-–]\s*(\d{4})/);
+      if (!match) { cell.style.color = '#f5e6d3'; return; }
+      const yearsLeft = parseInt(match[2]) - new Date().getFullYear();
+      if (yearsLeft < 0)       cell.style.color = '#666';
+      else if (yearsLeft <= 2) cell.style.color = '#7ecb7e';
+      else if (yearsLeft <= 5) cell.style.color = '#e8a94a';
+      else                     cell.style.color = '#c04040';
+    }
 
     // Inline source editing
     document.querySelectorAll('.source-cell').forEach(cell => {
