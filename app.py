@@ -584,7 +584,10 @@ def lookup_drinking_window(wine_name, vintage, varietal, region):
             raw = raw.split("```")[1]
             if raw.startswith("json"):
                 raw = raw[4:]
-        return json_lib.loads(raw.strip()).get("window")
+        window = json_lib.loads(raw.strip()).get("window") or None
+        if window:
+            window = window.replace("Now", str(date.today().year))
+        return window
     except Exception:
         return None
 
@@ -626,11 +629,13 @@ def _run_enrich_drinking_windows():
             results = json_lib.loads(raw.strip())
             conn = get_db()
             cur = conn.cursor()
+            current_year = str(date.today().year)
             for r in results:
                 idx = r.get("index", 0) - 1
                 if 0 <= idx < len(batch):
+                    window = (r.get("window") or "").replace("Now", current_year) or None
                     cur.execute(f"UPDATE wines SET drinking_window = {p} WHERE id = {p}",
-                                (r.get("window"), batch[idx]["id"]))
+                                (window, batch[idx]["id"]))
             conn.commit()
             conn.close()
         except Exception as e:
