@@ -143,9 +143,7 @@
       .btn-wine, .btn { font-size: 0.8rem; padding: 4px 10px; }
       #tableScroll { font-size: 0.78rem; }
       .col-wine { min-width: 160px; }
-      .col-date { min-width: 80px; }
-      /* Hide lower-priority columns on mobile */
-      th:nth-child(n+7), td:nth-child(n+7) { display: none; }
+      .col-date { min-width: 70px; }
     }
   </style>
 </head>
@@ -310,7 +308,7 @@
           <tbody>
             {% for wine in wines %}
             <tr>
-              <td>{{ (wine.order_date[5:7] + '/' + wine.order_date[8:10] + '/' + wine.order_date[:4]) if wine.order_date else '—' }}</td>
+              <td>{{ (wine.order_date[5:7] + '/' + wine.order_date[8:10] + '/' + wine.order_date[2:4]) if wine.order_date else '—' }}</td>
               <td class="text-center" style="vertical-align:middle;">
                 <span class="color-dot color-dot-{{ wine.color_code or '' }}"
                       data-wine-id="{{ wine.id }}"
@@ -480,75 +478,123 @@
 
   <!-- Add Wine Modal -->
   <div class="modal fade" id="addWineModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
       <div class="modal-content" style="background:#2a1200; border:1px solid #5a2d0c; color:#f5e6d3;">
         <div class="modal-header" style="border-bottom:1px solid #5a2d0c;">
-          <h5 class="modal-title" style="color:#c9a96e;">Add Wine Manually</h5>
+          <h5 class="modal-title" style="color:#c9a96e;">Add Wine</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
         </div>
-        <form method="POST" action="/wine/add" enctype="multipart/form-data" onsubmit="this.querySelector('[type=submit]').disabled=true; this.querySelector('[type=submit]').textContent='Adding…';">
+
+        <!-- Step 1: choose method -->
+        <div id="addMethodPicker" class="modal-body">
+          <p style="color:#aaa;font-size:0.9rem;margin-bottom:16px;">How would you like to add a wine?</p>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <button class="btn btn-wine" onclick="showAddPane('manual')">✏️ &nbsp; Manual — fill in details yourself</button>
+            <button class="btn" style="background:#1a2a3a;border:1px solid #3a6a9a;color:#c0d8f5;" onclick="showAddPane('label')">📷 &nbsp; Scan Label — take a photo of the bottle label</button>
+            <button class="btn" style="background:#1a3a1a;border:1px solid #3a6a3a;color:#c0f5c0;" onclick="showAddPane('receipt')">🧾 &nbsp; Scan Receipt — take a photo of a receipt</button>
+          </div>
+        </div>
+
+        <!-- Step 2a: Manual -->
+        <div id="addPane-manual" style="display:none;">
+          <form method="POST" action="/wine/add" enctype="multipart/form-data" onsubmit="this.querySelector('[type=submit]').disabled=true; this.querySelector('[type=submit]').textContent='Adding…';">
+            <div class="modal-body d-flex flex-column gap-3">
+              <button type="button" class="btn btn-sm btn-secondary align-self-start" onclick="showAddPane(null)">← Back</button>
+              <div>
+                <label class="form-label fw-bold" style="color:#c9a96e;">Wine Name <span style="color:#e05050;">*</span></label>
+                <input type="text" name="wine_name" class="form-control" placeholder="e.g. 2019 Opus One Napa Valley Cabernet Sauvignon" required>
+              </div>
+              <div>
+                <label class="form-label fw-bold" style="color:#c9a96e;">Label Photo <span style="color:#888;font-weight:normal;">(optional)</span></label>
+                <input type="file" name="image" accept="image/*" class="form-control" id="manualImageInput" onchange="previewImage(this,'manualPreview'); scanLabel(this);">
+                <img id="manualPreview" src="" alt="" style="display:none;margin-top:8px;max-height:120px;border-radius:4px;object-fit:contain;">
+                <div id="scanStatus" style="display:none;margin-top:6px;font-size:0.85rem;color:#c9a96e;"></div>
+                <input type="hidden" name="scan_varietal" id="scanVarietal">
+                <input type="hidden" name="scan_region" id="scanRegion">
+                <input type="hidden" name="scan_wine_type" id="scanWineType">
+                <input type="hidden" name="scan_location" id="scanLocation">
+                <input type="hidden" name="scan_drinking_window" id="scanDrinkingWindow">
+              </div>
+              <div class="row g-2">
+                <div class="col"><label class="form-label fw-bold" style="color:#c9a96e;">Vintage</label><input type="number" name="vintage" class="form-control" placeholder="e.g. 2019" min="1900" max="2100"></div>
+                <div class="col"><label class="form-label fw-bold" style="color:#c9a96e;">Price Per Bottle ($)</label><input type="number" name="unit_price" class="form-control" placeholder="e.g. 49.99" min="0" step="0.01"></div>
+                <div class="col"><label class="form-label fw-bold" style="color:#c9a96e;">Quantity</label><input type="number" name="quantity" class="form-control" value="1" min="1"></div>
+              </div>
+              <div class="row g-2">
+                <div class="col"><label class="form-label fw-bold" style="color:#c9a96e;">Source <span style="color:#888;font-weight:normal;">(optional)</span></label><input type="text" name="retailer" class="form-control" placeholder="e.g. Vivino, Wine.com"></div>
+                <div class="col"><label class="form-label fw-bold" style="color:#c9a96e;">Date <span style="color:#888;font-weight:normal;">(optional)</span></label><input type="date" name="order_date" class="form-control"></div>
+                <div class="col"><label class="form-label fw-bold" style="color:#c9a96e;">Sticker <span style="color:#888;font-weight:normal;">(optional)</span></label>
+                  <select name="color_code" class="form-select"><option value="">None</option><option value="Red">🔴 Red</option><option value="Blue">🔵 Blue</option><option value="Orange">🟠 Orange</option><option value="Yellow">🟡 Yellow</option><option value="Green">🟢 Green</option></select>
+                </div>
+              </div>
+              <div><label class="form-label fw-bold" style="color:#c9a96e;">Notes <span style="color:#888;font-weight:normal;">(optional)</span></label><textarea name="notes" class="form-control" rows="2" placeholder="Tasting notes, occasion, etc."></textarea></div>
+              <div style="font-size:0.82rem;color:#aaa;">Region, varietal, type, and drinking window will be filled in automatically.</div>
+            </div>
+            <div class="modal-footer" style="border-top:1px solid #5a2d0c;">
+              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-wine btn-sm">Add Wine</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Step 2b: Label scan -->
+        <div id="addPane-label" style="display:none;">
           <div class="modal-body d-flex flex-column gap-3">
-            <div>
-              <label class="form-label fw-bold" style="color:#c9a96e;">Wine Name <span style="color:#e05050;">*</span></label>
-              <input type="text" name="wine_name" class="form-control" placeholder="e.g. 2019 Opus One Napa Valley Cabernet Sauvignon" required>
+            <button type="button" class="btn btn-sm btn-secondary align-self-start" onclick="showAddPane(null)">← Back</button>
+            <div style="text-align:center;">
+              <p style="color:#aaa;font-size:0.9rem;">Take or upload a photo of the wine label. Claude will read it and fill in the details.</p>
+              <label class="btn btn-wine" style="cursor:pointer;">📷 Take / Upload Photo<input type="file" id="labelScanInput" accept="image/*" capture="environment" style="display:none;" onchange="handleLabelScan(this)"></label>
             </div>
-            <div>
-              <label class="form-label fw-bold" style="color:#c9a96e;">Label Photo <span style="color:#888; font-weight:normal;">(optional — upload to auto-fill details)</span></label>
-              <input type="file" name="image" accept="image/*" capture="environment" class="form-control" id="imageUploadInput" onchange="previewImage(this); scanLabel(this);">
-              <img id="imagePreview" src="" alt="" style="display:none;margin-top:8px;max-height:120px;border-radius:4px;object-fit:contain;">
-              <div id="scanStatus" style="display:none;margin-top:6px;font-size:0.85rem;color:#c9a96e;"></div>
-              <input type="hidden" name="scan_varietal" id="scanVarietal">
-              <input type="hidden" name="scan_region" id="scanRegion">
-              <input type="hidden" name="scan_wine_type" id="scanWineType">
-              <input type="hidden" name="scan_location" id="scanLocation">
-              <input type="hidden" name="scan_drinking_window" id="scanDrinkingWindow">
-            </div>
-            <div class="row g-2">
-              <div class="col">
-                <label class="form-label fw-bold" style="color:#c9a96e;">Vintage</label>
-                <input type="number" name="vintage" class="form-control" placeholder="e.g. 2019" min="1900" max="2100">
+            <img id="labelScanPreview" src="" alt="" style="display:none;max-height:200px;border-radius:4px;object-fit:contain;margin:0 auto;">
+            <div id="labelScanStatus" style="display:none;text-align:center;font-size:0.9rem;color:#c9a96e;"></div>
+            <!-- Filled by scan, editable before submitting -->
+            <form id="labelScanForm" method="POST" action="/wine/add" enctype="multipart/form-data" style="display:none;" onsubmit="this.querySelector('[type=submit]').disabled=true; this.querySelector('[type=submit]').textContent='Adding…';">
+              <input type="hidden" name="scan_varietal" id="lsVarietal">
+              <input type="hidden" name="scan_region" id="lsRegion">
+              <input type="hidden" name="scan_wine_type" id="lsWineType">
+              <input type="hidden" name="scan_location" id="lsLocation">
+              <input type="hidden" name="scan_drinking_window" id="lsDrinkingWindow">
+              <div class="d-flex flex-column gap-2 mt-2">
+                <div class="row g-2">
+                  <div class="col-8"><label class="form-label fw-bold" style="color:#c9a96e;">Wine Name <span style="color:#e05050;">*</span></label><input type="text" name="wine_name" id="lsWineName" class="form-control" required></div>
+                  <div class="col-4"><label class="form-label fw-bold" style="color:#c9a96e;">Vintage</label><input type="number" name="vintage" id="lsVintage" class="form-control" min="1900" max="2100"></div>
+                </div>
+                <div class="row g-2">
+                  <div class="col"><label class="form-label fw-bold" style="color:#c9a96e;">Price ($)</label><input type="number" name="unit_price" class="form-control" placeholder="e.g. 49.99" min="0" step="0.01"></div>
+                  <div class="col"><label class="form-label fw-bold" style="color:#c9a96e;">Quantity</label><input type="number" name="quantity" class="form-control" value="1" min="1"></div>
+                  <div class="col"><label class="form-label fw-bold" style="color:#c9a96e;">Sticker</label>
+                    <select name="color_code" class="form-select"><option value="">None</option><option value="Red">🔴 Red</option><option value="Blue">🔵 Blue</option><option value="Orange">🟠 Orange</option><option value="Yellow">🟡 Yellow</option><option value="Green">🟢 Green</option></select>
+                  </div>
+                </div>
+                <div class="row g-2">
+                  <div class="col"><label class="form-label fw-bold" style="color:#c9a96e;">Source</label><input type="text" name="retailer" class="form-control" placeholder="e.g. Wine.com"></div>
+                  <div class="col"><label class="form-label fw-bold" style="color:#c9a96e;">Date</label><input type="date" name="order_date" class="form-control"></div>
+                </div>
+                <!-- Hidden file field re-attached by JS -->
+                <input type="file" name="image" id="lsImageProxy" style="display:none;">
               </div>
-              <div class="col">
-                <label class="form-label fw-bold" style="color:#c9a96e;">Price Per Bottle ($)</label>
-                <input type="number" name="unit_price" class="form-control" placeholder="e.g. 49.99" min="0" step="0.01">
+              <div class="modal-footer" style="border-top:1px solid #5a2d0c;margin-top:12px;padding:12px 0 0;">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-wine btn-sm">Add Wine</button>
               </div>
-              <div class="col">
-                <label class="form-label fw-bold" style="color:#c9a96e;">Quantity</label>
-                <input type="number" name="quantity" class="form-control" value="1" min="1">
-              </div>
-            </div>
-            <div class="row g-2">
-              <div class="col">
-                <label class="form-label fw-bold" style="color:#c9a96e;">Source <span style="color:#888; font-weight:normal;">(optional)</span></label>
-                <input type="text" name="retailer" class="form-control" placeholder="e.g. Vivino, Wine.com">
-              </div>
-              <div class="col">
-                <label class="form-label fw-bold" style="color:#c9a96e;">Date <span style="color:#888; font-weight:normal;">(optional)</span></label>
-                <input type="date" name="order_date" class="form-control">
-              </div>
-              <div class="col">
-                <label class="form-label fw-bold" style="color:#c9a96e;">Sticker <span style="color:#888; font-weight:normal;">(optional)</span></label>
-                <select name="color_code" class="form-select">
-                  <option value="">None</option>
-                  <option value="Red">🔴 Red</option>
-                  <option value="Blue">🔵 Blue</option>
-                  <option value="Orange">🟠 Orange</option>
-                  <option value="Yellow">🟡 Yellow</option>
-                  <option value="Green">🟢 Green</option>
-                </select>
-              </div>
-            </div>
-            <div>
-              <label class="form-label fw-bold" style="color:#c9a96e;">Notes <span style="color:#888; font-weight:normal;">(optional)</span></label>
-              <textarea name="notes" class="form-control" rows="2" placeholder="Tasting notes, occasion, etc."></textarea>
-            </div>
-            <div style="font-size:0.82rem; color:#aaa;">Region, varietal, type, and image will be filled in automatically based on the wine name.</div>
+            </form>
           </div>
-          <div class="modal-footer" style="border-top:1px solid #5a2d0c;">
-            <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
-            <button type="submit" class="btn btn-wine btn-sm">Add Wine</button>
+        </div>
+
+        <!-- Step 2c: Receipt scan -->
+        <div id="addPane-receipt" style="display:none;">
+          <div class="modal-body d-flex flex-column gap-3">
+            <button type="button" class="btn btn-sm btn-secondary align-self-start" onclick="showAddPane(null)">← Back</button>
+            <div style="text-align:center;">
+              <p style="color:#aaa;font-size:0.9rem;">Take or upload a photo of a receipt. Claude will extract wines, prices, and dates.</p>
+              <label class="btn" style="background:#1a3a1a;border:1px solid #3a6a3a;color:#c0f5c0;cursor:pointer;">🧾 Take / Upload Photo<input type="file" id="receiptScanInput" accept="image/*" capture="environment" style="display:none;" onchange="handleReceiptScan(this)"></label>
+            </div>
+            <img id="receiptScanPreview" src="" alt="" style="display:none;max-height:200px;border-radius:4px;object-fit:contain;margin:0 auto;">
+            <div id="receiptScanStatus" style="display:none;text-align:center;font-size:0.9rem;color:#c9a96e;"></div>
+            <div id="receiptResults" style="display:none;"></div>
           </div>
-        </form>
+        </div>
+
       </div>
     </div>
   </div>
@@ -923,14 +969,97 @@
 
 
     // Image upload preview
-    function previewImage(input) {
-      const preview = document.getElementById('imagePreview');
+    // Reset modal to method picker when opened
+    document.getElementById('addWineModal').addEventListener('show.bs.modal', () => showAddPane(null));
+
+    function showAddPane(pane) {
+      document.getElementById('addMethodPicker').style.display = pane ? 'none' : 'block';
+      ['manual','label','receipt'].forEach(p => {
+        document.getElementById('addPane-' + p).style.display = (pane === p) ? 'block' : 'none';
+      });
+    }
+
+    function previewImage(input, previewId) {
+      const preview = document.getElementById(previewId || 'manualPreview');
       if (input.files && input.files[0]) {
         preview.src = URL.createObjectURL(input.files[0]);
         preview.style.display = 'block';
       } else {
         preview.style.display = 'none';
       }
+    }
+
+    function handleLabelScan(input) {
+      if (!input.files || !input.files[0]) return;
+      const preview = document.getElementById('labelScanPreview');
+      preview.src = URL.createObjectURL(input.files[0]);
+      preview.style.display = 'block';
+      const status = document.getElementById('labelScanStatus');
+      status.style.display = 'block';
+      status.style.color = '#c9a96e';
+      status.textContent = 'Scanning label…';
+      const formData = new FormData();
+      formData.append('image', input.files[0]);
+      fetch('/wine/scan-label', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+          if (data.error) { status.textContent = 'Scan failed: ' + data.error; return; }
+          if (data.wine_name) document.getElementById('lsWineName').value = data.wine_name;
+          if (data.vintage)   document.getElementById('lsVintage').value = data.vintage;
+          if (data.varietal)  document.getElementById('lsVarietal').value = data.varietal;
+          if (data.region)    document.getElementById('lsRegion').value = data.region;
+          if (data.wine_type) document.getElementById('lsWineType').value = data.wine_type;
+          if (data.location)  document.getElementById('lsLocation').value = data.location;
+          if (data.drinking_window) document.getElementById('lsDrinkingWindow').value = data.drinking_window;
+          // Transfer the file to the hidden proxy input so it gets submitted with the form
+          const dt = new DataTransfer();
+          dt.items.add(input.files[0]);
+          document.getElementById('lsImageProxy').files = dt.files;
+          status.textContent = 'Label scanned! Review and adjust below.';
+          status.style.color = '#7ecb7e';
+          document.getElementById('labelScanForm').style.display = 'block';
+        })
+        .catch(() => { status.textContent = 'Scan failed — try again.'; });
+    }
+
+    function handleReceiptScan(input) {
+      if (!input.files || !input.files[0]) return;
+      const preview = document.getElementById('receiptScanPreview');
+      preview.src = URL.createObjectURL(input.files[0]);
+      preview.style.display = 'block';
+      const status = document.getElementById('receiptScanStatus');
+      status.style.display = 'block';
+      status.style.color = '#c9a96e';
+      status.textContent = 'Reading receipt…';
+      const formData = new FormData();
+      formData.append('image', input.files[0]);
+      fetch('/wine/scan-receipt', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(wines => {
+          if (wines.error) { status.textContent = 'Scan failed: ' + wines.error; return; }
+          if (!wines.length) { status.textContent = 'No wines found on receipt.'; return; }
+          status.textContent = `Found ${wines.length} wine(s). Review and add below.`;
+          status.style.color = '#7ecb7e';
+          const container = document.getElementById('receiptResults');
+          container.style.display = 'block';
+          container.innerHTML = wines.map((w, i) => `
+            <form method="POST" action="/wine/add" style="background:#1a0a00;border:1px solid #3a1a00;border-radius:6px;padding:10px;margin-bottom:8px;">
+              <div style="font-weight:bold;color:#c9a96e;margin-bottom:6px;">${w.wine_name || 'Unknown Wine'}</div>
+              <input type="hidden" name="wine_name" value="${(w.wine_name||'').replace(/"/g,'&quot;')}">
+              <div class="row g-2">
+                <div class="col"><label style="font-size:0.8rem;color:#aaa;">Vintage</label><input type="number" name="vintage" class="form-control form-control-sm" value="${w.vintage||''}"></div>
+                <div class="col"><label style="font-size:0.8rem;color:#aaa;">Price ($)</label><input type="number" name="unit_price" class="form-control form-control-sm" value="${w.unit_price||''}" step="0.01"></div>
+                <div class="col"><label style="font-size:0.8rem;color:#aaa;">Qty</label><input type="number" name="quantity" class="form-control form-control-sm" value="${w.quantity||1}" min="1"></div>
+              </div>
+              <div class="row g-2 mt-1">
+                <div class="col"><label style="font-size:0.8rem;color:#aaa;">Source</label><input type="text" name="retailer" class="form-control form-control-sm" value="${w.retailer||''}"></div>
+                <div class="col"><label style="font-size:0.8rem;color:#aaa;">Date</label><input type="date" name="order_date" class="form-control form-control-sm" value="${w.order_date||''}"></div>
+              </div>
+              <button type="submit" class="btn btn-wine btn-sm mt-2 w-100" onsubmit="this.disabled=true;">Add This Wine</button>
+            </form>
+          `).join('');
+        })
+        .catch(() => { status.textContent = 'Scan failed — try again.'; });
     }
 
     function scanLabel(input) {

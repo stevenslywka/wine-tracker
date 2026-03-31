@@ -592,6 +592,51 @@ def lookup_drinking_window(wine_name, vintage, varietal, region):
         return None
 
 
+def lookup_receipt(image_data, media_type):
+    """Ask Claude to extract wine info from a receipt image. Returns a list of dicts."""
+    import anthropic, base64, json as json_lib
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return None
+    client = anthropic.Anthropic(api_key=api_key)
+    message = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=1024,
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_data}},
+                {"type": "text", "text": "Look at this receipt and extract all wine purchases. For each wine, return a JSON array of objects with these keys (use null if unknown):\n[{\"wine_name\": \"full name\", \"vintage\": 2019, \"unit_price\": 29.99, \"quantity\": 1, \"retailer\": \"store name\", \"order_date\": \"YYYY-MM-DD\"}]\nReturn only the JSON array, no other text."}
+            ]
+        }]
+    )
+    try:
+        raw = message.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        return json_lib.loads(raw.strip())
+    except Exception as e:
+        print("receipt parse error:", e)
+        return None
+
+
+@app.route("/wine/scan-receipt", methods=["POST"])
+@edit_required
+def scan_receipt():
+    import base64
+    uploaded = request.files.get("image")
+    if not uploaded or not uploaded.filename:
+        return jsonify({"error": "No image provided"}), 400
+    image_data = base64.standard_b64encode(uploaded.read()).decode("utf-8")
+    media_type = uploaded.content_type or "image/jpeg"
+    results = lookup_receipt(image_data, media_type)
+    if results is None:
+        return jsonify({"error": "Could not parse receipt"}), 500
+    return jsonify(results)
+
+
 def _run_enrich_drinking_windows():
     """Background task: fill drinking_window for all wines that are missing it."""
     import anthropic, json as json_lib
