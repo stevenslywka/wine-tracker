@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Analytics — Steven's Wine Tracker</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    body { background: #1a0a00; color: #f5e6d3; }
+    .navbar { background: #3d0f0f !important; }
+    .navbar-brand { color: #c9a96e !important; font-size: 1.4rem; font-weight: bold; }
+    .card { background: #2a1200; border: 1px solid #5a2d0c; }
+    a { color: #c9a96e; } a:hover { color: #e8c98a; }
+    .btn-wine { background: #8b1a1a; border-color: #8b1a1a; color: #f5e6d3; }
+    .chart-card { background: #2a1200; border: 1px solid #5a2d0c; border-radius: 8px; padding: 20px; }
+    .chart-title { color: #c9a96e; font-size: 1rem; font-weight: bold; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg mb-4">
+    <div class="container d-flex justify-content-between align-items-center">
+      <span class="navbar-brand">🍷 Steven's Wine Tracker</span>
+      <div class="d-flex gap-2">
+        <a href="/" class="btn btn-wine btn-sm">← Collection</a>
+        {% if auth_enabled %}
+        <a href="{{ url_for('logout') }}" class="btn btn-sm" style="background:#3d0f0f;border:1px solid #5a2d0c;color:#c9a96e;">Log out</a>
+        {% endif %}
+      </div>
+    </div>
+  </nav>
+
+  <div class="container-fluid px-4" style="max-width:1400px;">
+    <h4 style="color:#c9a96e;margin-bottom:20px;">Collection Analytics</h4>
+
+    <div class="row g-4">
+
+      <!-- By Type -->
+      <div class="col-md-6">
+        <div class="chart-card">
+          <div class="chart-title">Bottles by Type</div>
+          <canvas id="typeChart" height="220"></canvas>
+        </div>
+      </div>
+
+      <!-- By Location -->
+      <div class="col-md-6">
+        <div class="chart-card">
+          <div class="chart-title">Bottles by Country</div>
+          <canvas id="locationChart" height="220"></canvas>
+        </div>
+      </div>
+
+      <!-- Spending by Year -->
+      <div class="col-md-6">
+        <div class="chart-card">
+          <div class="chart-title">Spending by Year ($)</div>
+          <canvas id="yearChart" height="220"></canvas>
+        </div>
+      </div>
+
+      <!-- Top Varietals -->
+      <div class="col-md-6">
+        <div class="chart-card">
+          <div class="chart-title">Top Varietals</div>
+          <canvas id="varietalChart" height="220"></canvas>
+        </div>
+      </div>
+
+      <!-- Status breakdown -->
+      <div class="col-md-6">
+        <div class="chart-card">
+          <div class="chart-title">Bottles by Status</div>
+          <canvas id="statusChart" height="220"></canvas>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    const gold = '#c9a96e';
+    const palette = ['#8b1a1a','#c9a96e','#2980b9','#27ae60','#e67e22','#8e44ad','#1abc9c','#e74c3c','#f39c12','#2ecc71'];
+
+    function makeChart(id, type, labels, data, colors) {
+      new Chart(document.getElementById(id), {
+        type: type,
+        data: {
+          labels: labels,
+          datasets: [{ data: data, backgroundColor: colors || palette, borderColor: '#1a0a00', borderWidth: 2 }]
+        },
+        options: {
+          plugins: { legend: { labels: { color: '#f5e6d3', font: { size: 12 } } } },
+          scales: type === 'bar' ? {
+            x: { ticks: { color: '#f5e6d3' }, grid: { color: '#3a1a00' } },
+            y: { ticks: { color: '#f5e6d3' }, grid: { color: '#3a1a00' } }
+          } : {}
+        }
+      });
+    }
+
+    makeChart('typeChart', 'doughnut',
+      {{ by_type | map(attribute='wine_type') | list | tojson }},
+      {{ by_type | map(attribute='count') | list | tojson }}
+    );
+
+    makeChart('locationChart', 'doughnut',
+      {{ by_location | map(attribute='location') | list | tojson }},
+      {{ by_location | map(attribute='count') | list | tojson }}
+    );
+
+    makeChart('yearChart', 'bar',
+      {{ by_year | map(attribute='year') | list | tojson }},
+      {{ by_year | map(attribute='spent') | list | tojson }},
+      [gold]
+    );
+
+    makeChart('varietalChart', 'bar',
+      {{ by_varietal | map(attribute='varietal') | list | tojson }},
+      {{ by_varietal | map(attribute='count') | list | tojson }},
+      ['#8b1a1a']
+    );
+
+    makeChart('statusChart', 'doughnut',
+      {{ by_status | map(attribute='status') | list | tojson }},
+      {{ by_status | map(attribute='count') | list | tojson }}
+    );
+  </script>
+</body>
+</html>

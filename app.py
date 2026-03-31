@@ -194,6 +194,13 @@ def index():
     if price_max:
         query += f" AND unit_price <= {p}"
         params.append(float(price_max))
+    rtd_filter = request.args.get("rtd", "")
+    if rtd_filter:
+        current_year = date.today().year
+        if is_postgres():
+            query += f" AND drinking_window ~ '^[0-9]{{4}}-[0-9]{{4}}$' AND CAST(split_part(drinking_window,'-',1) AS INT) <= {current_year} AND CAST(split_part(drinking_window,'-',2) AS INT) >= {current_year}"
+        else:
+            query += f" AND drinking_window LIKE '____-____' AND CAST(SUBSTR(drinking_window,1,4) AS INT) <= {current_year} AND CAST(SUBSTR(drinking_window,6,4) AS INT) >= {current_year}"
     color_filter = request.args.get("color_code", "")
     if color_filter:
         query += f" AND color_code = {p}"
@@ -818,6 +825,58 @@ def api_wines():
     wines = cur.fetchall()
     conn.close()
     return jsonify([dict(w) for w in wines])
+
+
+@app.route("/export/csv")
+@login_required
+def export_csv():
+    import csv, io
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM wines ORDER BY order_date DESC")
+    wines = cur.fetchall()
+    conn.close()
+    output = io.StringIO()
+    fields = ["id","wine_name","vintage","varietal","region","location","wine_type",
+              "unit_price","retail_price","total_price","quantity","size_ml",
+              "retailer","order_date","status","color_code","drinking_window",
+              "my_rating","notes"]
+    writer = csv.DictWriter(output, fieldnames=fields, extrasaction="ignore")
+    writer.writeheader()
+    for w in wines:
+        writer.writerow({f: w[f] if f in w.keys() else "" for f in fields})
+    output.seek(0)
+    from flask import Response
+    return Response(output.getvalue(), mimetype="text/csv",
+                    headers={"Content-Disposition": "attachment; filename=wine-collection.csv"})
+
+
+@app.route("/analytics")
+@login_required
+def analytics():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT wine_type, COUNT(*) as count FROM wines WHERE wine_type IS NOT NULL GROUP BY wine_type ORDER BY count DESC")
+    by_type = cur.fetchall()
+    cur.execute("SELECT location, COUNT(*) as count FROM wines WHERE location IS NOT NULL GROUP BY location ORDER BY count DESC LIMIT 10")
+    by_location = cur.fetchall()
+    cur.execute("SELECT varietal, COUNT(*) as count FROM wines WHERE varietal IS NOT NULL GROUP BY varietal ORDER BY count DESC LIMIT 10")
+    by_varietal = cur.fetchall()
+    import db as db_mod
+    if db_mod.is_postgres():
+        cur.execute("SELECT EXTRACT(YEAR FROM order_date::date)::text as year, SUM(total_price) as spent FROM wines WHERE order_date IS NOT NULL GROUP BY year ORDER BY year")
+    else:
+        cur.execute("SELECT strftime('%Y', order_date) as year, SUM(total_price) as spent FROM wines WHERE order_date IS NOT NULL GROUP BY year ORDER BY year")
+    by_year = cur.fetchall()
+    cur.execute("SELECT status, COUNT(*) as count FROM wines GROUP BY status")
+    by_status = cur.fetchall()
+    conn.close()
+    return render_template("analytics.html",
+                           by_type=by_type, by_location=by_location,
+                           by_varietal=by_varietal, by_year=by_year,
+                           by_status=by_status,
+                           access_level=__import__('flask').session.get("access_level","edit"),
+                           auth_enabled=AUTH_ENABLED)
 
 
 if __name__ == "__main__":

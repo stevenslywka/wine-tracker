@@ -161,6 +161,8 @@
           <button type="submit" class="btn btn-sm" style="background:#1a3a1a;border:1px solid #3a6a3a;color:#7ecb7e;">🍷 Fill Drinking Windows</button>
         </form>
         {% endif %}
+        <a href="/analytics" class="btn btn-sm" style="background:#1a1a3a;border:1px solid #3a3a8a;color:#c0c8f5;">📊 Analytics</a>
+        <a href="/export/csv" class="btn btn-sm" style="background:#1a3a2a;border:1px solid #3a8a5a;color:#c0f5d8;">⬇ Export CSV</a>
         {% if auth_enabled %}
         <a href="{{ url_for('logout') }}" class="btn btn-sm" style="background:#3d0f0f; border:1px solid #5a2d0c; color:#c9a96e;">Log out</a>
         {% endif %}
@@ -169,6 +171,11 @@
   </nav>
 
   <div class="container-fluid px-4" style="max-width: 1600px;">
+
+    <!-- Ready to Drink quick filter -->
+    <div class="mb-2">
+      <a href="/?rtd=1" class="btn btn-sm {% if request.args.get('rtd') %}btn-success{% endif %}" style="background:{% if request.args.get('rtd') %}#27ae60{% else %}#1a3a1a{% endif %};border:1px solid #3a6a3a;color:#c0f5c0;">🟢 Ready to Drink</a>
+    </div>
 
     <!-- Stats Row -->
     <div class="row g-3 mb-3">
@@ -329,6 +336,7 @@
                   <img src="{{ wine.image_url }}" class="wine-thumb" data-src="{{ wine.image_url }}" data-name="{{ wine.wine_name or '' }}" style="width:36px;height:48px;object-fit:cover;border-radius:3px;flex-shrink:0;cursor:zoom-in;" alt="" onclick="event.stopPropagation();openImagePopup(this)">
                   {% endif %}
                   <a href="https://www.wine-searcher.com/find/{{ wine.wine_name | replace(' ', '+') }}{% if wine.vintage %}+{{ wine.vintage }}{% endif %}#t2" target="_blank" onclick="event.stopPropagation()" style="color:inherit;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'"><strong>{{ wine.wine_name or '—' }}</strong></a>
+                  {% if wine.drinking_window and wine.drinking_window|string|length == 9 %}{%- set parts = wine.drinking_window.split('-') -%}{% if parts|length == 2 and parts[0]|int <= 2026 and parts[1]|int >= 2026 %}<span title="Ready to drink!" style="margin-left:4px;font-size:0.85em;">🟢</span>{% endif %}{% endif %}
                 </div>
               </td>
               <td>{{ wine.vintage or '—' }}</td>
@@ -481,6 +489,34 @@
     <span class="picker-dot" style="background:#e67e22;" data-color="Orange" title="Orange"></span>
     <span class="picker-dot" style="background:#c0392b;" data-color="Red" title="Red"></span>
     <span class="picker-dot" style="background:#2980b9;" data-color="Blue" title="Blue"></span>
+  </div>
+
+  <!-- Mark as Drank Modal -->
+  <div class="modal fade" id="drankModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+      <div class="modal-content" style="background:#2a1200;border:1px solid #5a2d0c;color:#f5e6d3;">
+        <div class="modal-header" style="border-bottom:1px solid #5a2d0c;">
+          <h6 class="modal-title" style="color:#c9a96e;">🍷 How was it?</h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body d-flex flex-column gap-3">
+          <div style="font-size:0.9rem;color:#aaa;" id="drankWineName"></div>
+          <input type="hidden" id="drankWineId">
+          <div>
+            <label class="form-label fw-bold" style="color:#c9a96e;font-size:0.85rem;">Rating <span style="color:#888;font-weight:normal;">(0–5, optional)</span></label>
+            <input type="number" id="drankRating" class="form-control" min="0" max="5" step="0.1" placeholder="e.g. 4.2">
+          </div>
+          <div>
+            <label class="form-label fw-bold" style="color:#c9a96e;font-size:0.85rem;">Tasting Notes <span style="color:#888;font-weight:normal;">(optional)</span></label>
+            <textarea id="drankNotes" class="form-control" rows="3" placeholder="How did it taste? Food pairing? Occasion?"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #5a2d0c;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="submitDrank(false)">Skip</button>
+          <button type="button" class="btn btn-wine btn-sm" onclick="submitDrank(true)">Save & Mark Drank</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- Add Wine Modal -->
@@ -877,6 +913,20 @@
         const newStatus = opt.dataset.status;
         const selected = allStatusBadges.filter(b => b.classList.contains('status-selected'));
         if (!selected.length) return;
+        clearStatusSelection();
+
+        // If marking as Drank, show quick rating/notes prompt first
+        if (newStatus === 'drank' && selected.length === 1) {
+          const badge = selected[0];
+          const wineName = badge.closest('tr').querySelector('strong')?.textContent || 'this wine';
+          document.getElementById('drankWineName').textContent = wineName;
+          document.getElementById('drankWineId').value = badge.dataset.wineId;
+          document.getElementById('drankRating').value = '';
+          document.getElementById('drankNotes').value = '';
+          new bootstrap.Modal(document.getElementById('drankModal')).show();
+          return;
+        }
+
         const ids = selected.map(b => b.dataset.wineId);
         const body = ids.map(id => `ids=${encodeURIComponent(id)}`).join('&') + `&status=${encodeURIComponent(newStatus)}`;
         fetch('/wines/bulk-status', {
@@ -892,7 +942,6 @@
             });
           }
         });
-        clearStatusSelection();
       });
     });
 
@@ -1078,6 +1127,29 @@
           `;
         })
         .catch(() => { status.textContent = 'Scan failed — try again.'; });
+    }
+
+    function submitDrank(saveDetails) {
+      const wineId = document.getElementById('drankWineId').value;
+      const rating = document.getElementById('drankRating').value.trim();
+      const notes  = document.getElementById('drankNotes').value.trim();
+      const modal  = bootstrap.Modal.getInstance(document.getElementById('drankModal'));
+
+      const markDrank = () => fetch(`/wines/bulk-status`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `ids=${encodeURIComponent(wineId)}&status=drank`
+      }).then(r => { if (r.ok) location.reload(); });
+
+      if (saveDetails) {
+        const saves = [];
+        if (rating) saves.push(fetch(`/wine/${wineId}/rating`, { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:`my_rating=${encodeURIComponent(rating)}` }));
+        if (notes)  saves.push(fetch(`/wine/${wineId}/notes`,  { method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:`notes=${encodeURIComponent(notes)}` }));
+        Promise.all(saves).then(markDrank);
+      } else {
+        markDrank();
+      }
+      modal.hide();
     }
 
     function submitReceiptWines() {
