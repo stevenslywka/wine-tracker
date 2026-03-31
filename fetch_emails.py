@@ -9,7 +9,9 @@ import json
 import sqlite3
 from datetime import datetime
 from email.header import decode_header
-from config import GMAIL_ADDRESS, GMAIL_APP_PASSWORD
+import os
+GMAIL_ADDRESS = os.environ.get("GMAIL_ADDRESS", "")
+GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD", "")
 import db as db_module
 
 DB_FILE = "wines.db"
