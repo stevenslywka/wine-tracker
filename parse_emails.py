@@ -17,7 +17,7 @@ DB_FILE = "wines.db"
 
 def init_db():
     conn = db_module.get_connection()
-    ph = db_module.placeholder
+    ph = db_module.get_placeholder()
     if db_module.is_postgres():
         conn.cursor().execute("""
             CREATE TABLE IF NOT EXISTS wines (
@@ -264,7 +264,7 @@ def parse_all_emails():
     ]
 
     conn = init_db()
-    ph = db_module.placeholder
+    ph = db_module.get_placeholder()
     all_wines = []
     errors = 0
 

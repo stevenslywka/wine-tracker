@@ -61,7 +61,7 @@ def get_db():
 def ph():
     """Return the SQL placeholder character for the current DB backend."""
     import db as db_module
-    return db_module.placeholder
+    return db_module.get_placeholder()
 
 
 def lastrowid(conn, cursor):

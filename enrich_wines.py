@@ -277,7 +277,7 @@ def infer_size(wine_name):
 
 
 def enrich():
-    ph = db_module.placeholder
+    ph = db_module.get_placeholder()
     conn = db_module.get_connection()
     cur = conn.cursor()
     cur.execute("SELECT id, wine_name, wine_type, size_ml FROM wines")

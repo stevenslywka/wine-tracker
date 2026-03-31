@@ -105,7 +105,7 @@ def search_and_fetch_image(wine_name):
 
 
 def fetch_all_images():
-    ph = db_module.placeholder
+    ph = db_module.get_placeholder()
     conn = db_module.get_connection()
     cur = conn.cursor()
 
