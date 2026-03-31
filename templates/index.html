@@ -108,6 +108,45 @@
     }
     #price-summary.visible { display: flex; }
     #price-summary span { color: #c9a96e; font-weight: bold; }
+
+    /* ── Responsive layout ── */
+
+    /* 4K (2560px+): generous spacing, larger text */
+    @media (min-width: 2560px) {
+      .navbar-brand { font-size: 1.8rem !important; }
+      .stat-value { font-size: 2.6rem; }
+      .table { font-size: 1.05rem; }
+      .container-fluid { max-width: 2400px !important; }
+      .btn, .form-control, .form-select { font-size: 1rem; }
+    }
+
+    /* Laptop (768px–2559px): default styles apply, just tighten a bit */
+    @media (max-width: 1400px) {
+      .container-fluid { padding-left: 12px !important; padding-right: 12px !important; }
+      .stat-value { font-size: 1.6rem; }
+      .table { font-size: 0.85rem; }
+      .col-wine { min-width: 200px; }
+    }
+
+    /* Mobile (< 768px) */
+    @media (max-width: 767px) {
+      .navbar-brand { font-size: 1.1rem !important; }
+      .navbar { margin-bottom: 8px !important; }
+      .container-fluid { padding-left: 8px !important; padding-right: 8px !important; }
+      .stat-value { font-size: 1.4rem; }
+      .card.stat-card { padding: 8px !important; }
+      .row.g-3.mb-3 { margin-bottom: 8px !important; }
+      .card.p-3.mb-2 { padding: 8px !important; margin-bottom: 6px !important; }
+      #filterForm > div { gap: 6px !important; }
+      #filterForm .form-control,
+      #filterForm .form-select { font-size: 0.85rem; min-width: 0 !important; }
+      .btn-wine, .btn { font-size: 0.8rem; padding: 4px 10px; }
+      #tableScroll { font-size: 0.78rem; }
+      .col-wine { min-width: 160px; }
+      .col-date { min-width: 80px; }
+      /* Hide lower-priority columns on mobile */
+      th:nth-child(n+7), td:nth-child(n+7) { display: none; }
+    }
   </style>
 </head>
 <body>
@@ -134,29 +173,17 @@
   <div class="container-fluid px-4" style="max-width: 1600px;">
 
     <!-- Stats Row -->
-    <div class="row g-3 mb-4">
+    <div class="row g-3 mb-3">
       <div class="col-6 col-md-3">
-        <div class="card stat-card p-3 text-center">
+        <div class="card stat-card p-2 p-md-3 text-center">
           <div class="stat-value">{{ stats.total_bottles or 0 }}</div>
-          <div style="color:#f5e6d3;">Total Bottles Bought</div>
+          <div style="color:#f5e6d3;font-size:0.85rem;">Total Bottles Bought</div>
         </div>
       </div>
       <div class="col-6 col-md-3">
-        <div class="card stat-card p-3 text-center">
+        <div class="card stat-card p-2 p-md-3 text-center">
           <div class="stat-value">{{ stats.in_cellar or 0 }}</div>
-          <div style="color:#f5e6d3;">Bottles in Cellar</div>
-        </div>
-      </div>
-      <div class="col-6 col-md-3">
-        <div class="card stat-card p-3 text-center">
-          <div class="stat-value">{{ stats.unique_wines or 0 }}</div>
-          <div style="color:#f5e6d3;">Unique Wines</div>
-        </div>
-      </div>
-      <div class="col-6 col-md-3">
-        <div class="card stat-card p-3 text-center">
-          <div class="stat-value">${{ "%.0f"|format(stats.total_spent or 0) }}</div>
-          <div style="color:#f5e6d3;">Total Spent</div>
+          <div style="color:#f5e6d3;font-size:0.85rem;">Bottles in Cellar</div>
         </div>
       </div>
     </div>
@@ -335,7 +362,9 @@
                 </span>
               </td>
               <td onclick="event.stopPropagation()" style="white-space:nowrap;">
+                {% if not auth_enabled or access_level == 'edit' %}
                 <button class="btn btn-sm delete-btn" data-wine-id="{{ wine.id }}" data-wine-name="{{ wine.wine_name | e }}" title="Delete" style="background:none;border:none;color:#5c1a1a;font-size:1rem;padding:2px 6px;cursor:pointer;">🗑</button>
+                {% endif %}
               </td>
             </tr>
             {% else %}
