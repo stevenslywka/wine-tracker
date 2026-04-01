@@ -18,11 +18,6 @@ app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-prod")
 import db as _db_module
 _db_module.migrate()
 
-# --- Auth configuration ---
-VIEW_PASSWORD = os.environ.get("VIEW_PASSWORD")
-EDIT_PASSWORD = os.environ.get("EDIT_PASSWORD")
-AUTH_ENABLED = VIEW_PASSWORD is not None  # skip auth entirely in local dev
-
 WINE_TYPES = ("Red", "White", "Rose", "Sparkling", "Dessert", "Fortified", "Orange")
 
 
@@ -31,25 +26,21 @@ WINE_TYPES = ("Red", "White", "Rose", "Sparkling", "Dessert", "Fortified", "Oran
 # ---------------------------------------------------------------------------
 
 def login_required(f):
-    """Require at least 'view' access level."""
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not AUTH_ENABLED:
-            return f(*args, **kwargs)
-        if session.get("access_level") not in ("view", "edit"):
+        if not session.get("user_id"):
             return redirect(url_for("login", next=request.url))
         return f(*args, **kwargs)
     return decorated
 
 
-def edit_required(f):
-    """Require 'edit' access level."""
+def admin_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        if not AUTH_ENABLED:
-            return f(*args, **kwargs)
-        if session.get("access_level") != "edit":
-            return redirect(url_for("login", next=request.url))
+        if not session.get("user_id"):
+            return redirect(url_for("login"))
+        if not session.get("is_admin"):
+            return ("Forbidden", 403)
         return f(*args, **kwargs)
     return decorated
 
@@ -59,19 +50,20 @@ def edit_required(f):
 # ---------------------------------------------------------------------------
 
 def get_db():
-    """Return an open DB connection — psycopg2 in prod, sqlite3 locally."""
     import db as db_module
     return db_module.get_connection()
 
 
 def ph():
-    """Return the SQL placeholder character for the current DB backend."""
     import db as db_module
     return db_module.get_placeholder()
 
 
+def is_postgres():
+    return _db_module.is_postgres()
+
+
 def lastrowid(conn, cursor):
-    """Return the last inserted row id, handling both psycopg2 and sqlite3."""
     import db as db_module
     if db_module.is_postgres():
         row = cursor.fetchone()
@@ -80,6 +72,27 @@ def lastrowid(conn, cursor):
         return None
     else:
         return cursor.lastrowid
+
+
+def get_user_by_username(username):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(f"SELECT * FROM users WHERE username = {ph()}", (username,))
+    user = cur.fetchone()
+    conn.close()
+    return user
+
+
+def owns_wine(wine_id):
+    """Return True if the logged-in user owns wine_id."""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(f"SELECT user_id FROM wines WHERE id = {ph()}", (wine_id,))
+    row = cur.fetchone()
+    conn.close()
+    if not row:
+        return False
+    return row["user_id"] == session.get("user_id")
 
 
 # ---------------------------------------------------------------------------
@@ -113,19 +126,28 @@ def infer_wine_type(varietal):
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    if session.get("user_id"):
+        return redirect(url_for("home"))
     error = None
     if request.method == "POST":
+        username = request.form.get("username", "").strip().lower()
         password = request.form.get("password", "")
-        if EDIT_PASSWORD and password == EDIT_PASSWORD:
-            session["access_level"] = "edit"
-            next_url = request.args.get("next") or url_for("index")
-            return redirect(next_url)
-        elif VIEW_PASSWORD and password == VIEW_PASSWORD:
-            session["access_level"] = "view"
-            next_url = request.args.get("next") or url_for("index")
-            return redirect(next_url)
-        else:
-            error = "Incorrect password."
+        if username and password:
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute(f"SELECT * FROM users WHERE username = {ph()}", (username,))
+            user = cur.fetchone()
+            conn.close()
+            if user:
+                from werkzeug.security import check_password_hash
+                if check_password_hash(user["password_hash"], password):
+                    session["user_id"] = user["id"]
+                    session["username"] = user["username"]
+                    session["display_name"] = user["display_name"]
+                    session["is_admin"] = bool(user["is_admin"])
+                    next_url = request.args.get("next") or url_for("home")
+                    return redirect(next_url)
+        error = "Incorrect username or password."
     return render_template("login.html", error=error)
 
 
@@ -136,12 +158,121 @@ def logout():
 
 
 # ---------------------------------------------------------------------------
-# Main routes
+# Home page
 # ---------------------------------------------------------------------------
 
 @app.route("/")
 @login_required
-def index():
+def home():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users ORDER BY username")
+    users = cur.fetchall()
+
+    # Get bottle counts per user
+    user_stats = {}
+    for u in users:
+        cur.execute(
+            f"SELECT COUNT(*) as cnt, SUM(CASE WHEN status='cellar' THEN quantity ELSE 0 END) as in_cellar FROM wines WHERE user_id = {ph()}",
+            (u["id"],)
+        )
+        row = cur.fetchone()
+        user_stats[u["id"]] = {
+            "total": row["cnt"] or 0,
+            "in_cellar": row["in_cellar"] or 0,
+        }
+    conn.close()
+    return render_template("home.html", users=users, user_stats=user_stats,
+                           current_user_id=session["user_id"])
+
+
+# ---------------------------------------------------------------------------
+# Admin page
+# ---------------------------------------------------------------------------
+
+@app.route("/admin", methods=["GET", "POST"])
+@admin_required
+def admin():
+    error = None
+    success = None
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "create_user":
+            username = request.form.get("username", "").strip().lower()
+            display_name = request.form.get("display_name", "").strip()
+            password = request.form.get("password", "").strip()
+            is_admin_val = 1 if request.form.get("is_admin") else 0
+            if not username or not display_name or not password:
+                error = "All fields are required."
+            else:
+                from werkzeug.security import generate_password_hash
+                pw_hash = generate_password_hash(password)
+                try:
+                    conn = get_db()
+                    cur = conn.cursor()
+                    p = ph()
+                    if is_postgres():
+                        cur.execute(
+                            f"INSERT INTO users (username, display_name, password_hash, is_admin) VALUES ({p},{p},{p},{p})",
+                            (username, display_name, pw_hash, bool(is_admin_val))
+                        )
+                    else:
+                        cur.execute(
+                            f"INSERT INTO users (username, display_name, password_hash, is_admin) VALUES ({p},{p},{p},{p})",
+                            (username, display_name, pw_hash, is_admin_val)
+                        )
+                    conn.commit()
+                    conn.close()
+                    success = f"Account created for {display_name} (@{username})."
+                except Exception as e:
+                    error = f"Could not create user: {e}"
+        elif action == "delete_user":
+            uid = request.form.get("user_id")
+            if uid and int(uid) != session["user_id"]:
+                conn = get_db()
+                cur = conn.cursor()
+                cur.execute(f"DELETE FROM users WHERE id = {ph()}", (int(uid),))
+                conn.commit()
+                conn.close()
+                success = "User deleted."
+            else:
+                error = "Cannot delete your own account."
+        elif action == "reset_password":
+            uid = request.form.get("user_id")
+            new_pw = request.form.get("new_password", "").strip()
+            if uid and new_pw:
+                from werkzeug.security import generate_password_hash
+                pw_hash = generate_password_hash(new_pw)
+                conn = get_db()
+                cur = conn.cursor()
+                cur.execute(f"UPDATE users SET password_hash = {ph()} WHERE id = {ph()}", (pw_hash, int(uid)))
+                conn.commit()
+                conn.close()
+                success = "Password reset."
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM users ORDER BY username")
+    users = cur.fetchall()
+    conn.close()
+    return render_template("admin.html", users=users, error=error, success=success)
+
+
+# ---------------------------------------------------------------------------
+# Cellar (collection) view — the main page per user
+# ---------------------------------------------------------------------------
+
+@app.route("/cellar/<username>")
+@login_required
+def cellar(username):
+    cellar_user = get_user_by_username(username)
+    if not cellar_user:
+        return ("User not found", 404)
+
+    can_edit = (cellar_user["id"] == session["user_id"])
+    # access_level kept for template compatibility
+    access_level = "edit" if can_edit else "view"
+
     conn = get_db()
     p = ph()
     search = request.args.get("q", "")
@@ -164,8 +295,8 @@ def index():
     if order not in {"asc", "desc"}:
         order = "desc"
 
-    query = "SELECT * FROM wines WHERE 1=1"
-    params = []
+    query = f"SELECT * FROM wines WHERE user_id = {p}"
+    params = [cellar_user["id"]]
 
     if search:
         query += f" AND (wine_name LIKE {p} OR varietal LIKE {p} OR region LIKE {p})"
@@ -227,27 +358,27 @@ def index():
     cur.execute(query, params)
     wines = cur.fetchall()
 
-    cur.execute("""
+    cur.execute(f"""
         SELECT
             SUM(quantity) as total_bottles,
             COUNT(DISTINCT wine_name) as unique_wines,
             SUM(total_price) as total_spent,
             SUM(CASE WHEN status='cellar' THEN quantity ELSE 0 END) as in_cellar
-        FROM wines
-    """)
+        FROM wines WHERE user_id = {p}
+    """, (cellar_user["id"],))
     stats = cur.fetchone()
 
-    cur.execute("SELECT DISTINCT varietal FROM wines WHERE varietal IS NOT NULL ORDER BY varietal")
+    cur.execute(f"SELECT DISTINCT varietal FROM wines WHERE user_id = {p} AND varietal IS NOT NULL ORDER BY varietal", (cellar_user["id"],))
     varietals = [r["varietal"] for r in cur.fetchall()]
-    cur.execute("SELECT DISTINCT region FROM wines WHERE region IS NOT NULL ORDER BY region")
+    cur.execute(f"SELECT DISTINCT region FROM wines WHERE user_id = {p} AND region IS NOT NULL ORDER BY region", (cellar_user["id"],))
     regions = [r["region"] for r in cur.fetchall()]
-    cur.execute("SELECT DISTINCT location FROM wines WHERE location IS NOT NULL ORDER BY location")
+    cur.execute(f"SELECT DISTINCT location FROM wines WHERE user_id = {p} AND location IS NOT NULL ORDER BY location", (cellar_user["id"],))
     locations = [r["location"] for r in cur.fetchall()]
-    cur.execute("SELECT DISTINCT vintage FROM wines WHERE vintage IS NOT NULL ORDER BY vintage DESC")
+    cur.execute(f"SELECT DISTINCT vintage FROM wines WHERE user_id = {p} AND vintage IS NOT NULL ORDER BY vintage DESC", (cellar_user["id"],))
     vintages = [r["vintage"] for r in cur.fetchall()]
-    cur.execute("SELECT DISTINCT size_ml FROM wines WHERE size_ml IS NOT NULL ORDER BY size_ml")
+    cur.execute(f"SELECT DISTINCT size_ml FROM wines WHERE user_id = {p} AND size_ml IS NOT NULL ORDER BY size_ml", (cellar_user["id"],))
     sizes = [r["size_ml"] for r in cur.fetchall()]
-    cur.execute("SELECT DISTINCT retailer FROM wines WHERE retailer IS NOT NULL ORDER BY retailer")
+    cur.execute(f"SELECT DISTINCT retailer FROM wines WHERE user_id = {p} AND retailer IS NOT NULL ORDER BY retailer", (cellar_user["id"],))
     retailers = [r["retailer"] for r in cur.fetchall()]
 
     conn.close()
@@ -262,8 +393,18 @@ def index():
                            sort=sort, order=order,
                            varietals=varietals, regions=regions,
                            locations=locations, vintages=vintages, sizes=sizes,
-                           access_level=session.get("access_level", "edit"),
-                           auth_enabled=AUTH_ENABLED)
+                           access_level=access_level,
+                           auth_enabled=True,
+                           cellar_username=cellar_user["username"],
+                           cellar_display_name=cellar_user["display_name"],
+                           is_own_cellar=can_edit)
+
+
+# Keep /index redirect for backward compat
+@app.route("/index")
+@login_required
+def index():
+    return redirect(url_for("cellar", username=session["username"]))
 
 
 @app.route("/wine/<int:wine_id>")
@@ -277,13 +418,14 @@ def wine_detail(wine_id):
     conn.close()
     if not wine:
         return "Wine not found", 404
+    can_edit = (wine["user_id"] == session["user_id"])
     return render_template("detail.html", wine=wine,
-                           access_level=session.get("access_level", "edit"),
-                           auth_enabled=AUTH_ENABLED)
+                           access_level="edit" if can_edit else "view",
+                           auth_enabled=True)
 
 
 @app.route("/wines/bulk-status", methods=["POST"])
-@edit_required
+@login_required
 def bulk_update_status():
     ids = request.form.getlist("ids")
     new_status = request.form.get("status")
@@ -292,16 +434,19 @@ def bulk_update_status():
     p = ph()
     conn = get_db()
     cur = conn.cursor()
+    uid = session["user_id"]
     for id_ in ids:
-        cur.execute(f"UPDATE wines SET status = {p} WHERE id = {p}", (new_status, id_))
+        cur.execute(f"UPDATE wines SET status = {p} WHERE id = {p} AND user_id = {p}", (new_status, id_, uid))
     conn.commit()
     conn.close()
     return ("", 204)
 
 
 @app.route("/wine/<int:wine_id>/status", methods=["POST"])
-@edit_required
+@login_required
 def update_status(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
     new_status = request.form.get("status")
     if new_status in ("apt", "house", "not_shipped", "drank"):
         p = ph()
@@ -310,12 +455,14 @@ def update_status(wine_id):
         cur.execute(f"UPDATE wines SET status = {p} WHERE id = {p}", (new_status, wine_id))
         conn.commit()
         conn.close()
-    return redirect(request.referrer or url_for("index"))
+    return redirect(request.referrer or url_for("home"))
 
 
 @app.route("/wine/<int:wine_id>/color", methods=["POST"])
-@edit_required
+@login_required
 def update_color(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
     color = request.form.get("color_code", "")
     if color in ("Red", "Blue", "Orange", "Yellow", "Green", ""):
         p = ph()
@@ -324,15 +471,17 @@ def update_color(wine_id):
         cur.execute(f"UPDATE wines SET color_code = {p} WHERE id = {p}", (color or None, wine_id))
         conn.commit()
         conn.close()
-    return redirect(request.referrer or url_for("index"))
+    return redirect(request.referrer or url_for("home"))
 
 
 BOTTLE_SIZES = (187, 375, 750, 1000, 1500, 3000, 6000)
 
 
 @app.route("/wine/<int:wine_id>/size", methods=["POST"])
-@edit_required
+@login_required
 def update_size(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
     raw = request.form.get("size_ml", "").strip()
     if raw == "":
         size = None
@@ -353,8 +502,10 @@ def update_size(wine_id):
 
 
 @app.route("/wine/<int:wine_id>/type", methods=["POST"])
-@edit_required
+@login_required
 def update_type(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
     wine_type = request.form.get("wine_type", "")
     if wine_type not in WINE_TYPES and wine_type != "":
         return ("", 400)
@@ -368,8 +519,10 @@ def update_type(wine_id):
 
 
 @app.route("/wine/<int:wine_id>/rating", methods=["POST"])
-@edit_required
+@login_required
 def update_rating(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
     raw = request.form.get("my_rating", "").strip()
     if raw == "":
         rating = None
@@ -390,8 +543,10 @@ def update_rating(wine_id):
 
 
 @app.route("/wine/<int:wine_id>/delete", methods=["POST"])
-@edit_required
+@login_required
 def delete_wine(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
     p = ph()
     conn = get_db()
     cur = conn.cursor()
@@ -402,8 +557,10 @@ def delete_wine(wine_id):
 
 
 @app.route("/wine/<int:wine_id>/retailer", methods=["POST"])
-@edit_required
+@login_required
 def update_retailer(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
     retailer = request.form.get("retailer", "").strip() or None
     p = ph()
     conn = get_db()
@@ -415,8 +572,10 @@ def update_retailer(wine_id):
 
 
 @app.route("/wine/<int:wine_id>/region", methods=["POST"])
-@edit_required
+@login_required
 def update_region(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
     value = request.form.get("region", "").strip() or None
     p = ph(); conn = get_db(); cur = conn.cursor()
     cur.execute(f"UPDATE wines SET region = {p} WHERE id = {p}", (value, wine_id))
@@ -425,8 +584,10 @@ def update_region(wine_id):
 
 
 @app.route("/wine/<int:wine_id>/location", methods=["POST"])
-@edit_required
+@login_required
 def update_location(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
     value = request.form.get("location", "").strip() or None
     p = ph(); conn = get_db(); cur = conn.cursor()
     cur.execute(f"UPDATE wines SET location = {p} WHERE id = {p}", (value, wine_id))
@@ -435,8 +596,10 @@ def update_location(wine_id):
 
 
 @app.route("/wine/<int:wine_id>/varietal", methods=["POST"])
-@edit_required
+@login_required
 def update_varietal(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
     value = request.form.get("varietal", "").strip() or None
     p = ph(); conn = get_db(); cur = conn.cursor()
     cur.execute(f"UPDATE wines SET varietal = {p} WHERE id = {p}", (value, wine_id))
@@ -445,8 +608,10 @@ def update_varietal(wine_id):
 
 
 @app.route("/wine/<int:wine_id>/drinking_window", methods=["POST"])
-@edit_required
+@login_required
 def update_drinking_window(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
     value = request.form.get("drinking_window", "").strip() or None
     p = ph(); conn = get_db(); cur = conn.cursor()
     cur.execute(f"UPDATE wines SET drinking_window = {p} WHERE id = {p}", (value, wine_id))
@@ -455,8 +620,10 @@ def update_drinking_window(wine_id):
 
 
 @app.route("/wine/<int:wine_id>/notes", methods=["POST"])
-@edit_required
+@login_required
 def update_notes(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
     notes = request.form.get("notes", "")
     p = ph()
     conn = get_db()
@@ -468,14 +635,14 @@ def update_notes(wine_id):
 
 
 @app.route("/wine/add", methods=["POST"])
-@edit_required
+@login_required
 def add_wine():
     from enrich_wines import extract_varietal, extract_region, extract_location, infer_wine_type, infer_size
     from fetch_images import search_and_fetch_image
 
     wine_name = request.form.get("wine_name", "").strip()
     if not wine_name:
-        return redirect(url_for("index"))
+        return redirect(url_for("cellar", username=session["username"]))
 
     raw_vintage    = request.form.get("vintage", "").strip()
     raw_price      = request.form.get("unit_price", "").strip()
@@ -494,7 +661,6 @@ def add_wine():
     order_date  = raw_order_date if raw_order_date else date.today().isoformat()
     total_price = round(unit_price * quantity, 2) if unit_price else None
 
-    # Use scan results if provided, otherwise fall back to rule-based enrichment
     scan_varietal        = request.form.get("scan_varietal", "").strip() or None
     scan_region          = request.form.get("scan_region", "").strip() or None
     scan_wine_type       = request.form.get("scan_wine_type", "").strip() or None
@@ -509,21 +675,21 @@ def add_wine():
     drinking_window = scan_drinking_window or lookup_drinking_window(wine_name, vintage, varietal, region)
     size_ml   = infer_size(wine_name)
 
+    user_id = session["user_id"]
     p = ph()
     conn = get_db()
     cur = conn.cursor()
 
-    import db as db_module
-    if db_module.is_postgres():
+    if is_postgres():
         cur.execute(f"""
             INSERT INTO wines
                 (wine_name, vintage, unit_price, total_price, quantity, notes,
                  varietal, region, location, wine_type, size_ml,
-                 retailer, order_date, status, color_code, drinking_window)
-            VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, 'cellar', {p}, {p})
+                 retailer, order_date, status, color_code, drinking_window, user_id)
+            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'cellar',{p},{p},{p})
             RETURNING id
         """, (wine_name, vintage, unit_price, total_price, quantity, notes,
-              varietal, region, location, wine_type, size_ml, retailer, order_date, color_code, drinking_window))
+              varietal, region, location, wine_type, size_ml, retailer, order_date, color_code, drinking_window, user_id))
         row = cur.fetchone()
         wine_id = row["id"] if row else None
     else:
@@ -531,16 +697,15 @@ def add_wine():
             INSERT INTO wines
                 (wine_name, vintage, unit_price, total_price, quantity, notes,
                  varietal, region, location, wine_type, size_ml,
-                 retailer, order_date, status, color_code, drinking_window)
-            VALUES ({p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, {p}, 'cellar', {p}, {p})
+                 retailer, order_date, status, color_code, drinking_window, user_id)
+            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'cellar',{p},{p},{p})
         """, (wine_name, vintage, unit_price, total_price, quantity, notes,
-              varietal, region, location, wine_type, size_ml, retailer, order_date, color_code, drinking_window))
+              varietal, region, location, wine_type, size_ml, retailer, order_date, color_code, drinking_window, user_id))
         wine_id = cur.lastrowid
 
     conn.commit()
     conn.close()
 
-    # Handle image upload or auto-fetch
     image_url = None
     uploaded = request.files.get("image")
     if uploaded and uploaded.filename:
@@ -556,7 +721,6 @@ def add_wine():
             result = cloudinary.uploader.upload(uploaded, folder="wine-tracker")
             image_url = result.get("secure_url")
         else:
-            # Save locally
             import uuid
             ext = os.path.splitext(uploaded.filename)[1] or ".jpg"
             filename = f"{uuid.uuid4().hex}{ext}"
@@ -574,11 +738,11 @@ def add_wine():
         conn.commit()
         conn.close()
 
-    return redirect(url_for("index"))
+    return redirect(url_for("cellar", username=session["username"]))
 
 
 def lookup_drinking_window(wine_name, vintage, varietal, region):
-    """Ask Claude for the drinking window of a single wine. Returns a string like '2025-2032' or None."""
+    """Ask Claude for the drinking window of a single wine."""
     import anthropic, json as json_lib
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -607,7 +771,7 @@ def lookup_drinking_window(wine_name, vintage, varietal, region):
 
 
 def lookup_receipt(image_data, media_type):
-    """Ask Claude to extract wine info from a receipt image. Returns a list of dicts."""
+    """Ask Claude to extract wine info from a receipt image."""
     import anthropic, base64, json as json_lib
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -637,7 +801,7 @@ def lookup_receipt(image_data, media_type):
 
 
 @app.route("/wine/scan-receipt", methods=["POST"])
-@edit_required
+@login_required
 def scan_receipt():
     import base64
     uploaded = request.files.get("image")
@@ -651,8 +815,8 @@ def scan_receipt():
     return jsonify(results)
 
 
-def _run_enrich_drinking_windows():
-    """Background task: fill drinking_window for all wines that are missing it."""
+def _run_enrich_drinking_windows(user_id):
+    """Background task: fill drinking_window for wines owned by user_id."""
     import anthropic, json as json_lib
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
@@ -661,7 +825,7 @@ def _run_enrich_drinking_windows():
     p = ph()
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT id, wine_name, vintage, varietal, region FROM wines WHERE drinking_window IS NULL OR drinking_window = ''")
+    cur.execute(f"SELECT id, wine_name, vintage, varietal, region FROM wines WHERE user_id = {p} AND (drinking_window IS NULL OR drinking_window = '')", (user_id,))
     wines = list(cur.fetchall())
     conn.close()
 
@@ -702,7 +866,7 @@ def _run_enrich_drinking_windows():
 
 
 @app.route("/wine/add-bulk", methods=["POST"])
-@edit_required
+@login_required
 def add_bulk_wines():
     import json as json_lib
     from enrich_wines import extract_varietal, extract_region, extract_location, infer_wine_type, infer_size
@@ -711,10 +875,10 @@ def add_bulk_wines():
         wines = json_lib.loads(wines_json)
     except Exception:
         return ("Bad request", 400)
+    user_id = session["user_id"]
     p = ph()
     conn = get_db()
     cur = conn.cursor()
-    import db as db_module
     for w in wines:
         wine_name = (w.get("wine_name") or "").strip()
         if not wine_name:
@@ -734,33 +898,27 @@ def add_bulk_wines():
         wine_type = infer_wine_type(varietal)
         size_ml   = infer_size(wine_name)
         drinking_window = lookup_drinking_window(wine_name, vintage, varietal, region)
-        if db_module.is_postgres():
-            cur.execute(f"""INSERT INTO wines (wine_name, vintage, unit_price, total_price, quantity,
-                varietal, region, location, wine_type, size_ml, retailer, order_date, status, drinking_window)
-                VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'cellar',{p})""",
-                (wine_name, vintage, unit_price, total_price, quantity,
-                 varietal, region, location, wine_type, size_ml, retailer, order_date, drinking_window))
-        else:
-            cur.execute(f"""INSERT INTO wines (wine_name, vintage, unit_price, total_price, quantity,
-                varietal, region, location, wine_type, size_ml, retailer, order_date, status, drinking_window)
-                VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'cellar',{p})""",
-                (wine_name, vintage, unit_price, total_price, quantity,
-                 varietal, region, location, wine_type, size_ml, retailer, order_date, drinking_window))
+        cur.execute(f"""INSERT INTO wines (wine_name, vintage, unit_price, total_price, quantity,
+            varietal, region, location, wine_type, size_ml, retailer, order_date, status, drinking_window, user_id)
+            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'cellar',{p},{p})""",
+            (wine_name, vintage, unit_price, total_price, quantity,
+             varietal, region, location, wine_type, size_ml, retailer, order_date, drinking_window, user_id))
     conn.commit()
     conn.close()
-    return redirect(url_for("index"))
+    return redirect(url_for("cellar", username=session["username"]))
 
 
 @app.route("/wine/enrich-drinking-windows", methods=["POST"])
-@edit_required
+@login_required
 def enrich_drinking_windows():
     import threading
-    threading.Thread(target=_run_enrich_drinking_windows, daemon=True).start()
-    return redirect(url_for("index"))
+    user_id = session["user_id"]
+    threading.Thread(target=_run_enrich_drinking_windows, args=(user_id,), daemon=True).start()
+    return redirect(url_for("cellar", username=session["username"]))
 
 
 @app.route("/wine/scan-label", methods=["POST"])
-@edit_required
+@login_required
 def scan_label():
     import anthropic, base64, json as json_lib
     uploaded = request.files.get("image")
@@ -785,7 +943,6 @@ def scan_label():
     )
     try:
         raw = message.content[0].text.strip()
-        # Strip markdown code fences if present
         if raw.startswith("```"):
             raw = raw.split("```")[1]
             if raw.startswith("json"):
@@ -799,7 +956,7 @@ def scan_label():
 
 
 @app.route("/refresh", methods=["POST"])
-@edit_required
+@login_required
 def refresh():
     import threading
     def run_refresh():
@@ -813,7 +970,7 @@ def refresh():
         fetch_all_images()
     t = threading.Thread(target=run_refresh, daemon=True)
     t.start()
-    return redirect(url_for("index"))
+    return redirect(url_for("cellar", username=session["username"]))
 
 
 @app.route("/api/wines")
@@ -821,7 +978,8 @@ def refresh():
 def api_wines():
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM wines ORDER BY order_date DESC")
+    uid = session["user_id"]
+    cur.execute(f"SELECT * FROM wines WHERE user_id = {ph()} ORDER BY order_date DESC", (uid,))
     wines = cur.fetchall()
     conn.close()
     return jsonify([dict(w) for w in wines])
@@ -833,7 +991,8 @@ def export_csv():
     import csv, io
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM wines ORDER BY order_date DESC")
+    uid = session["user_id"]
+    cur.execute(f"SELECT * FROM wines WHERE user_id = {ph()} ORDER BY order_date DESC", (uid,))
     wines = cur.fetchall()
     conn.close()
     output = io.StringIO()
@@ -854,29 +1013,40 @@ def export_csv():
 @app.route("/analytics")
 @login_required
 def analytics():
+    return redirect(url_for("user_analytics", username=session["username"]))
+
+
+@app.route("/cellar/<username>/analytics")
+@login_required
+def user_analytics(username):
+    cellar_user = get_user_by_username(username)
+    if not cellar_user:
+        return ("User not found", 404)
+    uid = cellar_user["id"]
+    p = ph()
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT wine_type, COUNT(*) as count FROM wines WHERE wine_type IS NOT NULL GROUP BY wine_type ORDER BY count DESC")
+    cur.execute(f"SELECT wine_type, COUNT(*) as count FROM wines WHERE user_id = {p} AND wine_type IS NOT NULL GROUP BY wine_type ORDER BY count DESC", (uid,))
     by_type = cur.fetchall()
-    cur.execute("SELECT location, COUNT(*) as count FROM wines WHERE location IS NOT NULL GROUP BY location ORDER BY count DESC LIMIT 10")
+    cur.execute(f"SELECT location, COUNT(*) as count FROM wines WHERE user_id = {p} AND location IS NOT NULL GROUP BY location ORDER BY count DESC LIMIT 10", (uid,))
     by_location = cur.fetchall()
-    cur.execute("SELECT varietal, COUNT(*) as count FROM wines WHERE varietal IS NOT NULL GROUP BY varietal ORDER BY count DESC LIMIT 10")
+    cur.execute(f"SELECT varietal, COUNT(*) as count FROM wines WHERE user_id = {p} AND varietal IS NOT NULL GROUP BY varietal ORDER BY count DESC LIMIT 10", (uid,))
     by_varietal = cur.fetchall()
-    import db as db_mod
-    if db_mod.is_postgres():
-        cur.execute("SELECT EXTRACT(YEAR FROM order_date::date)::text as year, SUM(total_price) as spent FROM wines WHERE order_date IS NOT NULL GROUP BY year ORDER BY year")
+    if is_postgres():
+        cur.execute(f"SELECT EXTRACT(YEAR FROM order_date::date)::text as year, SUM(total_price) as spent FROM wines WHERE user_id = {p} AND order_date IS NOT NULL GROUP BY year ORDER BY year", (uid,))
     else:
-        cur.execute("SELECT strftime('%Y', order_date) as year, SUM(total_price) as spent FROM wines WHERE order_date IS NOT NULL GROUP BY year ORDER BY year")
+        cur.execute(f"SELECT strftime('%Y', order_date) as year, SUM(total_price) as spent FROM wines WHERE user_id = {p} AND order_date IS NOT NULL GROUP BY year ORDER BY year", (uid,))
     by_year = cur.fetchall()
-    cur.execute("SELECT status, COUNT(*) as count FROM wines GROUP BY status")
+    cur.execute(f"SELECT status, COUNT(*) as count FROM wines WHERE user_id = {p} GROUP BY status", (uid,))
     by_status = cur.fetchall()
     conn.close()
     return render_template("analytics.html",
                            by_type=by_type, by_location=by_location,
                            by_varietal=by_varietal, by_year=by_year,
                            by_status=by_status,
-                           access_level=__import__('flask').session.get("access_level","edit"),
-                           auth_enabled=AUTH_ENABLED)
+                           auth_enabled=True,
+                           cellar_username=username,
+                           cellar_display_name=cellar_user["display_name"])
 
 
 if __name__ == "__main__":

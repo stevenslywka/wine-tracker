@@ -50,25 +50,73 @@ placeholder = get_placeholder
 
 
 def migrate():
-    """Add any missing columns to the wines table. Safe to run on every startup."""
+    """Add any missing columns/tables. Safe to run on every startup."""
     conn = get_connection()
     cur = conn.cursor()
+    pg = os.environ.get("DATABASE_URL") is not None
+
+    # --- Create users table ---
+    if pg:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id SERIAL PRIMARY KEY,
+                username TEXT UNIQUE NOT NULL,
+                display_name TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                is_admin BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT NOW()
+            )
+        """)
+    else:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                display_name TEXT NOT NULL,
+                password_hash TEXT NOT NULL,
+                is_admin INTEGER DEFAULT 0,
+                created_at TEXT DEFAULT (datetime('now'))
+            )
+        """)
+
+    # --- Add new columns to wines ---
     new_columns = [
         ("drinking_window", "TEXT"),
+        ("user_id", "INTEGER"),
     ]
     for col, col_type in new_columns:
         try:
-            if os.environ.get("DATABASE_URL"):
+            if pg:
                 cur.execute(f"ALTER TABLE wines ADD COLUMN IF NOT EXISTS {col} {col_type}")
             else:
                 cur.execute(f"ALTER TABLE wines ADD COLUMN {col} {col_type}")
         except Exception:
-            pass  # Column already exists
+            pass
 
-    # Normalize "Now-XXXX" drinking windows to use the actual current year
+    # --- Seed steven's account if no users exist ---
+    from werkzeug.security import generate_password_hash
+    cur.execute("SELECT COUNT(*) as cnt FROM users")
+    row = cur.fetchone()
+    cnt = row["cnt"] if isinstance(row, dict) else row[0]
+    if cnt == 0:
+        pw_hash = generate_password_hash("changeme123")
+        if pg:
+            cur.execute("INSERT INTO users (username, display_name, password_hash, is_admin) VALUES (%s, %s, %s, %s)",
+                        ("steven", "Steven", pw_hash, True))
+        else:
+            cur.execute("INSERT INTO users (username, display_name, password_hash, is_admin) VALUES (?, ?, ?, ?)",
+                        ("steven", "Steven", pw_hash, 1))
+
+    # --- Assign all unowned wines to steven ---
+    if pg:
+        cur.execute("UPDATE wines SET user_id = (SELECT id FROM users WHERE username = 'steven') WHERE user_id IS NULL")
+    else:
+        cur.execute("UPDATE wines SET user_id = (SELECT id FROM users WHERE username = 'steven') WHERE user_id IS NULL")
+
+    # --- Normalize "Now-XXXX" drinking windows ---
     from datetime import date as _date
     current_year = str(_date.today().year)
-    if os.environ.get("DATABASE_URL"):
+    if pg:
         cur.execute("UPDATE wines SET drinking_window = REPLACE(drinking_window, 'Now', %s) WHERE drinking_window LIKE 'Now-%%'", (current_year,))
     else:
         cur.execute("UPDATE wines SET drinking_window = REPLACE(drinking_window, 'Now', ?) WHERE drinking_window LIKE 'Now-%'", (current_year,))
