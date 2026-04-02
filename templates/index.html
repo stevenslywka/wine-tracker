@@ -6,7 +6,7 @@
   <title>{{ cellar_display_name }}'s Cellar — Wine Tracker</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
-    body { background: #1a0a00; color: #f5e6d3; }
+    body { background: #1a0a00; color: #f5e6d3; overscroll-behavior: none; }
     .navbar { background: #3d0f0f !important; }
     .navbar-brand { color: #c9a96e !important; font-size: 1.4rem; font-weight: bold; }
     .card { background: #2a1200; border: 1px solid #5a2d0c; }
@@ -61,6 +61,38 @@
     .picker-dot-clear { background: transparent; border: 2px solid #888; }
     .col-date { min-width: 110px; }
     .col-wine { min-width: 280px; }
+    /* ── Column header tooltips ── */
+    th[data-tip] { cursor: help; }
+    th[data-tip]::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2a1200;
+      color: #f5e6d3;
+      border: 1px solid #c9a96e;
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 0.78rem;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s;
+      z-index: 200;
+    }
+    th[data-tip]:hover::after { opacity: 1; }
+    /* Mobile tooltip overlay */
+    #col-tooltip-popup {
+      position: fixed; z-index: 9999;
+      background: #2a1200; color: #f5e6d3;
+      border: 1px solid #c9a96e; border-radius: 6px;
+      padding: 5px 12px; font-size: 0.82rem;
+      pointer-events: none; opacity: 0;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+    #col-tooltip-popup.visible { opacity: 1; }
     #size-picker-popup {
       display: none; position: fixed; z-index: 9999;
       background: #2a1200; border: 1px solid #c9a96e; border-radius: 8px;
@@ -289,29 +321,29 @@
         <table class="table table-hover mb-0">
           <thead style="position:sticky;top:0;z-index:10;background:#1a0a00;">
             <tr>
-              {% macro sort_link(field, label, cls='') %}
+              {% macro sort_link(field, label, cls='', tip='') %}
                 {% set new_order = 'asc' if (sort == field and order == 'desc') else 'desc' %}
-                <th class="{{ cls }}"><a href="?q={{ search }}&status={{ status_filter }}&varietal={{ varietal_filter }}&region={{ region_filter }}&location={{ location_filter }}&color_code={{ color_filter }}&vintage_min={{ vintage_min }}&vintage_max={{ vintage_max }}&price_min={{ price_min }}&price_max={{ price_max }}&sort={{ field }}&order={{ new_order }}">
+                <th class="{{ cls }}" style="position:relative;"{% if tip %} data-tip="{{ tip }}"{% endif %}><a href="?q={{ search }}&status={{ status_filter }}&varietal={{ varietal_filter }}&region={{ region_filter }}&location={{ location_filter }}&color_code={{ color_filter }}&vintage_min={{ vintage_min }}&vintage_max={{ vintage_max }}&price_min={{ price_min }}&price_max={{ price_max }}&sort={{ field }}&order={{ new_order }}">
                   {{ label }}{% if sort == field %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}
                 </a></th>
               {% endmacro %}
-              {{ sort_link('order_date', 'Date', 'col-date') }}
-              {{ sort_link('color_code', 'Sticker') }}
-              {{ sort_link('wine_name', 'Wine', 'col-wine') }}
-              {{ sort_link('vintage', 'Vintage') }}
-              {{ sort_link('region', 'Region') }}
-              {{ sort_link('location', 'Location') }}
-              {{ sort_link('varietal', 'Varietal') }}
-              {{ sort_link('wine_type', 'Type') }}
-              {{ sort_link('size_ml', 'Size') }}
-              {{ sort_link('quantity', 'Qty') }}
-              {{ sort_link('unit_price', 'Paid Price') }}
-              {{ sort_link('retail_price', 'Retail Price', 'd-none') }}
-              {{ sort_link('retailer', 'Source') }}
-              {{ sort_link('my_rating', 'My Rating') }}
-              <th>Drinking Window</th>
-              <th>Notes</th>
-              <th>Status</th>
+              {{ sort_link('order_date', 'Date', 'col-date', 'Date the wine was purchased') }}
+              {{ sort_link('color_code', 'Sticker', '', 'Your personal color tag for this bottle') }}
+              {{ sort_link('wine_name', 'Wine', 'col-wine', 'Full wine name') }}
+              {{ sort_link('vintage', 'Vintage', '', 'Year the grapes were harvested') }}
+              {{ sort_link('region', 'Region', '', 'Wine-producing region or appellation') }}
+              {{ sort_link('location', 'Location', '', 'Where the bottle is physically stored') }}
+              {{ sort_link('varietal', 'Varietal', '', 'Grape variety (e.g. Cabernet Sauvignon)') }}
+              {{ sort_link('wine_type', 'Type', '', 'Red, White, Rosé, Sparkling, etc.') }}
+              {{ sort_link('size_ml', 'Size', '', 'Bottle size in milliliters') }}
+              {{ sort_link('quantity', 'Qty', '', 'Number of bottles currently in cellar') }}
+              {{ sort_link('unit_price', 'Paid Price', '', 'Price paid per bottle') }}
+              {{ sort_link('retail_price', 'Retail Price', 'd-none', 'Retail market price') }}
+              {{ sort_link('retailer', 'Source', '', 'Where you purchased the wine') }}
+              {{ sort_link('my_rating', 'My Rating', '', 'Your personal score out of 10') }}
+              <th style="position:relative;" data-tip="Suggested years to drink this wine">Drinking Window</th>
+              <th style="position:relative;" data-tip="Your personal tasting notes">Notes</th>
+              <th style="position:relative;" data-tip="Cellar, Apt, House, Not Shipped, or Drank">Status</th>
               <th></th>
             </tr>
           </thead>
@@ -391,6 +423,9 @@
     Steven's Wine Tracker
   </footer>
 
+
+  <!-- Mobile column tooltip -->
+  <div id="col-tooltip-popup"></div>
 
   <!-- Shared backdrop -->
   <div id="popup-backdrop" style="display:none;position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,0.6);" onclick="closeAllPopups()"></div>
@@ -1305,6 +1340,23 @@
       else if (yearsLeft <= 5) cell.style.color = '#e8a94a';
       else                     cell.style.color = '#c04040';
     }
+
+    // Mobile column header tap-to-show tooltip
+    const colTooltipEl = document.getElementById('col-tooltip-popup');
+    let colTooltipTimer = null;
+    document.querySelectorAll('th[data-tip]').forEach(th => {
+      th.addEventListener('touchstart', e => {
+        const tip = th.dataset.tip;
+        if (!tip) return;
+        const rect = th.getBoundingClientRect();
+        colTooltipEl.textContent = tip;
+        colTooltipEl.style.left = Math.min(rect.left, window.innerWidth - 220) + 'px';
+        colTooltipEl.style.top  = (rect.bottom + 6) + 'px';
+        colTooltipEl.classList.add('visible');
+        clearTimeout(colTooltipTimer);
+        colTooltipTimer = setTimeout(() => colTooltipEl.classList.remove('visible'), 2000);
+      }, { passive: true });
+    });
 
     // Inline source editing
     document.querySelectorAll('.source-cell').forEach(cell => {
