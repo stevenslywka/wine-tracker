@@ -361,8 +361,8 @@ def cellar(username):
 
     # Apply search (exact LIKE first)
     if search:
-        query  = base_query + f" AND (wine_name LIKE {p} OR varietal LIKE {p} OR region LIKE {p})"
-        params = base_params + [f"%{search}%", f"%{search}%", f"%{search}%"]
+        query  = base_query + f" AND (wine_name LIKE {p} OR varietal LIKE {p} OR region LIKE {p} OR retailer LIKE {p} OR location LIKE {p} OR wine_type LIKE {p} OR notes LIKE {p})"
+        params = base_params + [f"%{search}%"] * 7
     else:
         query, params = base_query, base_params
 
@@ -386,7 +386,7 @@ def cellar(username):
             for word in name.split():
                 if len(word) >= 3:
                     scores.append(SequenceMatcher(None, term, word).ratio())
-            for field in ("varietal", "region"):
+            for field in ("varietal", "region", "retailer", "location", "wine_type"):
                 val = (wine[field] or "").lower()
                 if val:
                     scores.append(SequenceMatcher(None, term, val).ratio())
