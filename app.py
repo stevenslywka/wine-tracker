@@ -983,6 +983,107 @@ def enrich_drinking_windows():
     return redirect(url_for("cellar", username=session["username"]))
 
 
+@app.route("/wine/recommend", methods=["POST"])
+@login_required
+def recommend_wine():
+    import anthropic, json as json_lib
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return jsonify({"error": "API key not configured"}), 500
+
+    user_id   = session["user_id"]
+    prompt    = request.json.get("prompt", "").strip()
+    location  = request.json.get("location", "")   # "apt", "house", or ""
+    wine_type = request.json.get("wine_type", "")  # e.g. "Red", or ""
+    stickers  = request.json.get("stickers", [])   # list of color strings, or []
+
+    if not prompt:
+        return jsonify({"error": "No prompt provided"}), 400
+
+    p = ph()
+    conn = get_db()
+    cur  = conn.cursor()
+
+    query  = f"SELECT wine_name, vintage, varietal, wine_type, region, location, color_code, drinking_window, notes, quantity FROM wines WHERE user_id = {p} AND status IN ('cellar', 'apt', 'house')"
+    params = [user_id]
+
+    if location:
+        query += f" AND location = {p}"
+        params.append(location)
+    if wine_type:
+        query += f" AND wine_type = {p}"
+        params.append(wine_type)
+    if stickers:
+        placeholders = ",".join([p] * len(stickers))
+        query += f" AND color_code IN ({placeholders})"
+        params.extend(stickers)
+
+    query += " ORDER BY RANDOM() LIMIT 100" if is_postgres() else " ORDER BY RANDOM() LIMIT 100"
+
+    cur.execute(query, params)
+    wines = cur.fetchall()
+    conn.close()
+
+    if not wines:
+        return jsonify({"error": "No wines match your filters."}), 200
+
+    sticker_guide = (
+        "Sticker color meanings for this cellar:\n"
+        "🟢 Green = everyday/forgettable, good when you just need a drink\n"
+        "🟡 Yellow = solid and enjoyable, reliable everyday wine\n"
+        "🟠 Orange = quality/higher-end, good for guests or when wine is part of the occasion\n"
+        "🔴 Red = very special/expensive, bring out to impress or for focused appreciation\n"
+        "🔵 Blue = sentimental (gift, winery visit, travel) — orange/red quality with personal meaning\n"
+        "No sticker = not yet categorized, treat as unknown quality"
+    )
+
+    wine_list = []
+    for w in wines:
+        parts = [w["wine_name"] or "Unknown"]
+        if w["vintage"]:        parts.append(f"vintage {w['vintage']}")
+        if w["varietal"]:       parts.append(w["varietal"])
+        if w["wine_type"]:      parts.append(w["wine_type"])
+        if w["region"]:         parts.append(w["region"])
+        if w["location"]:       parts.append(f"location: {w['location']}")
+        if w["color_code"]:     parts.append(f"sticker: {w['color_code']}")
+        if w["drinking_window"]:parts.append(f"drink: {w['drinking_window']}")
+        if w["quantity"]:       parts.append(f"qty: {w['quantity']}")
+        if w["notes"]:          parts.append(f"notes: {w['notes'][:80]}")
+        wine_list.append(" | ".join(parts))
+
+    cellar_text = "\n".join(f"- {w}" for w in wine_list)
+
+    system_prompt = (
+        f"{sticker_guide}\n\n"
+        "You are a sommelier helping recommend wines from a personal cellar. "
+        "Based on the user's description of their mood, occasion, or food, recommend 1–3 wines "
+        "from the list below that best match. Be concise — one sentence per wine explaining why it fits. "
+        "Return ONLY valid JSON in this format: "
+        "{\"recommendations\": [{\"wine_name\": \"...\", \"vintage\": 2019, \"reason\": \"...\"}]} "
+        "If vintage is unknown use null. If nothing fits well, return {\"recommendations\": [], \"message\": \"brief explanation\"}. "
+        "Only recommend wines from the list provided.\n\n"
+        f"Available wines ({len(wines)} bottles):\n{cellar_text}"
+    )
+
+    client = anthropic.Anthropic(api_key=api_key)
+    message = client.messages.create(
+        model="claude-haiku-4-5-20251001",
+        max_tokens=512,
+        messages=[{"role": "user", "content": prompt}],
+        system=system_prompt
+    )
+
+    raw = message.content[0].text.strip()
+    try:
+        data = json_lib.loads(raw)
+    except Exception:
+        import re
+        m = re.search(r'\{.*\}', raw, re.DOTALL)
+        data = json_lib.loads(m.group()) if m else {"error": "Could not parse response"}
+
+    return jsonify(data)
+
+
 @app.route("/wine/scan-label", methods=["POST"])
 @login_required
 def scan_label():

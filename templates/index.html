@@ -61,6 +61,24 @@
     .picker-dot-clear { background: transparent; border: 2px solid #888; }
     .col-date { min-width: 110px; }
     .col-wine { min-width: 280px; }
+    /* ── Wine Rec chips ── */
+    .rec-filter-chip {
+      cursor: pointer; padding: 3px 10px; border-radius: 20px; font-size: 0.8rem;
+      border: 1px solid #5a2d0c; color: #a07850; background: transparent;
+      transition: all 0.15s; user-select: none;
+    }
+    .rec-filter-chip.active { background: #8b1a1a; border-color: #c9a96e; color: #f5e6d3; }
+    .rec-sticker-chip {
+      cursor: pointer; font-size: 1.3rem; border-radius: 6px; padding: 2px 4px;
+      border: 2px solid transparent; transition: border-color 0.15s; user-select: none;
+    }
+    .rec-sticker-chip.active { border-color: #c9a96e; background: rgba(201,169,110,0.15); }
+    .rec-result-card {
+      background: #1a0a00; border: 1px solid #5a2d0c; border-radius: 8px; padding: 12px 14px;
+    }
+    .rec-result-card .rec-wine-name { font-weight: bold; color: #c9a96e; font-size: 1rem; }
+    .rec-result-card .rec-reason { font-size: 0.87rem; color: #d0b898; margin-top: 4px; }
+
     /* ── Column header tooltips ── */
     th[data-tip] { cursor: help; }
     th[data-tip]::after {
@@ -226,6 +244,13 @@
           <div style="color:#f5e6d3;font-size:0.85rem;">Total Bottles Bought</div>
         </div>
       </div>
+    </div>
+
+    <!-- Wine Rec -->
+    <div class="mb-2">
+      <button type="button" class="btn btn-sm" style="background:#3a1a3a;border:1px solid #7a3a7a;color:#e0b0e0;" data-bs-toggle="modal" data-bs-target="#wineRecModal">
+        🍷 Need a wine rec?
+      </button>
     </div>
 
     <!-- Search & Filter -->
@@ -546,6 +571,74 @@
         <div class="modal-footer" style="border-top:1px solid #5a2d0c;">
           <button type="button" class="btn btn-secondary btn-sm" onclick="submitDrank(false)">Skip</button>
           <button type="button" class="btn btn-wine btn-sm" onclick="submitDrank(true)">Save & Mark Drank</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Wine Rec Modal -->
+  <div class="modal fade" id="wineRecModal" tabindex="-1">
+    <div class="modal-dialog modal-md">
+      <div class="modal-content" style="background:#2a1200;border:1px solid #5a2d0c;color:#f5e6d3;">
+        <div class="modal-header" style="border-bottom:1px solid #5a2d0c;">
+          <h5 class="modal-title" style="color:#c9a96e;">🍷 Wine Recommendation</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body d-flex flex-column gap-3">
+
+          <textarea id="recPrompt" class="form-control" rows="3"
+            placeholder="Describe what you're looking for… e.g. 'something light for a pool afternoon', 'bold red to go with a steak', 'impressive bottle to bring to a dinner party', 'third bottle of the night, don't care'"
+            style="resize:none;"></textarea>
+
+          <div style="font-size:0.85rem;color:#a07850;font-weight:bold;">Optional filters</div>
+          <div class="d-flex flex-wrap gap-3">
+
+            <div>
+              <div style="font-size:0.8rem;color:#a07850;margin-bottom:4px;">Location</div>
+              <div class="d-flex gap-2">
+                <label class="rec-filter-chip" data-group="location" data-value="">
+                  <input type="radio" name="rec-location" value="" checked style="display:none;"> Any
+                </label>
+                <label class="rec-filter-chip" data-group="location" data-value="apt">
+                  <input type="radio" name="rec-location" value="apt" style="display:none;"> Apt
+                </label>
+                <label class="rec-filter-chip" data-group="location" data-value="house">
+                  <input type="radio" name="rec-location" value="house" style="display:none;"> House
+                </label>
+              </div>
+            </div>
+
+            <div>
+              <div style="font-size:0.8rem;color:#a07850;margin-bottom:4px;">Type</div>
+              <select id="recType" class="form-select form-select-sm" style="min-width:110px;">
+                <option value="">Any</option>
+                <option value="Red">Red</option>
+                <option value="White">White</option>
+                <option value="Rosé">Rosé</option>
+                <option value="Sparkling">Sparkling</option>
+                <option value="Dessert">Dessert</option>
+                <option value="Orange">Orange</option>
+              </select>
+            </div>
+
+            <div>
+              <div style="font-size:0.8rem;color:#a07850;margin-bottom:4px;">Sticker</div>
+              <div class="d-flex gap-1 flex-wrap">
+                <label class="rec-sticker-chip" data-value="Green" title="Green — everyday/forgettable">🟢</label>
+                <label class="rec-sticker-chip" data-value="Yellow" title="Yellow — solid everyday">🟡</label>
+                <label class="rec-sticker-chip" data-value="Orange" title="Orange — quality, guests">🟠</label>
+                <label class="rec-sticker-chip" data-value="Red" title="Red — very special">🔴</label>
+                <label class="rec-sticker-chip" data-value="Blue" title="Blue — sentimental">🔵</label>
+              </div>
+            </div>
+
+          </div>
+
+          <div id="recResults" style="display:none;"></div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #5a2d0c;">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-wine btn-sm" id="recSubmitBtn" onclick="submitWineRec()">Find a Bottle</button>
         </div>
       </div>
     </div>
@@ -1345,6 +1438,84 @@
       else if (yearsLeft <= 2) cell.style.color = '#7ecb7e';
       else if (yearsLeft <= 5) cell.style.color = '#e8a94a';
       else                     cell.style.color = '#c04040';
+    }
+
+    // ── Wine Rec Modal ──
+    // Filter chips — location (radio behaviour)
+    document.querySelectorAll('.rec-filter-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const group = chip.dataset.group;
+        document.querySelectorAll(`.rec-filter-chip[data-group="${group}"]`).forEach(c => c.classList.remove('active'));
+        chip.classList.add('active');
+        chip.querySelector('input').checked = true;
+      });
+    });
+    // Mark first chip active on load
+    document.querySelectorAll('.rec-filter-chip input:checked').forEach(inp => inp.closest('.rec-filter-chip').classList.add('active'));
+
+    // Sticker chips — toggle multi-select
+    document.querySelectorAll('.rec-sticker-chip').forEach(chip => {
+      chip.addEventListener('click', () => chip.classList.toggle('active'));
+    });
+
+    // Reset rec modal when opened
+    document.getElementById('wineRecModal').addEventListener('show.bs.modal', () => {
+      document.getElementById('recPrompt').value = '';
+      document.getElementById('recResults').style.display = 'none';
+      document.getElementById('recResults').innerHTML = '';
+      document.getElementById('recSubmitBtn').disabled = false;
+      document.getElementById('recSubmitBtn').textContent = 'Find a Bottle';
+      document.querySelectorAll('.rec-sticker-chip').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.rec-filter-chip').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('.rec-filter-chip input:checked').forEach(inp => inp.closest('.rec-filter-chip').classList.add('active'));
+      document.getElementById('recType').value = '';
+    });
+
+    async function submitWineRec() {
+      const prompt = document.getElementById('recPrompt').value.trim();
+      if (!prompt) { document.getElementById('recPrompt').focus(); return; }
+
+      const btn = document.getElementById('recSubmitBtn');
+      btn.disabled = true;
+      btn.textContent = 'Finding…';
+
+      const location  = document.querySelector('.rec-filter-chip[data-group="location"].active')?.dataset.value || '';
+      const wine_type = document.getElementById('recType').value;
+      const stickers  = [...document.querySelectorAll('.rec-sticker-chip.active')].map(c => c.dataset.value);
+
+      const resultsEl = document.getElementById('recResults');
+      resultsEl.style.display = 'none';
+      resultsEl.innerHTML = '';
+
+      try {
+        const resp = await fetch('/wine/recommend', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ prompt, location, wine_type, stickers })
+        });
+        const data = await resp.json();
+
+        if (data.error) {
+          resultsEl.innerHTML = `<div style="color:#e05050;font-size:0.9rem;">${data.error}</div>`;
+        } else if (data.recommendations && data.recommendations.length) {
+          resultsEl.innerHTML = data.recommendations.map(r => `
+            <div class="rec-result-card">
+              <div class="rec-wine-name">${r.wine_name}${r.vintage ? ' <span style="font-weight:normal;color:#a07850;">' + r.vintage + '</span>' : ''}</div>
+              <div class="rec-reason">${r.reason}</div>
+            </div>`).join('');
+        } else {
+          resultsEl.innerHTML = `<div style="color:#a07850;font-size:0.9rem;">${data.message || 'No matches found for those filters. Try broadening your search.'}</div>`;
+        }
+        resultsEl.style.display = 'flex';
+        resultsEl.style.flexDirection = 'column';
+        resultsEl.style.gap = '10px';
+      } catch(e) {
+        resultsEl.innerHTML = '<div style="color:#e05050;font-size:0.9rem;">Something went wrong. Please try again.</div>';
+        resultsEl.style.display = 'block';
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Find a Bottle';
     }
 
     // Mobile column header tap-to-show tooltip
