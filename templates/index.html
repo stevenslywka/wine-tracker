@@ -327,38 +327,29 @@
                   {{ label }}{% if sort == field %} {{ '↑' if order == 'asc' else '↓' }}{% endif %}
                 </a></th>
               {% endmacro %}
-              {{ sort_link('order_date', 'Date', 'col-date', 'Date the wine was purchased') }}
-              {{ sort_link('color_code', 'Sticker', '', 'Your personal color tag for this bottle') }}
               {{ sort_link('wine_name', 'Wine', 'col-wine', 'Full wine name') }}
               {{ sort_link('vintage', 'Vintage', '', 'Year the grapes were harvested') }}
+              {{ sort_link('wine_type', 'Type', '', 'Red, White, Rosé, Sparkling, etc.') }}
               {{ sort_link('region', 'Region', '', 'Wine-producing region or appellation') }}
               {{ sort_link('location', 'Location', '', 'Where the bottle is physically stored') }}
               {{ sort_link('varietal', 'Varietal', '', 'Grape variety (e.g. Cabernet Sauvignon)') }}
-              {{ sort_link('wine_type', 'Type', '', 'Red, White, Rosé, Sparkling, etc.') }}
               {{ sort_link('size_ml', 'Size', '', 'Bottle size in milliliters') }}
               {{ sort_link('quantity', 'Qty', '', 'Number of bottles currently in cellar') }}
               {{ sort_link('unit_price', 'Paid Price', '', 'Price paid per bottle') }}
-              {{ sort_link('retail_price', 'Retail Price', 'd-none', 'Retail market price') }}
               {{ sort_link('retailer', 'Source', '', 'Where you purchased the wine') }}
+              {{ sort_link('order_date', 'Date', 'col-date', 'Date the wine was purchased') }}
+              {{ sort_link('color_code', 'Sticker', '', 'Your personal color tag for this bottle') }}
               {{ sort_link('my_rating', 'My Rating', '', 'Your personal score out of 10') }}
               <th style="position:relative;" data-tip="Suggested years to drink this wine">Drinking Window</th>
-              <th style="position:relative;" data-tip="Your personal tasting notes">Notes</th>
               <th style="position:relative;" data-tip="Cellar, Apt, House, Not Shipped, or Drank">Status</th>
+              <th style="position:relative;" data-tip="Your personal tasting notes">Notes</th>
+              {{ sort_link('retail_price', 'Retail Price', 'd-none', 'Retail market price') }}
               <th></th>
             </tr>
           </thead>
           <tbody>
             {% for wine in wines %}
             <tr>
-              {% set _months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
-              <td>{{ (_months[wine.order_date[5:7]|int - 1] + '-' + wine.order_date[2:4]) if wine.order_date else '—' }}</td>
-              <td class="text-center" style="vertical-align:middle;">
-                <span class="color-dot color-dot-{{ wine.color_code or '' }}"
-                      data-wine-id="{{ wine.id }}"
-                      data-color="{{ wine.color_code or '' }}"
-                      {% if not wine.color_code %}style="background:transparent;border-color:#444;"{% endif %}
-                      title="Click to change color"></span>
-              </td>
               <td>
                 <div class="d-flex align-items-center gap-2">
                   {% if wine.image_url %}
@@ -369,28 +360,33 @@
                 </div>
               </td>
               <td>{{ wine.vintage or '—' }}</td>
-              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="region" data-value="{{ wine.region or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.region or '—' }}</span></td>
-              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="location" data-value="{{ wine.location or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.location or '—' }}</span></td>
-              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="varietal" data-value="{{ wine.varietal or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.varietal or '—' }}</span></td>
               <td class="type-cell" data-wine-id="{{ wine.id }}" data-type="{{ wine.wine_type or '' }}" onclick="event.stopPropagation()" title="Click to change type" style="cursor:pointer;white-space:nowrap;">
                 <span class="type-badge type-{{ wine.wine_type or 'none' }}">{{ wine.wine_type or '—' }}</span>
               </td>
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="region" data-value="{{ wine.region or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.region or '—' }}</span></td>
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="location" data-value="{{ wine.location or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.location or '—' }}</span></td>
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="varietal" data-value="{{ wine.varietal or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.varietal or '—' }}</span></td>
               <td class="size-cell" data-wine-id="{{ wine.id }}" data-size="{{ wine.size_ml or '' }}" onclick="event.stopPropagation()" title="Click to change size" style="cursor:pointer;white-space:nowrap;">
                 {{ wine.size_ml or '—' }}{% if wine.size_ml %}ml{% endif %}
               </td>
               <td>{{ wine.quantity or '—' }}</td>
               <td class="price-cell" data-col="paid" data-wine-id="{{ wine.id }}" data-value="{{ wine.unit_price or '' }}" onclick="event.stopPropagation()" title="Click to edit"><span class="price-display">{% if wine.unit_price %}${{ "%.2f"|format(wine.unit_price) }}{% else %}—{% endif %}</span></td>
-              <td class="price-cell d-none" data-col="retail" data-wine-id="{{ wine.id }}" data-value="{{ wine.retail_price or '' }}" onclick="event.stopPropagation()" title="Click to edit"><span class="price-display">{% if wine.retail_price %}${{ "%.2f"|format(wine.retail_price) }}{% else %}—{% endif %}</span></td>
               <td class="source-cell" data-wine-id="{{ wine.id }}" data-retailer="{{ wine.retailer or '' }}" onclick="event.stopPropagation()" title="Click to edit source" style="cursor:pointer;white-space:nowrap;">
                 <span class="source-display">{{ wine.retailer or '—' }}</span>
+              </td>
+              {% set _months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
+              <td>{{ (_months[wine.order_date[5:7]|int - 1] + '-' + wine.order_date[2:4]) if wine.order_date else '—' }}</td>
+              <td class="text-center" style="vertical-align:middle;">
+                <span class="color-dot color-dot-{{ wine.color_code or '' }}"
+                      data-wine-id="{{ wine.id }}"
+                      data-color="{{ wine.color_code or '' }}"
+                      {% if not wine.color_code %}style="background:transparent;border-color:#444;"{% endif %}
+                      title="Click to change color"></span>
               </td>
               <td class="rating-cell" data-wine-id="{{ wine.id }}" data-rating="{{ wine.my_rating or '' }}" onclick="event.stopPropagation()" title="Click to rate">
                 <span class="rating-display">{{ "%.1f"|format(wine.my_rating) if wine.my_rating is not none else '—' }}</span>
               </td>
               <td class="drinking-window-cell editable-cell" data-wine-id="{{ wine.id }}" data-field="drinking_window" data-value="{{ wine.drinking_window or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;white-space:nowrap;"><span class="editable-display">{{ wine.drinking_window or '—' }}</span></td>
-              <td class="notes-cell" data-wine-id="{{ wine.id }}" data-wine-name="{{ wine.wine_name or '' }}" data-notes="{{ wine.notes | e if wine.notes else '' }}" onclick="event.stopPropagation()" title="{{ wine.notes or 'Click to add notes' }}" style="cursor:pointer;max-width:160px;">
-                <span class="notes-preview">{% if wine.notes %}<span style="color:#c9a96e;">&#x1F4DD;</span> {{ wine.notes[:40] }}{% if wine.notes|length > 40 %}…{% endif %}{% else %}<span style="color:#555;">—</span>{% endif %}</span>
-              </td>
               <td onclick="event.stopPropagation()">
                 <span class="badge status-badge badge-{{ wine.status or '' }}"
                       data-wine-id="{{ wine.id }}"
@@ -403,6 +399,10 @@
                   {% else %}—{% endif %}
                 </span>
               </td>
+              <td class="notes-cell" data-wine-id="{{ wine.id }}" data-wine-name="{{ wine.wine_name or '' }}" data-notes="{{ wine.notes | e if wine.notes else '' }}" onclick="event.stopPropagation()" title="{{ wine.notes or 'Click to add notes' }}" style="cursor:pointer;max-width:160px;">
+                <span class="notes-preview">{% if wine.notes %}<span style="color:#c9a96e;">&#x1F4DD;</span> {{ wine.notes[:40] }}{% if wine.notes|length > 40 %}…{% endif %}{% else %}<span style="color:#555;">—</span>{% endif %}</span>
+              </td>
+              <td class="price-cell d-none" data-col="retail" data-wine-id="{{ wine.id }}" data-value="{{ wine.retail_price or '' }}" onclick="event.stopPropagation()" title="Click to edit"><span class="price-display">{% if wine.retail_price %}${{ "%.2f"|format(wine.retail_price) }}{% else %}—{% endif %}</span></td>
               <td onclick="event.stopPropagation()" style="white-space:nowrap;">
                 {% if not auth_enabled or access_level == 'edit' %}
                 <button class="btn btn-sm delete-btn" data-wine-id="{{ wine.id }}" data-wine-name="{{ wine.wine_name | e }}" title="Delete" style="background:none;border:none;color:#5c1a1a;font-size:1rem;padding:2px 6px;cursor:pointer;">🗑</button>
