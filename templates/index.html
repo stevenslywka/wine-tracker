@@ -181,16 +181,30 @@
       </div>
       <div class="d-flex gap-2 align-items-center">
         {% if access_level == 'edit' %}
-        <button type="button" class="btn btn-wine btn-sm" data-bs-toggle="modal" data-bs-target="#addWineModal">+ Add Wine</button>
-        <form method="POST" action="/refresh" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').textContent='Refreshing…';">
-          <button type="submit" class="btn btn-wine btn-sm">&#8635; Refresh Emails</button>
-        </form>
-        <form method="POST" action="/wine/enrich-drinking-windows" onsubmit="this.querySelector('button').disabled=true; this.querySelector('button').textContent='Enriching…';">
-          <button type="submit" class="btn btn-sm" style="background:#1a3a1a;border:1px solid #3a6a3a;color:#7ecb7e;">🍷 Fill Drinking Windows</button>
-        </form>
+        <button type="button" class="btn btn-wine btn-sm" style="min-width:100px;" data-bs-toggle="modal" data-bs-target="#addWineModal">+ Add Wine</button>
         {% endif %}
         <a href="{{ url_for('user_analytics', username=cellar_username) }}" class="btn btn-sm" style="background:#1a1a3a;border:1px solid #3a3a8a;color:#c0c8f5;">📊 Analytics</a>
-        <a href="/export/csv" class="btn btn-sm" style="background:#1a3a2a;border:1px solid #3a8a5a;color:#c0f5d8;">⬇ Export CSV</a>
+        <div class="dropdown">
+          <button class="btn btn-sm dropdown-toggle" style="background:#2a1200;border:1px solid #5a2d0c;color:#c9a96e;" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+            ⚙ Refresh / Export
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end" style="background:#2a1200;border:1px solid #5a2d0c;min-width:180px;">
+            {% if access_level == 'edit' %}
+            <li>
+              <form method="POST" action="/refresh" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Refreshing…';">
+                <button type="submit" class="dropdown-item" style="color:#f5e6d3;background:none;">&#8635; Refresh Emails</button>
+              </form>
+            </li>
+            <li>
+              <form method="POST" action="/wine/enrich-drinking-windows" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Enriching…';">
+                <button type="submit" class="dropdown-item" style="color:#7ecb7e;background:none;">🍷 Fill Drinking Windows</button>
+              </form>
+            </li>
+            <li><hr class="dropdown-divider" style="border-color:#5a2d0c;margin:4px 0;"></li>
+            {% endif %}
+            <li><a class="dropdown-item" href="/export/csv" style="color:#c0f5d8;">⬇ Export CSV</a></li>
+          </ul>
+        </div>
         {% if auth_enabled %}
         <a href="{{ url_for('logout') }}" class="btn btn-sm" style="background:#3d0f0f; border:1px solid #5a2d0c; color:#c9a96e;">Log out</a>
         {% endif %}
