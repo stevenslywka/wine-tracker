@@ -629,6 +629,38 @@ def update_drinking_window(wine_id):
     return ("", 204)
 
 
+@app.route("/wine/<int:wine_id>/unit_price", methods=["POST"])
+@login_required
+def update_unit_price(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
+    raw = request.form.get("unit_price", "").strip()
+    try:    unit_price = float(raw) if raw else None
+    except ValueError: unit_price = None
+    p = ph(); conn = get_db(); cur = conn.cursor()
+    cur.execute(f"SELECT quantity FROM wines WHERE id = {p}", (wine_id,))
+    row = cur.fetchone()
+    quantity = row["quantity"] if row else 1
+    total_price = round(unit_price * quantity, 2) if unit_price else None
+    cur.execute(f"UPDATE wines SET unit_price = {p}, total_price = {p} WHERE id = {p}", (unit_price, total_price, wine_id))
+    conn.commit(); conn.close()
+    return ("", 204)
+
+
+@app.route("/wine/<int:wine_id>/retail_price", methods=["POST"])
+@login_required
+def update_retail_price(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
+    raw = request.form.get("retail_price", "").strip()
+    try:    retail_price = float(raw) if raw else None
+    except ValueError: retail_price = None
+    p = ph(); conn = get_db(); cur = conn.cursor()
+    cur.execute(f"UPDATE wines SET retail_price = {p} WHERE id = {p}", (retail_price, wine_id))
+    conn.commit(); conn.close()
+    return ("", 204)
+
+
 @app.route("/wine/<int:wine_id>/notes", methods=["POST"])
 @login_required
 def update_notes(wine_id):
@@ -660,6 +692,8 @@ def add_wine():
     notes          = request.form.get("notes", "").strip() or None
     retailer       = request.form.get("retailer", "").strip() or None
     raw_order_date = request.form.get("order_date", "").strip()
+    raw_status     = request.form.get("status", "").strip()
+    status         = raw_status if raw_status in ('cellar', 'apt', 'house', 'not_shipped', 'drank') else 'cellar'
 
     try:    vintage    = int(raw_vintage)   if raw_vintage   else None
     except ValueError: vintage = None
@@ -696,10 +730,10 @@ def add_wine():
                 (wine_name, vintage, unit_price, total_price, quantity, notes,
                  varietal, region, location, wine_type, size_ml,
                  retailer, order_date, status, color_code, drinking_window, user_id)
-            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'cellar',{p},{p},{p})
+            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
             RETURNING id
         """, (wine_name, vintage, unit_price, total_price, quantity, notes,
-              varietal, region, location, wine_type, size_ml, retailer, order_date, color_code, drinking_window, user_id))
+              varietal, region, location, wine_type, size_ml, retailer, order_date, status, color_code, drinking_window, user_id))
         row = cur.fetchone()
         wine_id = row["id"] if row else None
     else:
@@ -708,9 +742,9 @@ def add_wine():
                 (wine_name, vintage, unit_price, total_price, quantity, notes,
                  varietal, region, location, wine_type, size_ml,
                  retailer, order_date, status, color_code, drinking_window, user_id)
-            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'cellar',{p},{p},{p})
+            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
         """, (wine_name, vintage, unit_price, total_price, quantity, notes,
-              varietal, region, location, wine_type, size_ml, retailer, order_date, color_code, drinking_window, user_id))
+              varietal, region, location, wine_type, size_ml, retailer, order_date, status, color_code, drinking_window, user_id))
         wine_id = cur.lastrowid
 
     conn.commit()

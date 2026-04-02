@@ -95,19 +95,10 @@
       color: #f5e6d3; text-align: center; font-size: 0.9rem; padding: 1px 4px;
     }
     .rating-input:focus { outline: none; box-shadow: 0 0 0 0.15rem rgba(201,169,110,0.4); }
-    .price-cell { user-select: none; cursor: cell; }
-    .price-cell.selected { background: rgba(201,169,110,0.55) !important; outline: 1px solid #c9a96e; color: #1a0a00; }
+    .price-cell { cursor: pointer; }
     .status-badge.status-selected { outline: 2px solid #c9a96e; box-shadow: 0 0 0 3px rgba(201,169,110,0.35); }
     #bulk-status-bar { display: none; }
     #bulk-status-bar.visible { display: flex; }
-    #price-summary {
-      display: none; position: fixed; bottom: 18px; right: 24px; z-index: 8888;
-      background: #2a1200; border: 1px solid #c9a96e; border-radius: 8px;
-      padding: 8px 16px; color: #f5e6d3; font-size: 0.9rem;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.6); gap: 20px;
-    }
-    #price-summary.visible { display: flex; }
-    #price-summary span { color: #c9a96e; font-weight: bold; }
 
     /* ── Responsive layout ── */
 
@@ -353,8 +344,8 @@
                 {{ wine.size_ml or '—' }}{% if wine.size_ml %}ml{% endif %}
               </td>
               <td>{{ wine.quantity or '—' }}</td>
-              <td class="price-cell" data-col="paid" data-value="{{ wine.unit_price or '' }}" onclick="event.stopPropagation()">{% if wine.unit_price %}${{ "%.2f"|format(wine.unit_price) }}{% else %}—{% endif %}</td>
-              <td class="price-cell" data-col="retail" data-value="{{ wine.retail_price or '' }}" onclick="event.stopPropagation()">{% if wine.retail_price %}${{ "%.2f"|format(wine.retail_price) }}{% else %}—{% endif %}</td>
+              <td class="price-cell" data-col="paid" data-wine-id="{{ wine.id }}" data-value="{{ wine.unit_price or '' }}" onclick="event.stopPropagation()" title="Click to edit"><span class="price-display">{% if wine.unit_price %}${{ "%.2f"|format(wine.unit_price) }}{% else %}—{% endif %}</span></td>
+              <td class="price-cell" data-col="retail" data-wine-id="{{ wine.id }}" data-value="{{ wine.retail_price or '' }}" onclick="event.stopPropagation()" title="Click to edit"><span class="price-display">{% if wine.retail_price %}${{ "%.2f"|format(wine.retail_price) }}{% else %}—{% endif %}</span></td>
               <td class="source-cell" data-wine-id="{{ wine.id }}" data-retailer="{{ wine.retailer or '' }}" onclick="event.stopPropagation()" title="Click to edit source" style="cursor:pointer;white-space:nowrap;">
                 <span class="source-display">{{ wine.retailer or '—' }}</span>
               </td>
@@ -397,12 +388,6 @@
     Steven's Wine Tracker
   </footer>
 
-  <!-- Price summary bar -->
-  <div id="price-summary">
-    Count: <span id="ps-count"></span>
-    Sum: <span id="ps-sum"></span>
-    Avg: <span id="ps-avg"></span>
-  </div>
 
   <!-- Shared backdrop -->
   <div id="popup-backdrop" style="display:none;position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,0.6);" onclick="closeAllPopups()"></div>
@@ -613,6 +598,15 @@
                 <div class="row g-2">
                   <div class="col"><label class="form-label fw-bold" style="color:#c9a96e;">Source</label><input type="text" name="retailer" class="form-control" placeholder="e.g. Wine.com"></div>
                   <div class="col"><label class="form-label fw-bold" style="color:#c9a96e;">Date</label><input type="date" name="order_date" class="form-control"></div>
+                  <div class="col"><label class="form-label fw-bold" style="color:#c9a96e;">Status</label>
+                    <select name="status" class="form-select">
+                      <option value="cellar">Cellar</option>
+                      <option value="apt">Apt</option>
+                      <option value="house">House</option>
+                      <option value="not_shipped">Not Shipped</option>
+                      <option value="drank">Drank</option>
+                    </select>
+                  </div>
                 </div>
                 <!-- Hidden file field re-attached by JS -->
                 <input type="file" name="image" id="lsImageProxy" style="display:none;">
@@ -724,61 +718,48 @@
       }
     });
 
-    // Price cell selection
-    const summary = document.getElementById('price-summary');
-    let isDragging = false;
-    let dragCol = null;
-    let startCell = null;
-
-    function getCellIndex(cell) {
-      return Array.from(document.querySelectorAll(`.price-cell[data-col="${cell.dataset.col}"]`)).indexOf(cell);
-    }
-
-    function updateSelection(col, fromIdx, toIdx) {
-      const cells = document.querySelectorAll(`.price-cell[data-col="${col}"]`);
-      const lo = Math.min(fromIdx, toIdx), hi = Math.max(fromIdx, toIdx);
-      document.querySelectorAll('.price-cell.selected').forEach(c => c.classList.remove('selected'));
-      const values = [];
-      cells.forEach((c, i) => {
-        if (i >= lo && i <= hi) {
-          c.classList.add('selected');
-          const v = parseFloat(c.dataset.value);
-          if (!isNaN(v)) values.push(v);
-        }
-      });
-      if (values.length) {
-        const sum = values.reduce((a, b) => a + b, 0);
-        document.getElementById('ps-count').textContent = values.length;
-        document.getElementById('ps-sum').textContent = '$' + sum.toFixed(2);
-        document.getElementById('ps-avg').textContent = '$' + (sum / values.length).toFixed(2);
-        summary.classList.add('visible');
-      } else {
-        summary.classList.remove('visible');
-      }
-    }
-
+    // Price cell inline editing
     document.querySelectorAll('.price-cell').forEach(cell => {
-      cell.addEventListener('mousedown', e => {
-        e.preventDefault();
-        isDragging = true;
-        dragCol = cell.dataset.col;
-        startCell = cell;
-        updateSelection(dragCol, getCellIndex(cell), getCellIndex(cell));
+      cell.addEventListener('click', () => {
+        if (cell.querySelector('input')) return;
+        const display = cell.querySelector('.price-display');
+        const current = cell.dataset.value;
+        const field = cell.dataset.col === 'paid' ? 'unit_price' : 'retail_price';
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.className = 'rating-input';
+        input.style.width = '80px';
+        input.value = current;
+        input.min = '0';
+        input.step = '0.01';
+        display.replaceWith(input);
+        input.focus(); input.select();
+        const save = () => {
+          const raw = input.value.trim();
+          const val = raw !== '' ? parseFloat(raw) : null;
+          fetch(`/wine/${cell.dataset.wineId}/${field}`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `${field}=${encodeURIComponent(raw)}`
+          });
+          cell.dataset.value = val !== null ? val : '';
+          const span = document.createElement('span');
+          span.className = 'price-display';
+          span.textContent = val !== null ? '$' + val.toFixed(2) : '—';
+          input.replaceWith(span);
+        };
+        input.addEventListener('blur', save);
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+          if (e.key === 'Escape') {
+            input.removeEventListener('blur', save);
+            const span = document.createElement('span');
+            span.className = 'price-display';
+            span.textContent = current ? '$' + parseFloat(current).toFixed(2) : '—';
+            input.replaceWith(span);
+          }
+        });
       });
-      cell.addEventListener('mouseover', e => {
-        if (isDragging && cell.dataset.col === dragCol) {
-          updateSelection(dragCol, getCellIndex(startCell), getCellIndex(cell));
-        }
-      });
-    });
-
-    document.addEventListener('mouseup', () => { isDragging = false; });
-
-    document.addEventListener('click', e => {
-      if (!e.target.closest('.price-cell')) {
-        document.querySelectorAll('.price-cell.selected').forEach(c => c.classList.remove('selected'));
-        summary.classList.remove('visible');
-      }
     });
 
     // Size picker
