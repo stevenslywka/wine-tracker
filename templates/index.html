@@ -318,7 +318,8 @@
           <tbody>
             {% for wine in wines %}
             <tr>
-              <td>{{ (wine.order_date[5:7] + '/' + wine.order_date[8:10] + '/' + wine.order_date[2:4]) if wine.order_date else '—' }}</td>
+              {% set _months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
+              <td>{{ (_months[wine.order_date[5:7]|int - 1] + '-' + wine.order_date[2:4]) if wine.order_date else '—' }}</td>
               <td class="text-center" style="vertical-align:middle;">
                 <span class="color-dot color-dot-{{ wine.color_code or '' }}"
                       data-wine-id="{{ wine.id }}"
