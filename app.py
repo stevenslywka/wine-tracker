@@ -166,10 +166,24 @@ def logout():
 def home():
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT * FROM users ORDER BY username")
+    cur.execute(
+        f"SELECT COUNT(*) as cnt, SUM(CASE WHEN status='cellar' THEN quantity ELSE 0 END) as in_cellar FROM wines WHERE user_id = {ph()}",
+        (session["user_id"],)
+    )
+    row = cur.fetchone()
+    conn.close()
+    my_stats = {"total": row["cnt"] or 0, "in_cellar": row["in_cellar"] or 0}
+    return render_template("home.html", my_stats=my_stats)
+
+
+@app.route("/friends")
+@login_required
+def friends():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(f"SELECT * FROM users WHERE id != {ph()} ORDER BY username", (session["user_id"],))
     users = cur.fetchall()
 
-    # Get bottle counts per user
     user_stats = {}
     for u in users:
         cur.execute(
@@ -177,13 +191,9 @@ def home():
             (u["id"],)
         )
         row = cur.fetchone()
-        user_stats[u["id"]] = {
-            "total": row["cnt"] or 0,
-            "in_cellar": row["in_cellar"] or 0,
-        }
+        user_stats[u["id"]] = {"total": row["cnt"] or 0, "in_cellar": row["in_cellar"] or 0}
     conn.close()
-    return render_template("home.html", users=users, user_stats=user_stats,
-                           current_user_id=session["user_id"])
+    return render_template("friends.html", users=users, user_stats=user_stats)
 
 
 # ---------------------------------------------------------------------------
