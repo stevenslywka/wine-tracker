@@ -200,10 +200,6 @@
 
   <div class="container-fluid px-4" style="max-width: 1600px;">
 
-    <!-- Ready to Drink quick filter -->
-    <div class="mb-2">
-      <a href="{{ url_for('cellar', username=cellar_username) }}?rtd=1" class="btn btn-sm {% if request.args.get('rtd') %}btn-success{% endif %}" style="background:{% if request.args.get('rtd') %}#27ae60{% else %}#1a3a1a{% endif %};border:1px solid #3a6a3a;color:#c0f5c0;">🟢 Ready to Drink</a>
-    </div>
 
     <!-- Stats Row -->
     <div class="row g-3 mb-3">
@@ -356,7 +352,6 @@
                   <img src="{{ wine.image_url }}" class="wine-thumb" data-src="{{ wine.image_url }}" data-name="{{ wine.wine_name or '' }}" style="width:36px;height:48px;object-fit:cover;border-radius:3px;flex-shrink:0;cursor:zoom-in;" alt="" onclick="event.stopPropagation();openImagePopup(this)">
                   {% endif %}
                   <a href="https://www.wine-searcher.com/find/{{ wine.wine_name | replace(' ', '+') }}{% if wine.vintage %}+{{ wine.vintage }}{% endif %}#t2" target="_blank" onclick="event.stopPropagation()" style="color:inherit;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'"><strong>{{ wine.wine_name or '—' }}</strong></a>
-                  {% if wine.drinking_window and wine.drinking_window|string|length == 9 %}{%- set parts = wine.drinking_window.split('-') -%}{% if parts|length == 2 and parts[0]|int <= 2026 and parts[1]|int >= 2026 %}<span title="Ready to drink!" style="margin-left:4px;font-size:0.85em;">🟢</span>{% endif %}{% endif %}
                 </div>
               </td>
               <td>{{ wine.vintage or '—' }}</td>

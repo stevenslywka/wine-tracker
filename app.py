@@ -332,13 +332,6 @@ def cellar(username):
     if price_max:
         base_query += f" AND unit_price <= {p}"
         base_params.append(float(price_max))
-    rtd_filter = request.args.get("rtd", "")
-    if rtd_filter:
-        current_year = date.today().year
-        if is_postgres():
-            base_query += f" AND drinking_window ~ '^[0-9]{{4}}-[0-9]{{4}}$' AND CAST(split_part(drinking_window,'-',1) AS INT) <= {current_year} AND CAST(split_part(drinking_window,'-',2) AS INT) >= {current_year}"
-        else:
-            base_query += f" AND drinking_window LIKE '____-____' AND CAST(SUBSTR(drinking_window,1,4) AS INT) <= {current_year} AND CAST(SUBSTR(drinking_window,6,4) AS INT) >= {current_year}"
     color_filter = request.args.get("color_code", "")
     if color_filter:
         base_query += f" AND color_code = {p}"
