@@ -637,7 +637,7 @@
         </div>
         <div class="modal-footer" style="border-top:1px solid #5a2d0c;">
           <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-          <button type="button" class="btn btn-wine btn-sm" id="recSubmitBtn" onclick="submitWineRec()">Find a Bottle</button>
+          <button type="button" class="btn btn-wine btn-sm" id="recSubmitBtn" onclick="submitWineRec()">Find a Bottle in Your Cellar</button>
         </div>
       </div>
     </div>
@@ -1463,7 +1463,7 @@
       document.getElementById('recResults').style.display = 'none';
       document.getElementById('recResults').innerHTML = '';
       document.getElementById('recSubmitBtn').disabled = false;
-      document.getElementById('recSubmitBtn').textContent = 'Find a Bottle';
+      document.getElementById('recSubmitBtn').textContent = 'Find a Bottle in Your Cellar';
       document.querySelectorAll('.rec-sticker-chip').forEach(c => c.classList.remove('active'));
       document.querySelectorAll('.rec-filter-chip').forEach(c => c.classList.remove('active'));
       document.querySelectorAll('.rec-filter-chip input:checked').forEach(inp => inp.closest('.rec-filter-chip').classList.add('active'));
@@ -1514,7 +1514,7 @@
       }
 
       btn.disabled = false;
-      btn.textContent = 'Find a Bottle';
+      btn.textContent = 'Find a Bottle in Your Cellar';
     }
 
     // Mobile column header tap-to-show tooltip
