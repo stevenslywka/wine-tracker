@@ -306,7 +306,7 @@
               {{ sort_link('size_ml', 'Size') }}
               {{ sort_link('quantity', 'Qty') }}
               {{ sort_link('unit_price', 'Paid Price') }}
-              {{ sort_link('retail_price', 'Retail Price') }}
+              {{ sort_link('retail_price', 'Retail Price', 'd-none') }}
               {{ sort_link('retailer', 'Source') }}
               {{ sort_link('my_rating', 'My Rating') }}
               <th>Drinking Window</th>
@@ -347,7 +347,7 @@
               </td>
               <td>{{ wine.quantity or '—' }}</td>
               <td class="price-cell" data-col="paid" data-wine-id="{{ wine.id }}" data-value="{{ wine.unit_price or '' }}" onclick="event.stopPropagation()" title="Click to edit"><span class="price-display">{% if wine.unit_price %}${{ "%.2f"|format(wine.unit_price) }}{% else %}—{% endif %}</span></td>
-              <td class="price-cell" data-col="retail" data-wine-id="{{ wine.id }}" data-value="{{ wine.retail_price or '' }}" onclick="event.stopPropagation()" title="Click to edit"><span class="price-display">{% if wine.retail_price %}${{ "%.2f"|format(wine.retail_price) }}{% else %}—{% endif %}</span></td>
+              <td class="price-cell d-none" data-col="retail" data-wine-id="{{ wine.id }}" data-value="{{ wine.retail_price or '' }}" onclick="event.stopPropagation()" title="Click to edit"><span class="price-display">{% if wine.retail_price %}${{ "%.2f"|format(wine.retail_price) }}{% else %}—{% endif %}</span></td>
               <td class="source-cell" data-wine-id="{{ wine.id }}" data-retailer="{{ wine.retailer or '' }}" onclick="event.stopPropagation()" title="Click to edit source" style="cursor:pointer;white-space:nowrap;">
                 <span class="source-display">{{ wine.retailer or '—' }}</span>
               </td>
