@@ -383,7 +383,7 @@
         </table>
       </div>
     </div>
-    <div class="mt-2 text-muted small">{{ wines|length }} result(s)</div>
+    <div class="mt-2 text-muted small">{{ wines|length }} result(s){% if fuzzy_used %} <span style="color:#a07850;font-style:italic;">— approximate matches</span>{% endif %}</div>
   </div>
 
   <footer style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:8px;color:#5a3a1a;font-size:0.8rem;background:#1a0a00;z-index:100;">

@@ -305,68 +305,96 @@ def cellar(username):
     if order not in {"asc", "desc"}:
         order = "desc"
 
-    query = f"SELECT * FROM wines WHERE user_id = {p}"
-    params = [cellar_user["id"]]
+    base_query = f"SELECT * FROM wines WHERE user_id = {p}"
+    base_params = [cellar_user["id"]]
 
-    if search:
-        query += f" AND (wine_name LIKE {p} OR varietal LIKE {p} OR region LIKE {p})"
-        params.extend([f"%{search}%", f"%{search}%", f"%{search}%"])
     if status_filter:
-        query += f" AND status = {p}"
-        params.append(status_filter)
+        base_query += f" AND status = {p}"
+        base_params.append(status_filter)
     if varietal_filter:
-        query += f" AND varietal = {p}"
-        params.append(varietal_filter)
+        base_query += f" AND varietal = {p}"
+        base_params.append(varietal_filter)
     if region_filter:
-        query += f" AND region = {p}"
-        params.append(region_filter)
+        base_query += f" AND region = {p}"
+        base_params.append(region_filter)
     if location_filter:
-        query += f" AND location = {p}"
-        params.append(location_filter)
+        base_query += f" AND location = {p}"
+        base_params.append(location_filter)
     if vintage_min:
-        query += f" AND vintage >= {p}"
-        params.append(int(vintage_min))
+        base_query += f" AND vintage >= {p}"
+        base_params.append(int(vintage_min))
     if vintage_max:
-        query += f" AND vintage <= {p}"
-        params.append(int(vintage_max))
+        base_query += f" AND vintage <= {p}"
+        base_params.append(int(vintage_max))
     if price_min:
-        query += f" AND unit_price >= {p}"
-        params.append(float(price_min))
+        base_query += f" AND unit_price >= {p}"
+        base_params.append(float(price_min))
     if price_max:
-        query += f" AND unit_price <= {p}"
-        params.append(float(price_max))
+        base_query += f" AND unit_price <= {p}"
+        base_params.append(float(price_max))
     rtd_filter = request.args.get("rtd", "")
     if rtd_filter:
         current_year = date.today().year
         if is_postgres():
-            query += f" AND drinking_window ~ '^[0-9]{{4}}-[0-9]{{4}}$' AND CAST(split_part(drinking_window,'-',1) AS INT) <= {current_year} AND CAST(split_part(drinking_window,'-',2) AS INT) >= {current_year}"
+            base_query += f" AND drinking_window ~ '^[0-9]{{4}}-[0-9]{{4}}$' AND CAST(split_part(drinking_window,'-',1) AS INT) <= {current_year} AND CAST(split_part(drinking_window,'-',2) AS INT) >= {current_year}"
         else:
-            query += f" AND drinking_window LIKE '____-____' AND CAST(SUBSTR(drinking_window,1,4) AS INT) <= {current_year} AND CAST(SUBSTR(drinking_window,6,4) AS INT) >= {current_year}"
+            base_query += f" AND drinking_window LIKE '____-____' AND CAST(SUBSTR(drinking_window,1,4) AS INT) <= {current_year} AND CAST(SUBSTR(drinking_window,6,4) AS INT) >= {current_year}"
     color_filter = request.args.get("color_code", "")
     if color_filter:
-        query += f" AND color_code = {p}"
-        params.append(color_filter)
+        base_query += f" AND color_code = {p}"
+        base_params.append(color_filter)
     retailer_filter = request.args.get("retailer", "")
     if retailer_filter:
-        query += f" AND retailer = {p}"
-        params.append(retailer_filter)
+        base_query += f" AND retailer = {p}"
+        base_params.append(retailer_filter)
     type_filter = request.args.get("wine_type", "")
     if type_filter:
-        query += f" AND wine_type = {p}"
-        params.append(type_filter)
+        base_query += f" AND wine_type = {p}"
+        base_params.append(type_filter)
     size_filter = request.args.get("size_ml", "")
     if size_filter:
         try:
-            query += f" AND size_ml = {p}"
-            params.append(int(size_filter))
+            base_query += f" AND size_ml = {p}"
+            base_params.append(int(size_filter))
         except ValueError:
             pass
+
+    # Apply search (exact LIKE first)
+    if search:
+        query  = base_query + f" AND (wine_name LIKE {p} OR varietal LIKE {p} OR region LIKE {p})"
+        params = base_params + [f"%{search}%", f"%{search}%", f"%{search}%"]
+    else:
+        query, params = base_query, base_params
 
     query += f" ORDER BY {sort} {order}"
 
     cur = conn.cursor()
     cur.execute(query, params)
     wines = cur.fetchall()
+
+    # Fuzzy fallback: if search ≥ 4 chars returned nothing, score against all filtered wines
+    fuzzy_used = False
+    if search and len(search) >= 4 and len(wines) == 0:
+        from difflib import SequenceMatcher
+        cur.execute(base_query + f" ORDER BY {sort} {order}", base_params)
+        candidates = cur.fetchall()
+        term = search.lower()
+
+        def _score(wine):
+            name = (wine["wine_name"] or "").lower()
+            scores = [SequenceMatcher(None, term, name).ratio()]
+            for word in name.split():
+                if len(word) >= 3:
+                    scores.append(SequenceMatcher(None, term, word).ratio())
+            for field in ("varietal", "region"):
+                val = (wine[field] or "").lower()
+                if val:
+                    scores.append(SequenceMatcher(None, term, val).ratio())
+            return max(scores)
+
+        scored = sorted(((s, w) for w in candidates if (s := _score(w)) >= 0.7), reverse=True)
+        wines = [w for _, w in scored]
+        fuzzy_used = bool(wines)
 
     cur.execute(f"""
         SELECT
@@ -407,7 +435,8 @@ def cellar(username):
                            auth_enabled=True,
                            cellar_username=cellar_user["username"],
                            cellar_display_name=cellar_user["display_name"],
-                           is_own_cellar=can_edit)
+                           is_own_cellar=can_edit,
+                           fuzzy_used=fuzzy_used)
 
 
 # Keep /index redirect for backward compat
