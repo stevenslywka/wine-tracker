@@ -187,7 +187,7 @@
       .col-wine { min-width: 160px; }
       .col-date { min-width: 70px; }
       footer { padding: 3px 8px !important; font-size: 0.72rem !important; }
-      .refresh-export-label { font-size: 0.72rem; }
+      #navActionBtns .btn, #navActionBtns .btn.dropdown-toggle { font-size: 0.72rem !important; padding: 3px 6px !important; }
     }
   </style>
 </head>
@@ -201,14 +201,14 @@
         <a href="{{ url_for('logout') }}" class="btn btn-sm" style="background:#3d0f0f;border:1px solid #5a2d0c;color:#c9a96e;">Log out</a>
         {% endif %}
       </div>
-      <div class="d-flex gap-1 align-items-center">
+      <div class="d-flex gap-1 align-items-center" id="navActionBtns">
         {% if access_level == 'edit' %}
         <button type="button" class="btn btn-wine btn-sm" data-bs-toggle="modal" data-bs-target="#addWineModal">+ Add Wine</button>
         {% endif %}
-        <a href="{{ url_for('user_analytics', username=cellar_username) }}" class="btn btn-sm" style="background:#1a1a3a;border:1px solid #3a3a8a;color:#c0c8f5;">📊<span class="d-none d-sm-inline"> Analytics</span></a>
+        <a href="{{ url_for('user_analytics', username=cellar_username) }}" class="btn btn-sm" style="background:#1a1a3a;border:1px solid #3a3a8a;color:#c0c8f5;">📊 Analytics</a>
         <div class="dropdown">
           <button class="btn btn-sm dropdown-toggle" style="background:#2a1200;border:1px solid #5a2d0c;color:#c9a96e;" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-            ⚙<span class="d-none d-sm-inline"> Refresh / Export</span>
+            ⚙ Refresh/Export
           </button>
           <ul class="dropdown-menu dropdown-menu-end" style="background:#2a1200;border:1px solid #5a2d0c;min-width:180px;">
             {% if access_level == 'edit' %}
