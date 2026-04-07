@@ -411,7 +411,7 @@
               <td class="rating-cell" data-wine-id="{{ wine.id }}" data-rating="{{ wine.my_rating or '' }}" onclick="event.stopPropagation()" title="Click to rate">
                 <span class="rating-display">{{ "%.1f"|format(wine.my_rating) if wine.my_rating is not none else '—' }}</span>
               </td>
-              <td class="drinking-window-cell editable-cell" data-wine-id="{{ wine.id }}" data-field="drinking_window" data-value="{{ wine.drinking_window or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;white-space:nowrap;"><span class="editable-display">{{ wine.drinking_window or '—' }}</span></td>
+              <td class="drinking-window-cell editable-cell" data-wine-id="{{ wine.id }}" data-field="drinking_window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;white-space:nowrap;font-weight:700;"><span class="editable-display">{{ wine.drinking_window or '—' }}</span></td>
               <td onclick="event.stopPropagation()">
                 <span class="badge status-badge badge-{{ wine.status or '' }}"
                       data-wine-id="{{ wine.id }}"
@@ -1425,14 +1425,30 @@
     });
 
     function applyDrinkingWindowColor(cell, text) {
+      if ((cell.dataset.status || '') === 'drank') {
+        cell.style.color = '#666';
+        cell.title = 'Drank';
+        return;
+      }
       const match = text && text.match(/(\d{4})\s*[-–]\s*(\d{4})/);
-      if (!match) { cell.style.color = '#f5e6d3'; return; }
-      const yearsLeft = parseInt(match[2]) - new Date().getFullYear();
-      if (yearsLeft < 0)       cell.style.color = '#666';
-      else if (yearsLeft <= 2) cell.style.color = '#7ecb7e';
-      else if (yearsLeft <= 5) cell.style.color = '#e8a94a';
-      else                     cell.style.color = '#c04040';
+      if (!match) { cell.style.color = '#f5e6d3'; cell.title = 'Click to edit'; return; }
+      const start = parseInt(match[1]);
+      const end   = parseInt(match[2]);
+      const mid   = (start + end) / 2;
+      const now   = new Date().getFullYear();
+      let color, label;
+      if (now < start)      { color = '#7eb8cb'; label = 'Not ready — hold';        }
+      else if (now <= mid)  { color = '#7ecb7e'; label = 'In window — prime';       }
+      else if (now <= end)  { color = '#e8a94a'; label = 'Past peak — drink soon';  }
+      else                  { color = '#c04040'; label = 'Overdue — past window';   }
+      cell.style.color = color;
+      cell.title = `${text} · ${label}`;
     }
+
+    // Apply drinking window colours on page load
+    document.querySelectorAll('.drinking-window-cell').forEach(cell => {
+      applyDrinkingWindowColor(cell, cell.dataset.value);
+    });
 
     // ── Wine Rec Modal ──
     // Filter chips — location (radio behaviour)
