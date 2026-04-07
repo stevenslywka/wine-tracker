@@ -110,6 +110,15 @@
                   <button type="submit" class="btn btn-sm"
                           style="background:#3d0f0f;border:1px solid #5a2d0c;color:#c9a96e;">Reset PW</button>
                 </form>
+                <!-- Re-run drinking windows -->
+                {% if u.username != session.username %}
+                <form method="POST" action="{{ url_for('enrich_drinking_windows') }}"
+                      onsubmit="return confirm('Re-run drinking windows for @{{ u.username }}? Auto-generated windows will be refreshed. Manually set windows are safe.');">
+                  <input type="hidden" name="user_id" value="{{ u.id }}">
+                  <button type="submit" class="btn btn-sm"
+                          style="background:#3d0f0f;border:1px solid #5a2d0c;color:#7ecb7e;">Re-run Windows</button>
+                </form>
+                {% endif %}
                 <!-- Delete user -->
                 {% if u.username != session.username %}
                 <form method="POST" action="{{ url_for('admin') }}"

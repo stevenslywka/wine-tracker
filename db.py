@@ -82,6 +82,7 @@ def migrate():
     # --- Add new columns to wines ---
     new_columns = [
         ("drinking_window", "TEXT"),
+        ("drinking_window_source", "TEXT"),
         ("user_id", "INTEGER"),
     ]
     for col, col_type in new_columns:
@@ -112,6 +113,15 @@ def migrate():
         cur.execute("UPDATE wines SET user_id = (SELECT id FROM users WHERE username = 'steven') WHERE user_id IS NULL")
     else:
         cur.execute("UPDATE wines SET user_id = (SELECT id FROM users WHERE username = 'steven') WHERE user_id IS NULL")
+
+    # --- Mark steven's existing drinking windows as manually curated ---
+    cur.execute("""
+        UPDATE wines SET drinking_window_source = 'manual'
+        WHERE drinking_window IS NOT NULL
+        AND drinking_window != ''
+        AND drinking_window_source IS NULL
+        AND user_id = (SELECT id FROM users WHERE username = 'steven')
+    """)
 
     # --- Normalize "Now-XXXX" drinking windows ---
     from datetime import date as _date

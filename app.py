@@ -645,8 +645,9 @@ def update_drinking_window(wine_id):
     if not owns_wine(wine_id):
         return ("", 403)
     value = request.form.get("drinking_window", "").strip() or None
+    source = "manual" if value else None
     p = ph(); conn = get_db(); cur = conn.cursor()
-    cur.execute(f"UPDATE wines SET drinking_window = {p} WHERE id = {p}", (value, wine_id))
+    cur.execute(f"UPDATE wines SET drinking_window = {p}, drinking_window_source = {p} WHERE id = {p}", (value, source, wine_id))
     conn.commit(); conn.close()
     return ("", 204)
 
@@ -738,8 +739,9 @@ def add_wine():
     region    = scan_region    or extract_region(wine_name, varietal)
     location  = scan_location  or extract_location(region)
     wine_type = scan_wine_type or infer_wine_type(varietal)
-    drinking_window = scan_drinking_window or lookup_drinking_window(wine_name, vintage, varietal, region)
     size_ml   = infer_size(wine_name)
+    drinking_window = scan_drinking_window or lookup_drinking_window(wine_name, vintage, varietal, region, retail_price=unit_price, size_ml=size_ml)
+    dw_source = "manual" if scan_drinking_window else ("auto" if drinking_window else None)
 
     user_id = session["user_id"]
     p = ph()
@@ -751,11 +753,11 @@ def add_wine():
             INSERT INTO wines
                 (wine_name, vintage, unit_price, total_price, quantity, notes,
                  varietal, region, location, wine_type, size_ml,
-                 retailer, order_date, status, color_code, drinking_window, user_id)
-            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
+                 retailer, order_date, status, color_code, drinking_window, drinking_window_source, user_id)
+            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
             RETURNING id
         """, (wine_name, vintage, unit_price, total_price, quantity, notes,
-              varietal, region, location, wine_type, size_ml, retailer, order_date, status, color_code, drinking_window, user_id))
+              varietal, region, location, wine_type, size_ml, retailer, order_date, status, color_code, drinking_window, dw_source, user_id))
         row = cur.fetchone()
         wine_id = row["id"] if row else None
     else:
@@ -763,10 +765,10 @@ def add_wine():
             INSERT INTO wines
                 (wine_name, vintage, unit_price, total_price, quantity, notes,
                  varietal, region, location, wine_type, size_ml,
-                 retailer, order_date, status, color_code, drinking_window, user_id)
-            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
+                 retailer, order_date, status, color_code, drinking_window, drinking_window_source, user_id)
+            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
         """, (wine_name, vintage, unit_price, total_price, quantity, notes,
-              varietal, region, location, wine_type, size_ml, retailer, order_date, status, color_code, drinking_window, user_id))
+              varietal, region, location, wine_type, size_ml, retailer, order_date, status, color_code, drinking_window, dw_source, user_id))
         wine_id = cur.lastrowid
 
     conn.commit()
@@ -807,19 +809,81 @@ def add_wine():
     return redirect(url_for("cellar", username=session["username"]))
 
 
-def lookup_drinking_window(wine_name, vintage, varietal, region):
+_DRINKING_WINDOW_SYSTEM_PROMPT = (
+    "You are a wine expert specializing in drinking windows — the range of years during which a wine "
+    "is at its best. Your job is to estimate accurate drinking windows based on producer, vintage, "
+    "varietal, region, and price.\n\n"
+    "Key rules:\n"
+    "- The drinking window represents when the wine is IDEALLY consumed. It may start in the past. "
+    "Do NOT anchor it to the current year.\n"
+    "- NEVER return a single-year window. Minimum span is 2 years.\n"
+    "- NEVER return an inverted window where the start year is after the end year.\n"
+    "- For rosé, rosato, and entry-level whites (retail price under $25 or varietal contains "
+    "Rosé/Rosato/Moscato): window = vintage+1 to vintage+4 max.\n"
+    "- For simple unoaked reds under $20 retail: window = vintage+1 to vintage+6 max.\n"
+    "- For Barolo, Barbaresco, Brunello di Montalcino, Sagrantino: minimum 15-year total span from "
+    "vintage, typically not ready until vintage+5 at earliest.\n"
+    "- For classified Bordeaux (Pauillac, Saint-Émilion, Pessac-Léognan, Saint-Julien, Margaux, "
+    "Pomerol): minimum 12-year total span from vintage.\n"
+    "- For serious Napa Valley Cabernet Sauvignon with retail price $50+: 10-20 year total span from vintage.\n"
+    "- For Premier Cru or Grand Cru Burgundy: 12-25 year span from vintage.\n"
+    "- For wines from prestigious small producers in otherwise generic appellations (e.g. a top "
+    "Côte-Rôtie producer making a Côtes du Rhône, a Burgundy domaine making Jura wine): apply the "
+    "producer's typical aging profile, not the appellation baseline.\n"
+    "- For 375mL half bottles: shorten the end of the window by 2-3 years versus a 750mL equivalent.\n"
+    "- For 1500mL magnums: extend the end of the window by 3-5 years versus a 750mL equivalent.\n"
+    "- If vintage is NV or unknown, base the window on the wine's typical style and producer.\n"
+    "- If you are uncertain about a specific wine, use vintage + appellation + varietal to estimate "
+    "conservatively. Do not guess wildly."
+)
+
+
+def validate_drinking_window(window_str, vintage):
+    """Validate a drinking window string before writing to the database. Returns None if invalid."""
+    import re
+    if not window_str or not isinstance(window_str, str):
+        return None
+    window_str = window_str.strip()
+    if not re.match(r'^\d{4}-\d{4}$', window_str):
+        return None
+    start, end = int(window_str[:4]), int(window_str[5:])
+    if start >= end:
+        return None
+    if (end - start) < 2:
+        return None
+    if vintage and isinstance(vintage, int):
+        if start > vintage + 30:
+            return None
+        if end > vintage + 50:
+            return None
+    return window_str
+
+
+def lookup_drinking_window(wine_name, vintage, varietal, region, retail_price=None, size_ml=None):
     """Ask Claude for the drinking window of a single wine."""
     import anthropic, json as json_lib
+    if len((wine_name or "").strip()) < 5:
+        return None
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         return None
+    parts = [f"{wine_name} ({vintage or 'NV'})"]
+    if varietal:
+        parts.append(varietal)
+    if region:
+        parts.append(region)
+    if retail_price:
+        parts.append(f"retail: ${retail_price}")
+    if size_ml and size_ml != 750:
+        parts.append(f"size: {size_ml}mL")
+    wine_desc = ", ".join(parts)
+    prompt = (f"What is the estimated drinking window for this wine: {wine_desc}? "
+              f"Return ONLY a JSON object like {{\"window\": \"2025-2032\"}}. No other text.")
     client = anthropic.Anthropic(api_key=api_key)
-    prompt = (f"What is the estimated drinking window for this wine: {wine_name} "
-              f"({vintage or 'NV'}), {varietal or ''}, {region or ''}? "
-              f"Return ONLY a JSON object like {{\"window\": \"2025-2032\"}}. Always use a 4-digit year for both start and end — never use 'Now'. No other text.")
     message = client.messages.create(
-        model="claude-haiku-4-5-20251001",
+        model="claude-sonnet-4-6",
         max_tokens=64,
+        system=_DRINKING_WINDOW_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}]
     )
     try:
@@ -829,9 +893,7 @@ def lookup_drinking_window(wine_name, vintage, varietal, region):
             if raw.startswith("json"):
                 raw = raw[4:]
         window = json_lib.loads(raw.strip()).get("window") or None
-        if window:
-            window = window.replace("Now", str(date.today().year))
-        return window
+        return validate_drinking_window(window, vintage)
     except Exception:
         return None
 
@@ -891,23 +953,45 @@ def _run_enrich_drinking_windows(user_id):
     p = ph()
     conn = get_db()
     cur = conn.cursor()
-    cur.execute(f"SELECT id, wine_name, vintage, varietal, region FROM wines WHERE user_id = {p} AND (drinking_window IS NULL OR drinking_window = '')", (user_id,))
+    cur.execute(
+        f"SELECT id, wine_name, vintage, varietal, region, retail_price, unit_price, size_ml "
+        f"FROM wines WHERE user_id = {p} AND (drinking_window_source IS NULL OR drinking_window_source = 'auto')",
+        (user_id,)
+    )
     wines = list(cur.fetchall())
     conn.close()
 
     batch_size = 10
     for i in range(0, len(wines), batch_size):
-        batch = wines[i:i + batch_size]
-        lines = "\n".join(
-            f"{j+1}. {w['wine_name']} ({w['vintage'] or 'NV'}), {w['varietal'] or ''}, {w['region'] or ''}"
-            for j, w in enumerate(batch)
+        batch = [w for w in wines[i:i + batch_size] if len((w["wine_name"] or "").strip()) >= 5]
+        if not batch:
+            continue
+
+        def _wine_line(j, w):
+            parts = [f"{w['wine_name']} ({w['vintage'] or 'NV'})"]
+            if w["varietal"]:
+                parts.append(w["varietal"])
+            if w["region"]:
+                parts.append(w["region"])
+            price = w["retail_price"] or w["unit_price"]
+            if price:
+                parts.append(f"retail: ${price}")
+            if w["size_ml"] and w["size_ml"] != 750:
+                parts.append(f"size: {w['size_ml']}mL")
+            return f"{j+1}. {', '.join(parts)}"
+
+        lines = "\n".join(_wine_line(j, w) for j, w in enumerate(batch))
+        prompt = (
+            "For each wine below, provide the estimated drinking window. "
+            "Return ONLY a JSON array with objects having 'index' (1-based) and 'window' (e.g. '2025-2032') keys.\n\n"
+            f"{lines}"
         )
-        prompt = (f"For each wine below, provide the estimated drinking window. "
-                  f"Return ONLY a JSON array with objects having 'index' (1-based) and 'window' (e.g. '2025-2032') keys. Always use 4-digit years for both start and end — never use 'Now'.\n\n{lines}")
+
         try:
             message = client.messages.create(
                 model="claude-haiku-4-5-20251001",
                 max_tokens=512,
+                system=_DRINKING_WINDOW_SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": prompt}]
             )
             raw = message.content[0].text.strip()
@@ -916,19 +1000,34 @@ def _run_enrich_drinking_windows(user_id):
                 if raw.startswith("json"):
                     raw = raw[4:]
             results = json_lib.loads(raw.strip())
-            conn = get_db()
-            cur = conn.cursor()
-            current_year = str(date.today().year)
-            for r in results:
-                idx = r.get("index", 0) - 1
-                if 0 <= idx < len(batch):
-                    window = (r.get("window") or "").replace("Now", current_year) or None
-                    cur.execute(f"UPDATE wines SET drinking_window = {p} WHERE id = {p}",
-                                (window, batch[idx]["id"]))
-            conn.commit()
-            conn.close()
         except Exception as e:
-            print(f"Enrich batch error: {e}")
+            batch_names = [w["wine_name"] for w in batch]
+            print(f"Enrich batch parse error: {e} | wines: {batch_names}")
+            continue
+
+        passed = failed = 0
+        conn = get_db()
+        cur = conn.cursor()
+        for r in results:
+            try:
+                idx = r.get("index", 0) - 1
+                if not (0 <= idx < len(batch)):
+                    failed += 1
+                    continue
+                w = batch[idx]
+                vintage_val = w["vintage"] if isinstance(w["vintage"], int) else None
+                window = validate_drinking_window(r.get("window") or "", vintage_val)
+                if window:
+                    cur.execute(f"UPDATE wines SET drinking_window = {p}, drinking_window_source = 'auto' WHERE id = {p}", (window, w["id"]))
+                    passed += 1
+                else:
+                    failed += 1
+            except Exception as item_e:
+                print(f"Enrich item error: {item_e}")
+                failed += 1
+        conn.commit()
+        conn.close()
+        print(f"Enrich batch {i // batch_size + 1}: {passed} passed, {failed} failed validation")
 
 
 @app.route("/wine/add-bulk", methods=["POST"])
@@ -963,24 +1062,25 @@ def add_bulk_wines():
         location  = extract_location(region)
         wine_type = infer_wine_type(varietal)
         size_ml   = infer_size(wine_name)
-        drinking_window = lookup_drinking_window(wine_name, vintage, varietal, region)
+        drinking_window = lookup_drinking_window(wine_name, vintage, varietal, region, retail_price=unit_price, size_ml=size_ml)
+        dw_source = "auto" if drinking_window else None
         cur.execute(f"""INSERT INTO wines (wine_name, vintage, unit_price, total_price, quantity,
-            varietal, region, location, wine_type, size_ml, retailer, order_date, status, drinking_window, user_id)
-            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'cellar',{p},{p})""",
+            varietal, region, location, wine_type, size_ml, retailer, order_date, status, drinking_window, drinking_window_source, user_id)
+            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'cellar',{p},{p},{p})""",
             (wine_name, vintage, unit_price, total_price, quantity,
-             varietal, region, location, wine_type, size_ml, retailer, order_date, drinking_window, user_id))
+             varietal, region, location, wine_type, size_ml, retailer, order_date, drinking_window, dw_source, user_id))
     conn.commit()
     conn.close()
     return redirect(url_for("cellar", username=session["username"]))
 
 
 @app.route("/wine/enrich-drinking-windows", methods=["POST"])
-@login_required
+@admin_required
 def enrich_drinking_windows():
     import threading
-    user_id = session["user_id"]
-    threading.Thread(target=_run_enrich_drinking_windows, args=(user_id,), daemon=True).start()
-    return redirect(url_for("cellar", username=session["username"]))
+    target_user_id = request.form.get("user_id", type=int) or session["user_id"]
+    threading.Thread(target=_run_enrich_drinking_windows, args=(target_user_id,), daemon=True).start()
+    return redirect(url_for("admin"))
 
 
 @app.route("/wine/recommend", methods=["POST"])
