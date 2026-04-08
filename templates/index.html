@@ -1423,7 +1423,8 @@
         if (el) el.style.display = 'flex';
       }
     }
-    updateFilterInput(document.getElementById('filterCategory').value);
+    const _filterCat = document.getElementById('filterCategory');
+    if (_filterCat) updateFilterInput(_filterCat.value);
 
     // Dynamic table height
 
