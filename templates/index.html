@@ -20,6 +20,19 @@
     .badge-drank { background: #5c1a1a; }
     .status-badge { cursor: pointer; user-select: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; }
     .status-badge:hover { opacity: 0.85; filter: brightness(1.2); }
+    .storage-badge { cursor: pointer; user-select: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; background: #1a3a2a; color: #7ecb9e; border: none; }
+    .storage-badge:hover { opacity: 0.85; filter: brightness(1.2); }
+    #storage-picker-popup {
+      display: none; position: fixed; z-index: 9999;
+      background: #2a1200; border: 1px solid #c9a96e; border-radius: 8px;
+      padding: 6px 8px; gap: 6px; flex-direction: column; box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+    }
+    #storage-picker-popup.visible { display: flex; }
+    .storage-option {
+      cursor: pointer; padding: 4px 12px; border-radius: 4px; font-size: 0.8rem;
+      color: #f5e6d3; text-align: center; background: #1a3a2a;
+    }
+    .storage-option:hover { opacity: 0.8; }
     #status-picker-popup {
       display: none; position: fixed; z-index: 9999;
       background: #2a1200; border: 1px solid #c9a96e; border-radius: 8px;
@@ -368,7 +381,7 @@
               {{ sort_link('vintage', 'Vintage', '', 'Year the grapes were harvested') }}
               {{ sort_link('wine_type', 'Type', '', 'Red, White, Rosé, Sparkling, etc.') }}
               {{ sort_link('region', 'Region', '', 'Wine-producing region or appellation') }}
-              {{ sort_link('storage_location', 'Storage', '', 'Where the bottle is physically stored') }}
+              {{ sort_link('origin', 'Origin', '', 'Country or state the wine is from') }}
               {{ sort_link('varietal', 'Varietal', '', 'Grape variety (e.g. Cabernet Sauvignon)') }}
               {{ sort_link('size_ml', 'Size', '', 'Bottle size in milliliters') }}
               {{ sort_link('quantity', 'Qty', '', 'Number of bottles currently in cellar') }}
@@ -378,6 +391,7 @@
               {{ sort_link('color_code', 'Sticker', '', 'Your personal color tag for this bottle') }}
               {{ sort_link('my_rating', 'My Rating', '', 'Your personal score out of 10') }}
               {{ sort_link('drinking_window', 'Drinking Window', '', 'Suggested years to drink this wine') }}
+              {{ sort_link('storage_location', 'Storage', '', 'Where the bottle is physically stored') }}
               <th style="position:relative;" data-tip="In Collection, Not Shipped, or Drank">Status</th>
               <th style="position:relative;" data-tip="Your personal tasting notes">Notes</th>
               {{ sort_link('retail_price', 'Retail Price', 'd-none', 'Retail market price') }}
@@ -400,7 +414,7 @@
                 <span class="type-badge type-{{ wine.wine_type or 'none' }}">{{ wine.wine_type or '—' }}</span>
               </td>
               <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="region" data-value="{{ wine.region or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.region or '—' }}</span></td>
-              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="storage_location" data-value="{{ wine.storage_location or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.storage_location or '—' }}</span></td>
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="origin" data-value="{{ wine.origin or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.origin or '—' }}</span></td>
               <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="varietal" data-value="{{ wine.varietal or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.varietal or '—' }}</span></td>
               <td class="size-cell" data-wine-id="{{ wine.id }}" data-size="{{ wine.size_ml or '' }}" onclick="event.stopPropagation()" title="Click to change size" style="cursor:pointer;white-space:nowrap;">
                 {{ wine.size_ml or '—' }}{% if wine.size_ml %}ml{% endif %}
@@ -423,6 +437,16 @@
                 <span class="rating-display">{{ "%.1f"|format(wine.my_rating) if wine.my_rating is not none else '—' }}</span>
               </td>
               <td class="drinking-window-cell editable-cell" data-wine-id="{{ wine.id }}" data-field="drinking_window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;white-space:nowrap;font-weight:700;"><span class="editable-display">{{ wine.drinking_window or '—' }}</span></td>
+              <td onclick="event.stopPropagation()">
+                {% if wine.status == 'in_collection' %}
+                <span class="badge storage-badge"
+                      data-wine-id="{{ wine.id }}"
+                      data-storage="{{ wine.storage_location or '' }}"
+                      title="Click to move">{{ wine.storage_location or '—' }}</span>
+                {% else %}
+                <span style="color:#555;">—</span>
+                {% endif %}
+              </td>
               <td onclick="event.stopPropagation()">
                 <span class="badge status-badge badge-{{ wine.status or '' }}"
                       data-wine-id="{{ wine.id }}"
@@ -544,6 +568,14 @@
     <div style="border-top:1px solid #3d1a00;margin:4px 0;"></div>
     <div class="status-option" style="background:#5c4a1a;" data-status="not_shipped" data-storage="">Not Shipped</div>
     <div class="status-option" style="background:#5c1a1a;" data-status="drank" data-storage="">Drank</div>
+  </div>
+
+  <!-- Storage location picker popup -->
+  <div id="storage-picker-popup">
+    <div style="font-size:0.72rem;color:#a07850;padding:2px 4px 4px;">Move to:</div>
+    {% for loc in user_locations %}
+    <div class="storage-option" data-storage="{{ loc }}">{{ loc }}</div>
+    {% endfor %}
   </div>
 
   <!-- Color picker popup -->
@@ -1385,6 +1417,63 @@
     }
     resizeTable();
     window.addEventListener('resize', resizeTable);
+
+    // Storage location badge picker
+    (function() {
+      const popup = document.getElementById('storage-picker-popup');
+      let activeStorageBadge = null;
+
+      function showStoragePopup(badge) {
+        activeStorageBadge = badge;
+        const rect = badge.getBoundingClientRect();
+        popup.classList.add('visible');
+        const popH = popup.offsetHeight;
+        const top = (rect.bottom + 6 + popH > window.innerHeight) ? (rect.top - popH - 6) : (rect.bottom + 6);
+        popup.style.top = top + 'px';
+        popup.style.left = Math.min(rect.left, window.innerWidth - 160) + 'px';
+      }
+
+      document.querySelectorAll('.storage-badge').forEach(badge => {
+        badge.addEventListener('click', e => {
+          e.stopPropagation();
+          if (popup.classList.contains('visible') && activeStorageBadge === badge) {
+            popup.classList.remove('visible');
+            activeStorageBadge = null;
+          } else {
+            showStoragePopup(badge);
+          }
+        });
+      });
+
+      popup.querySelectorAll('.storage-option').forEach(opt => {
+        opt.addEventListener('mousedown', e => e.preventDefault());
+        opt.addEventListener('click', e => {
+          e.stopPropagation();
+          if (!activeStorageBadge) return;
+          const newStorage = opt.dataset.storage;
+          const wineId = activeStorageBadge.dataset.wineId;
+          fetch(`/wine/${wineId}/storage_location`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `storage_location=${encodeURIComponent(newStorage)}`
+          }).then(r => {
+            if (r.ok) {
+              activeStorageBadge.dataset.storage = newStorage;
+              activeStorageBadge.textContent = newStorage;
+            }
+          });
+          popup.classList.remove('visible');
+          activeStorageBadge = null;
+        });
+      });
+
+      document.addEventListener('click', e => {
+        if (!e.target.closest('.storage-badge') && !e.target.closest('#storage-picker-popup')) {
+          popup.classList.remove('visible');
+          activeStorageBadge = null;
+        }
+      });
+    })();
 
     // Delete buttons
     document.querySelectorAll('.delete-btn').forEach(btn => {
