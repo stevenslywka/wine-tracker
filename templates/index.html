@@ -583,11 +583,7 @@
 
   <!-- Status picker popup -->
   <div id="status-picker-popup">
-    <div style="font-size:0.72rem;color:#a07850;padding:2px 4px 4px;">Move to location:</div>
-    {% for loc in user_locations %}
-    <div class="status-option loc-color-{{ loop.index0 % 5 }}" data-status="in_collection" data-storage="{{ loc }}">{{ loc }}</div>
-    {% endfor %}
-    <div style="border-top:1px solid #3d1a00;margin:4px 0;"></div>
+    <div class="status-option" style="background:#1a3a5c;" data-status="in_collection" data-storage="">In Collection</div>
     <div class="status-option" style="background:#5c4a1a;" data-status="not_shipped" data-storage="">Not Shipped</div>
     <div class="status-option" style="background:#5c1a1a;" data-status="drank" data-storage="">Drank</div>
   </div>
