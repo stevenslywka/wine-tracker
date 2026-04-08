@@ -114,6 +114,63 @@ def migrate():
     else:
         cur.execute("UPDATE wines SET user_id = (SELECT id FROM users WHERE username = 'steven') WHERE user_id IS NULL")
 
+    # --- Rename 'location' → 'origin', add 'storage_location' ---
+    if pg:
+        cur.execute("SELECT 1 FROM information_schema.columns WHERE table_name='wines' AND column_name='origin'")
+        if not cur.fetchone():
+            cur.execute("ALTER TABLE wines RENAME COLUMN location TO origin")
+        cur.execute("ALTER TABLE wines ADD COLUMN IF NOT EXISTS storage_location TEXT")
+    else:
+        cur.execute("PRAGMA table_info(wines)")
+        cols = {r['name'] for r in cur.fetchall()}
+        if 'origin' not in cols and 'location' in cols:
+            cur.execute("ALTER TABLE wines RENAME COLUMN location TO origin")
+        if 'storage_location' not in cols:
+            cur.execute("ALTER TABLE wines ADD COLUMN storage_location TEXT")
+
+    # --- Create user_locations table ---
+    if pg:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS user_locations (
+                id SERIAL PRIMARY KEY,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                name TEXT NOT NULL,
+                sort_order INTEGER DEFAULT 0
+            )
+        """)
+    else:
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS user_locations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                sort_order INTEGER DEFAULT 0
+            )
+        """)
+
+    # --- Migrate old location-based statuses → in_collection + storage_location ---
+    p2 = "%s" if pg else "?"
+    for old_status, new_loc in [('cellar', 'Cellar'), ('apt', 'Apt'), ('house', 'House')]:
+        cur.execute(
+            f"UPDATE wines SET status = {p2}, storage_location = {p2} WHERE status = {p2} AND storage_location IS NULL",
+            ('in_collection', new_loc, old_status)
+        )
+
+    # --- Seed default locations for any user with no locations yet ---
+    cur.execute("SELECT id FROM users")
+    all_users = cur.fetchall()
+    for u in all_users:
+        uid2 = u['id'] if isinstance(u, dict) else u[0]
+        cur.execute(f"SELECT COUNT(*) as cnt FROM user_locations WHERE user_id = {p2}", (uid2,))
+        row = cur.fetchone()
+        cnt = row['cnt'] if isinstance(row, dict) else row[0]
+        if cnt == 0:
+            for i, loc_name in enumerate(['Cellar', 'Apt', 'House']):
+                cur.execute(
+                    f"INSERT INTO user_locations (user_id, name, sort_order) VALUES ({p2},{p2},{p2})",
+                    (uid2, loc_name, i)
+                )
+
     # --- Mark steven's existing drinking windows as manually curated ---
     cur.execute("""
         UPDATE wines SET drinking_window_source = 'manual'

@@ -289,7 +289,8 @@ def cellar(username):
     status_filter = request.args.get("status", "")
     varietal_filter = request.args.get("varietal", "")
     region_filter = request.args.get("region", "")
-    location_filter = request.args.get("location", "")
+    origin_filter = request.args.get("origin", "")
+    storage_filter = request.args.get("storage_location", "")
     vintage_min = request.args.get("vintage_min", "")
     vintage_max = request.args.get("vintage_max", "")
     price_min = request.args.get("price_min", "")
@@ -298,7 +299,7 @@ def cellar(username):
     order = request.args.get("order", "desc")
 
     allowed_sorts = {"order_date", "wine_name", "vintage", "unit_price", "retail_price",
-                     "quantity", "color_code", "region", "location", "varietal",
+                     "quantity", "color_code", "region", "origin", "storage_location", "varietal",
                      "my_rating", "wine_type", "size_ml", "drinking_window"}
     if sort not in allowed_sorts:
         sort = "order_date"
@@ -317,9 +318,12 @@ def cellar(username):
     if region_filter:
         base_query += f" AND region = {p}"
         base_params.append(region_filter)
-    if location_filter:
-        base_query += f" AND location = {p}"
-        base_params.append(location_filter)
+    if origin_filter:
+        base_query += f" AND origin = {p}"
+        base_params.append(origin_filter)
+    if storage_filter:
+        base_query += f" AND storage_location = {p}"
+        base_params.append(storage_filter)
     if vintage_min:
         base_query += f" AND vintage >= {p}"
         base_params.append(int(vintage_min))
@@ -354,7 +358,7 @@ def cellar(username):
 
     # Apply search (exact LIKE first)
     if search:
-        query  = base_query + f" AND (wine_name LIKE {p} OR varietal LIKE {p} OR region LIKE {p} OR retailer LIKE {p} OR location LIKE {p} OR wine_type LIKE {p} OR notes LIKE {p})"
+        query  = base_query + f" AND (wine_name LIKE {p} OR varietal LIKE {p} OR region LIKE {p} OR retailer LIKE {p} OR origin LIKE {p} OR wine_type LIKE {p} OR notes LIKE {p})"
         params = base_params + [f"%{search}%"] * 7
     else:
         query, params = base_query, base_params
@@ -396,7 +400,7 @@ def cellar(username):
             for word in name.split():
                 if len(word) >= 3:
                     scores.append(SequenceMatcher(None, term, word).ratio())
-            for field in ("varietal", "region", "retailer", "location", "wine_type"):
+            for field in ("varietal", "region", "retailer", "origin", "wine_type"):
                 val = (wine[field] or "").lower()
                 if val:
                     scores.append(SequenceMatcher(None, term, val).ratio())
@@ -410,8 +414,7 @@ def cellar(username):
         SELECT
             SUM(quantity) as total_bottles,
             COUNT(DISTINCT wine_name) as unique_wines,
-            SUM(total_price) as total_spent,
-            SUM(CASE WHEN status='cellar' THEN quantity ELSE 0 END) as in_cellar
+            SUM(total_price) as total_spent
         FROM wines WHERE user_id = {p}
     """, (cellar_user["id"],))
     stats = cur.fetchone()
@@ -420,8 +423,16 @@ def cellar(username):
     varietals = [r["varietal"] for r in cur.fetchall()]
     cur.execute(f"SELECT DISTINCT region FROM wines WHERE user_id = {p} AND region IS NOT NULL ORDER BY region", (cellar_user["id"],))
     regions = [r["region"] for r in cur.fetchall()]
-    cur.execute(f"SELECT DISTINCT location FROM wines WHERE user_id = {p} AND location IS NOT NULL ORDER BY location", (cellar_user["id"],))
-    locations = [r["location"] for r in cur.fetchall()]
+    cur.execute(f"SELECT DISTINCT origin FROM wines WHERE user_id = {p} AND origin IS NOT NULL ORDER BY origin", (cellar_user["id"],))
+    origins = [r["origin"] for r in cur.fetchall()]
+    cur.execute(f"SELECT name FROM user_locations WHERE user_id = {p} ORDER BY sort_order", (cellar_user["id"],))
+    user_locations = [r["name"] for r in cur.fetchall()]
+    cur.execute(f"""
+        SELECT storage_location, SUM(quantity) as cnt
+        FROM wines WHERE user_id = {p} AND status = 'in_collection' AND storage_location IS NOT NULL
+        GROUP BY storage_location ORDER BY storage_location
+    """, (cellar_user["id"],))
+    location_counts = {r["storage_location"]: r["cnt"] for r in cur.fetchall()}
     cur.execute(f"SELECT DISTINCT vintage FROM wines WHERE user_id = {p} AND vintage IS NOT NULL ORDER BY vintage DESC", (cellar_user["id"],))
     vintages = [r["vintage"] for r in cur.fetchall()]
     cur.execute(f"SELECT DISTINCT size_ml FROM wines WHERE user_id = {p} AND size_ml IS NOT NULL ORDER BY size_ml", (cellar_user["id"],))
@@ -433,14 +444,17 @@ def cellar(username):
     return render_template("index.html", wines=wines, stats=stats,
                            search=search, status_filter=status_filter,
                            varietal_filter=varietal_filter, region_filter=region_filter,
-                           location_filter=location_filter, color_filter=color_filter,
+                           origin_filter=origin_filter, storage_filter=storage_filter,
+                           color_filter=color_filter,
                            type_filter=type_filter, size_filter=size_filter, retailer_filter=retailer_filter,
                            retailers=retailers,
                            vintage_min=vintage_min, vintage_max=vintage_max,
                            price_min=price_min, price_max=price_max,
                            sort=sort, order=order,
                            varietals=varietals, regions=regions,
-                           locations=locations, vintages=vintages, sizes=sizes,
+                           origins=origins, user_locations=user_locations,
+                           location_counts=location_counts,
+                           vintages=vintages, sizes=sizes,
                            access_level=access_level,
                            auth_enabled=True,
                            cellar_username=cellar_user["username"],
@@ -478,14 +492,20 @@ def wine_detail(wine_id):
 def bulk_update_status():
     ids = request.form.getlist("ids")
     new_status = request.form.get("status")
-    if new_status not in ("apt", "house", "not_shipped", "drank"):
+    if new_status not in ("in_collection", "not_shipped", "drank"):
         return ("", 400)
+    storage_loc = request.form.get("storage_location", "").strip() or None
     p = ph()
     conn = get_db()
     cur = conn.cursor()
     uid = session["user_id"]
     for id_ in ids:
-        cur.execute(f"UPDATE wines SET status = {p} WHERE id = {p} AND user_id = {p}", (new_status, id_, uid))
+        if new_status == "in_collection" and storage_loc:
+            cur.execute(f"UPDATE wines SET status = {p}, storage_location = {p} WHERE id = {p} AND user_id = {p}", (new_status, storage_loc, id_, uid))
+        elif new_status in ("not_shipped", "drank"):
+            cur.execute(f"UPDATE wines SET status = {p}, storage_location = NULL WHERE id = {p} AND user_id = {p}", (new_status, id_, uid))
+        else:
+            cur.execute(f"UPDATE wines SET status = {p} WHERE id = {p} AND user_id = {p}", (new_status, id_, uid))
     conn.commit()
     conn.close()
     return ("", 204)
@@ -497,11 +517,17 @@ def update_status(wine_id):
     if not owns_wine(wine_id):
         return ("", 403)
     new_status = request.form.get("status")
-    if new_status in ("apt", "house", "not_shipped", "drank"):
+    storage_loc = request.form.get("storage_location", "").strip() or None
+    if new_status in ("in_collection", "not_shipped", "drank"):
         p = ph()
         conn = get_db()
         cur = conn.cursor()
-        cur.execute(f"UPDATE wines SET status = {p} WHERE id = {p}", (new_status, wine_id))
+        if new_status == "in_collection" and storage_loc:
+            cur.execute(f"UPDATE wines SET status = {p}, storage_location = {p} WHERE id = {p}", (new_status, storage_loc, wine_id))
+        elif new_status in ("not_shipped", "drank"):
+            cur.execute(f"UPDATE wines SET status = {p}, storage_location = NULL WHERE id = {p}", (new_status, wine_id))
+        else:
+            cur.execute(f"UPDATE wines SET status = {p} WHERE id = {p}", (new_status, wine_id))
         conn.commit()
         conn.close()
     return redirect(request.referrer or url_for("home"))
@@ -632,14 +658,26 @@ def update_region(wine_id):
     return ("", 204)
 
 
-@app.route("/wine/<int:wine_id>/location", methods=["POST"])
+@app.route("/wine/<int:wine_id>/origin", methods=["POST"])
 @login_required
-def update_location(wine_id):
+def update_origin(wine_id):
     if not owns_wine(wine_id):
         return ("", 403)
-    value = request.form.get("location", "").strip() or None
+    value = request.form.get("origin", "").strip() or None
     p = ph(); conn = get_db(); cur = conn.cursor()
-    cur.execute(f"UPDATE wines SET location = {p} WHERE id = {p}", (value, wine_id))
+    cur.execute(f"UPDATE wines SET origin = {p} WHERE id = {p}", (value, wine_id))
+    conn.commit(); conn.close()
+    return ("", 204)
+
+
+@app.route("/wine/<int:wine_id>/storage_location", methods=["POST"])
+@login_required
+def update_storage_location(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
+    value = request.form.get("storage_location", "").strip() or None
+    p = ph(); conn = get_db(); cur = conn.cursor()
+    cur.execute(f"UPDATE wines SET storage_location = {p} WHERE id = {p}", (value, wine_id))
     conn.commit(); conn.close()
     return ("", 204)
 
@@ -732,8 +770,13 @@ def add_wine():
     notes          = request.form.get("notes", "").strip() or None
     retailer       = request.form.get("retailer", "").strip() or None
     raw_order_date = request.form.get("order_date", "").strip()
-    raw_status     = request.form.get("status", "").strip()
-    status         = raw_status if raw_status in ('cellar', 'apt', 'house', 'not_shipped', 'drank') else 'cellar'
+    raw_status       = request.form.get("status", "").strip()
+    storage_location = request.form.get("storage_location", "").strip() or None
+    if raw_status in ('not_shipped', 'drank'):
+        status = raw_status
+        storage_location = None
+    else:
+        status = 'in_collection'
 
     try:    vintage    = int(raw_vintage)   if raw_vintage   else None
     except ValueError: vintage = None
@@ -754,7 +797,7 @@ def add_wine():
 
     varietal  = scan_varietal  or extract_varietal(wine_name)
     region    = scan_region    or extract_region(wine_name, varietal)
-    location  = scan_location  or extract_location(region)
+    origin    = scan_location  or extract_location(region)
     wine_type = scan_wine_type or infer_wine_type(varietal)
     size_ml   = infer_size(wine_name)
     drinking_window = scan_drinking_window or lookup_drinking_window(wine_name, vintage, varietal, region, retail_price=unit_price, size_ml=size_ml)
@@ -769,23 +812,23 @@ def add_wine():
         cur.execute(f"""
             INSERT INTO wines
                 (wine_name, vintage, unit_price, total_price, quantity, notes,
-                 varietal, region, location, wine_type, size_ml,
-                 retailer, order_date, status, color_code, drinking_window, drinking_window_source, user_id)
-            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
+                 varietal, region, origin, wine_type, size_ml,
+                 retailer, order_date, status, storage_location, color_code, drinking_window, drinking_window_source, user_id)
+            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
             RETURNING id
         """, (wine_name, vintage, unit_price, total_price, quantity, notes,
-              varietal, region, location, wine_type, size_ml, retailer, order_date, status, color_code, drinking_window, dw_source, user_id))
+              varietal, region, origin, wine_type, size_ml, retailer, order_date, status, storage_location, color_code, drinking_window, dw_source, user_id))
         row = cur.fetchone()
         wine_id = row["id"] if row else None
     else:
         cur.execute(f"""
             INSERT INTO wines
                 (wine_name, vintage, unit_price, total_price, quantity, notes,
-                 varietal, region, location, wine_type, size_ml,
-                 retailer, order_date, status, color_code, drinking_window, drinking_window_source, user_id)
-            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
+                 varietal, region, origin, wine_type, size_ml,
+                 retailer, order_date, status, storage_location, color_code, drinking_window, drinking_window_source, user_id)
+            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
         """, (wine_name, vintage, unit_price, total_price, quantity, notes,
-              varietal, region, location, wine_type, size_ml, retailer, order_date, status, color_code, drinking_window, dw_source, user_id))
+              varietal, region, origin, wine_type, size_ml, retailer, order_date, status, storage_location, color_code, drinking_window, dw_source, user_id))
         wine_id = cur.lastrowid
 
     conn.commit()
@@ -1076,16 +1119,16 @@ def add_bulk_wines():
         total_price = round(unit_price * quantity, 2) if unit_price else None
         varietal  = extract_varietal(wine_name)
         region    = extract_region(wine_name, varietal)
-        location  = extract_location(region)
+        origin    = extract_location(region)
         wine_type = infer_wine_type(varietal)
         size_ml   = infer_size(wine_name)
         drinking_window = lookup_drinking_window(wine_name, vintage, varietal, region, retail_price=unit_price, size_ml=size_ml)
         dw_source = "auto" if drinking_window else None
         cur.execute(f"""INSERT INTO wines (wine_name, vintage, unit_price, total_price, quantity,
-            varietal, region, location, wine_type, size_ml, retailer, order_date, status, drinking_window, drinking_window_source, user_id)
-            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'cellar',{p},{p},{p})""",
+            varietal, region, origin, wine_type, size_ml, retailer, order_date, status, storage_location, drinking_window, drinking_window_source, user_id)
+            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'in_collection','Cellar',{p},{p},{p})""",
             (wine_name, vintage, unit_price, total_price, quantity,
-             varietal, region, location, wine_type, size_ml, retailer, order_date, drinking_window, dw_source, user_id))
+             varietal, region, origin, wine_type, size_ml, retailer, order_date, drinking_window, dw_source, user_id))
     conn.commit()
     conn.close()
     return redirect(url_for("cellar", username=session["username"]))
@@ -1108,11 +1151,11 @@ def recommend_wine():
     if not api_key:
         return jsonify({"error": "API key not configured"}), 500
 
-    user_id   = session["user_id"]
-    prompt    = request.json.get("prompt", "").strip()
-    location  = request.json.get("location", "")   # "apt", "house", or ""
-    wine_type = request.json.get("wine_type", "")  # e.g. "Red", or ""
-    stickers  = request.json.get("stickers", [])   # list of color strings, or []
+    user_id      = session["user_id"]
+    prompt       = request.json.get("prompt", "").strip()
+    storage_loc  = request.json.get("storage_location", "")  # e.g. "Cellar", "Apt", or ""
+    wine_type    = request.json.get("wine_type", "")
+    stickers     = request.json.get("stickers", [])
 
     if not prompt:
         return jsonify({"error": "No prompt provided"}), 400
@@ -1121,12 +1164,12 @@ def recommend_wine():
     conn = get_db()
     cur  = conn.cursor()
 
-    query  = f"SELECT wine_name, vintage, varietal, wine_type, region, location, color_code, drinking_window, notes, quantity FROM wines WHERE user_id = {p} AND status IN ('cellar', 'apt', 'house')"
+    query  = f"SELECT wine_name, vintage, varietal, wine_type, region, origin, color_code, drinking_window, notes, quantity FROM wines WHERE user_id = {p} AND status = 'in_collection'"
     params = [user_id]
 
-    if location:
-        query += f" AND location = {p}"
-        params.append(location)
+    if storage_loc:
+        query += f" AND storage_location = {p}"
+        params.append(storage_loc)
     if wine_type:
         query += f" AND wine_type = {p}"
         params.append(wine_type)
@@ -1161,7 +1204,7 @@ def recommend_wine():
         if w["varietal"]:       parts.append(w["varietal"])
         if w["wine_type"]:      parts.append(w["wine_type"])
         if w["region"]:         parts.append(w["region"])
-        if w["location"]:       parts.append(f"location: {w['location']}")
+        if w["origin"]:         parts.append(f"origin: {w['origin']}")
         if w["color_code"]:     parts.append(f"sticker: {w['color_code']}")
         if w["drinking_window"]:parts.append(f"drink: {w['drinking_window']}")
         if w["quantity"]:       parts.append(f"qty: {w['quantity']}")
@@ -1280,9 +1323,9 @@ def export_csv():
     wines = cur.fetchall()
     conn.close()
     output = io.StringIO()
-    fields = ["id","wine_name","vintage","varietal","region","location","wine_type",
+    fields = ["id","wine_name","vintage","varietal","region","origin","wine_type",
               "unit_price","retail_price","total_price","quantity","size_ml",
-              "retailer","order_date","status","color_code","drinking_window",
+              "retailer","order_date","status","storage_location","color_code","drinking_window",
               "my_rating","notes"]
     writer = csv.DictWriter(output, fieldnames=fields, extrasaction="ignore")
     writer.writeheader()
@@ -1312,7 +1355,7 @@ def user_analytics(username):
     cur = conn.cursor()
     cur.execute(f"SELECT wine_type, COUNT(*) as count FROM wines WHERE user_id = {p} AND wine_type IS NOT NULL GROUP BY wine_type ORDER BY count DESC", (uid,))
     by_type = cur.fetchall()
-    cur.execute(f"SELECT location, COUNT(*) as count FROM wines WHERE user_id = {p} AND location IS NOT NULL GROUP BY location ORDER BY count DESC LIMIT 10", (uid,))
+    cur.execute(f"SELECT origin, COUNT(*) as count FROM wines WHERE user_id = {p} AND origin IS NOT NULL GROUP BY origin ORDER BY count DESC LIMIT 10", (uid,))
     by_location = cur.fetchall()
     cur.execute(f"SELECT varietal, COUNT(*) as count FROM wines WHERE user_id = {p} AND varietal IS NOT NULL GROUP BY varietal ORDER BY count DESC LIMIT 10", (uid,))
     by_varietal = cur.fetchall()
@@ -1331,6 +1374,35 @@ def user_analytics(username):
                            auth_enabled=True,
                            cellar_username=username,
                            cellar_display_name=cellar_user["display_name"])
+
+
+@app.route("/settings/locations", methods=["GET", "POST"])
+@login_required
+def settings_locations():
+    uid = session["user_id"]
+    p = ph()
+    conn = get_db()
+    cur = conn.cursor()
+    if request.method == "POST":
+        action = request.form.get("action")
+        if action == "add":
+            name = request.form.get("name", "").strip()
+            if name:
+                cur.execute(f"SELECT COALESCE(MAX(sort_order), -1) + 1 as next_order FROM user_locations WHERE user_id = {p}", (uid,))
+                next_order = cur.fetchone()["next_order"]
+                cur.execute(f"INSERT INTO user_locations (user_id, name, sort_order) VALUES ({p},{p},{p})", (uid, name, next_order))
+                conn.commit()
+        elif action == "delete":
+            loc_id = request.form.get("loc_id", type=int)
+            if loc_id:
+                cur.execute(f"DELETE FROM user_locations WHERE id = {p} AND user_id = {p}", (loc_id, uid))
+                conn.commit()
+        conn.close()
+        return redirect(url_for("settings_locations"))
+    cur.execute(f"SELECT * FROM user_locations WHERE user_id = {p} ORDER BY sort_order", (uid,))
+    locations = cur.fetchall()
+    conn.close()
+    return render_template("settings_locations.html", locations=locations, auth_enabled=True)
 
 
 if __name__ == "__main__":
