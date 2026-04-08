@@ -1415,8 +1415,12 @@
       const footerHeight = 34;
       table.style.height = (window.innerHeight - top - footerHeight - 8) + 'px';
     }
-    resizeTable();
+    // Delay so Bootstrap collapse finishes rendering before we measure
+    requestAnimationFrame(() => requestAnimationFrame(resizeTable));
     window.addEventListener('resize', resizeTable);
+    // Recalculate when More Filters collapses open/close
+    document.getElementById('moreFilters')?.addEventListener('shown.bs.collapse', resizeTable);
+    document.getElementById('moreFilters')?.addEventListener('hidden.bs.collapse', resizeTable);
 
     // Storage location badge picker
     (function() {
