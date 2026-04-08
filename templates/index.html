@@ -1035,7 +1035,6 @@
     const statusPopup = document.getElementById('status-picker-popup');
     const allStatusBadges = [...document.querySelectorAll('.status-badge')];
     let statusDragging = false, statusStartIdx = 0;
-    let suppressNextStatusClose = false;
 
     function getStatusIdx(badge) { return allStatusBadges.indexOf(badge); }
 
@@ -1045,7 +1044,6 @@
       statusPopup.style.left = rect.left + 'px';
       statusPopup.style.top  = top + 'px';
       statusPopup.classList.add('visible');
-      suppressNextStatusClose = true; // swallow the click that follows mouseup
     }
 
     function setStatusSelection(fromIdx, toIdx) {
@@ -1122,12 +1120,12 @@
       });
     });
 
-    document.addEventListener('click', e => {
-      if (suppressNextStatusClose) { suppressNextStatusClose = false; return; }
+    // Use capture-phase mousedown so table cells' stopPropagation can't block it
+    document.addEventListener('mousedown', e => {
       if (!e.target.closest('.status-badge') && !e.target.closest('#status-picker-popup')) {
         clearStatusSelection();
       }
-    });
+    }, true);
 
     // Shared backdrop / close
     function closeAllPopups() {
@@ -1435,11 +1433,14 @@
       function showStoragePopup(badge) {
         activeStorageBadge = badge;
         const rect = badge.getBoundingClientRect();
+        // Position below badge first, show, then flip up if off-screen
+        popup.style.top = (rect.bottom + 4) + 'px';
+        popup.style.left = Math.min(rect.left, window.innerWidth - 180) + 'px';
         popup.classList.add('visible');
-        const popH = popup.offsetHeight;
-        const top = (rect.bottom + 6 + popH > window.innerHeight) ? (rect.top - popH - 6) : (rect.bottom + 6);
-        popup.style.top = top + 'px';
-        popup.style.left = Math.min(rect.left, window.innerWidth - 160) + 'px';
+        const popRect = popup.getBoundingClientRect();
+        if (popRect.bottom > window.innerHeight - 8) {
+          popup.style.top = (rect.top - popRect.height - 4) + 'px';
+        }
       }
 
       document.querySelectorAll('.storage-badge').forEach(badge => {
@@ -1480,12 +1481,12 @@
         });
       });
 
-      document.addEventListener('click', e => {
+      document.addEventListener('mousedown', e => {
         if (!e.target.closest('.storage-badge') && !e.target.closest('#storage-picker-popup')) {
           popup.classList.remove('visible');
           activeStorageBadge = null;
         }
-      });
+      }, true);
     })();
 
     // Delete buttons
