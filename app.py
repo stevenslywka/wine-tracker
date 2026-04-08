@@ -433,6 +433,10 @@ def cellar(username):
         GROUP BY storage_location ORDER BY storage_location
     """, (cellar_user["id"],))
     location_counts = {r["storage_location"]: r["cnt"] for r in cur.fetchall()}
+    cur.execute(f"SELECT SUM(quantity) as cnt FROM wines WHERE user_id = {p} AND status = 'not_shipped'", (cellar_user["id"],))
+    not_shipped_count = cur.fetchone()["cnt"] or 0
+    cur.execute(f"SELECT COUNT(*) as cnt FROM wines WHERE user_id = {p} AND status = 'drank'", (cellar_user["id"],))
+    drank_count = cur.fetchone()["cnt"] or 0
     cur.execute(f"SELECT DISTINCT vintage FROM wines WHERE user_id = {p} AND vintage IS NOT NULL ORDER BY vintage DESC", (cellar_user["id"],))
     vintages = [r["vintage"] for r in cur.fetchall()]
     cur.execute(f"SELECT DISTINCT size_ml FROM wines WHERE user_id = {p} AND size_ml IS NOT NULL ORDER BY size_ml", (cellar_user["id"],))
@@ -454,6 +458,8 @@ def cellar(username):
                            varietals=varietals, regions=regions,
                            origins=origins, user_locations=user_locations,
                            location_counts=location_counts,
+                           not_shipped_count=not_shipped_count,
+                           drank_count=drank_count,
                            vintages=vintages, sizes=sizes,
                            access_level=access_level,
                            auth_enabled=True,

@@ -264,8 +264,12 @@
             <span class="chip-count">{{ location_counts.get(loc, 0) }}</span>
           </a>
           {% endfor %}
-          <a href="?status=not_shipped&q={{ search }}" class="quick-chip {% if status_filter=='not_shipped' %}active{% endif %}" style="text-decoration:none;">Not Shipped</a>
-          <a href="?status=drank&q={{ search }}" class="quick-chip {% if status_filter=='drank' %}active{% endif %}" style="text-decoration:none;">Drank</a>
+          <a href="?status=not_shipped&q={{ search }}" class="quick-chip {% if status_filter=='not_shipped' %}active{% endif %}" style="text-decoration:none;">
+            Not Shipped{% if not_shipped_count %} <span class="chip-count">{{ not_shipped_count }}</span>{% endif %}
+          </a>
+          <a href="?status=drank&q={{ search }}" class="quick-chip {% if status_filter=='drank' %}active{% endif %}" style="text-decoration:none;">
+            Drank{% if drank_count %} <span class="chip-count">{{ drank_count }}</span>{% endif %}
+          </a>
           {% if status_filter or storage_filter or search or varietal_filter or region_filter or origin_filter or vintage_min or vintage_max or price_min or price_max or color_filter or type_filter or size_filter or retailer_filter %}
           <a href="{{ url_for('cellar', username=cellar_username) }}" class="quick-chip" style="text-decoration:none;background:#3d0f0f;border-color:#8b1a1a;color:#e08080;">✕ Clear</a>
           {% endif %}
