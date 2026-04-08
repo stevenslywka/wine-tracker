@@ -366,7 +366,7 @@
               {{ sort_link('order_date', 'Date', 'col-date', 'Date the wine was purchased') }}
               {{ sort_link('color_code', 'Sticker', '', 'Your personal color tag for this bottle') }}
               {{ sort_link('my_rating', 'My Rating', '', 'Your personal score out of 10') }}
-              <th style="position:relative;" data-tip="Suggested years to drink this wine">Drinking Window</th>
+              {{ sort_link('drinking_window', 'Drinking Window', '', 'Suggested years to drink this wine') }}
               <th style="position:relative;" data-tip="Cellar, Apt, House, Not Shipped, or Drank">Status</th>
               <th style="position:relative;" data-tip="Your personal tasting notes">Notes</th>
               {{ sort_link('retail_price', 'Retail Price', 'd-none', 'Retail market price') }}
@@ -1320,7 +1320,7 @@
         const endYear = parseInt(match[2]);
         const yearsLeft = endYear - currentYear;
         if (yearsLeft < 0)       cell.style.color = '#666';       // past window
-        else if (yearsLeft <= 2) cell.style.color = '#7ecb7e';    // green  - drink soon
+        else if (yearsLeft <= 2) cell.style.color = '#3a8f3a';    // green  - drink soon
         else if (yearsLeft <= 5) cell.style.color = '#e8a94a';    // orange - getting there
         else                     cell.style.color = '#c04040';    // red    - hold
       });
@@ -1438,7 +1438,7 @@
       const now   = new Date().getFullYear();
       let color, label;
       if (now < start)      { color = '#7eb8cb'; label = 'Not ready — hold';        }
-      else if (now <= mid)  { color = '#7ecb7e'; label = 'In window — prime';       }
+      else if (now <= mid)  { color = '#3a8f3a'; label = 'In window — prime';       }
       else if (now <= end)  { color = '#e8a94a'; label = 'Past peak — drink soon';  }
       else                  { color = '#c04040'; label = 'Overdue — past window';   }
       cell.style.color = color;

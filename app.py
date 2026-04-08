@@ -299,7 +299,7 @@ def cellar(username):
 
     allowed_sorts = {"order_date", "wine_name", "vintage", "unit_price", "retail_price",
                      "quantity", "color_code", "region", "location", "varietal",
-                     "my_rating", "wine_type", "size_ml"}
+                     "my_rating", "wine_type", "size_ml", "drinking_window"}
     if sort not in allowed_sorts:
         sort = "order_date"
     if order not in {"asc", "desc"}:
@@ -359,7 +359,24 @@ def cellar(username):
     else:
         query, params = base_query, base_params
 
-    query += f" ORDER BY {sort} {order}"
+    if sort == "drinking_window":
+        # Sort by status: Red=1, Orange=2, Green=3, Blue=4, Grey=5
+        # Extracts start/end year from "YYYY-YYYY" text field
+        cur_year = "EXTRACT(YEAR FROM NOW())::INTEGER" if is_postgres() else "CAST(STRFTIME('%Y', 'now') AS INTEGER)"
+        start_yr = "CAST(SUBSTRING(drinking_window FROM 1 FOR 4) AS INTEGER)" if is_postgres() else "CAST(SUBSTR(drinking_window, 1, 4) AS INTEGER)"
+        end_yr   = "CAST(RIGHT(drinking_window, 4) AS INTEGER)" if is_postgres() else "CAST(SUBSTR(drinking_window, -4) AS INTEGER)"
+        dw_sort = (
+            f"CASE "
+            f"WHEN status = 'drank' OR drinking_window IS NULL OR drinking_window = '' THEN 5 "
+            f"WHEN {cur_year} > {end_yr} THEN 1 "
+            f"WHEN {cur_year} > ({start_yr} + {end_yr}) / 2 THEN 2 "
+            f"WHEN {cur_year} >= {start_yr} THEN 3 "
+            f"ELSE 4 "
+            f"END"
+        )
+        query += f" ORDER BY {dw_sort} {'ASC' if order == 'asc' else 'DESC'}"
+    else:
+        query += f" ORDER BY {sort} {order}"
 
     cur = conn.cursor()
     cur.execute(query, params)
