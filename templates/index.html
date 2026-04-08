@@ -20,8 +20,24 @@
     .badge-drank { background: #5c1a1a; }
     .status-badge { cursor: pointer; user-select: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; }
     .status-badge:hover { opacity: 0.85; filter: brightness(1.2); }
-    .storage-badge { cursor: pointer; user-select: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; background: #1a3a2a; color: #7ecb9e; border: none; }
-    .storage-badge:hover { opacity: 0.85; filter: brightness(1.2); }
+    .storage-badge { cursor: pointer; user-select: none; font-size: 0.85rem; padding: 6px 12px; border-radius: 6px; border: none; }
+    .storage-badge:hover { opacity: 0.85; filter: brightness(1.3); }
+    /* Location colour palette — cycles by index */
+    .loc-color-0 { background: #1a3a5c; color: #7eb8cb; }
+    .loc-color-1 { background: #5c1a1a; color: #e08080; }
+    .loc-color-2 { background: #1a3a2a; color: #7ecb9e; }
+    .loc-color-3 { background: #3a1a5c; color: #c0a0e0; }
+    .loc-color-4 { background: #5c3a1a; color: #e0a870; }
+    .quick-chip.loc-color-0 { border-color: #2a6a9c; }
+    .quick-chip.loc-color-1 { border-color: #8c2a2a; }
+    .quick-chip.loc-color-2 { border-color: #2a6a3a; }
+    .quick-chip.loc-color-3 { border-color: #5a2a8c; }
+    .quick-chip.loc-color-4 { border-color: #8c5a2a; }
+    .quick-chip.loc-color-0.active, .quick-chip.loc-color-0:hover { background: #2a5a8c; color: #c0dcf0; }
+    .quick-chip.loc-color-1.active, .quick-chip.loc-color-1:hover { background: #8c2a2a; color: #f0c0c0; }
+    .quick-chip.loc-color-2.active, .quick-chip.loc-color-2:hover { background: #2a6a3a; color: #c0f0d0; }
+    .quick-chip.loc-color-3.active, .quick-chip.loc-color-3:hover { background: #5a2a8c; color: #e0c8f8; }
+    .quick-chip.loc-color-4.active, .quick-chip.loc-color-4:hover { background: #8c5a2a; color: #f0d4a8; }
     #storage-picker-popup {
       display: none; position: fixed; z-index: 9999;
       background: #2a1200; border: 1px solid #c9a96e; border-radius: 8px;
@@ -272,7 +288,7 @@
             <span class="chip-count">{{ location_counts.values()|sum }}</span>
           </a>
           {% for loc in user_locations %}
-          <a href="?status=in_collection&storage_location={{ loc }}&q={{ search }}" class="quick-chip {% if storage_filter==loc %}active{% endif %}" style="text-decoration:none;">
+          <a href="?status=in_collection&storage_location={{ loc }}&q={{ search }}" class="quick-chip loc-color-{{ loop.index0 % 5 }} {% if storage_filter==loc %}active{% endif %}" style="text-decoration:none;">
             {{ loc }}
             <span class="chip-count">{{ location_counts.get(loc, 0) }}</span>
           </a>
@@ -439,7 +455,8 @@
               <td class="drinking-window-cell editable-cell" data-wine-id="{{ wine.id }}" data-field="drinking_window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;white-space:nowrap;font-weight:700;"><span class="editable-display">{{ wine.drinking_window or '—' }}</span></td>
               <td onclick="event.stopPropagation()">
                 {% if wine.status == 'in_collection' %}
-                <span class="badge storage-badge"
+                {% set loc_idx = (user_locations.index(wine.storage_location) % 5) if wine.storage_location in user_locations else 0 %}
+                <span class="badge storage-badge loc-color-{{ loc_idx }}"
                       data-wine-id="{{ wine.id }}"
                       data-storage="{{ wine.storage_location or '' }}"
                       title="Click to move">{{ wine.storage_location or '—' }}</span>
@@ -563,7 +580,7 @@
   <div id="status-picker-popup">
     <div style="font-size:0.72rem;color:#a07850;padding:2px 4px 4px;">Move to location:</div>
     {% for loc in user_locations %}
-    <div class="status-option" style="background:#1a4a2a;" data-status="in_collection" data-storage="{{ loc }}">{{ loc }}</div>
+    <div class="status-option loc-color-{{ loop.index0 % 5 }}" data-status="in_collection" data-storage="{{ loc }}">{{ loc }}</div>
     {% endfor %}
     <div style="border-top:1px solid #3d1a00;margin:4px 0;"></div>
     <div class="status-option" style="background:#5c4a1a;" data-status="not_shipped" data-storage="">Not Shipped</div>
@@ -574,7 +591,7 @@
   <div id="storage-picker-popup">
     <div style="font-size:0.72rem;color:#a07850;padding:2px 4px 4px;">Move to:</div>
     {% for loc in user_locations %}
-    <div class="storage-option" data-storage="{{ loc }}">{{ loc }}</div>
+    <div class="storage-option loc-color-{{ loop.index0 % 5 }}" data-storage="{{ loc }}">{{ loc }}</div>
     {% endfor %}
   </div>
 
@@ -1449,6 +1466,7 @@
         });
       });
 
+      const locationList = {{ user_locations | tojson }};
       popup.querySelectorAll('.storage-option').forEach(opt => {
         opt.addEventListener('mousedown', e => e.preventDefault());
         opt.addEventListener('click', e => {
@@ -1462,6 +1480,9 @@
             body: `storage_location=${encodeURIComponent(newStorage)}`
           }).then(r => {
             if (r.ok) {
+              const idx = locationList.indexOf(newStorage);
+              const colorIdx = idx >= 0 ? idx % 5 : 0;
+              activeStorageBadge.className = `badge storage-badge loc-color-${colorIdx}`;
               activeStorageBadge.dataset.storage = newStorage;
               activeStorageBadge.textContent = newStorage;
             }
