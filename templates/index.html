@@ -422,15 +422,16 @@
           <tbody>
             {% for wine in wines %}
             <tr>
-              <td>
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="wine_name" data-value="{{ wine.wine_name | e }}" onclick="event.stopPropagation()" title="Click name to edit">
                 <div class="d-flex align-items-center gap-2">
                   {% if wine.image_url %}
                   <img src="{{ wine.image_url }}" class="wine-thumb" data-src="{{ wine.image_url }}" data-name="{{ wine.wine_name or '' }}" style="width:36px;height:48px;object-fit:cover;border-radius:3px;flex-shrink:0;cursor:zoom-in;" alt="" onclick="event.stopPropagation();openImagePopup(this)">
                   {% endif %}
-                  <a href="https://www.wine-searcher.com/find/{{ wine.wine_name | replace(' ', '+') }}{% if wine.vintage %}+{{ wine.vintage }}{% endif %}#t2" target="_blank" onclick="event.stopPropagation()" style="color:inherit;text-decoration:none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'"><strong>{{ wine.wine_name or '—' }}</strong></a>
+                  <span class="editable-display" style="font-weight:bold;cursor:pointer;">{{ wine.wine_name or '—' }}</span>
+                  <a href="https://www.wine-searcher.com/find/{{ wine.wine_name | replace(' ', '+') }}{% if wine.vintage %}+{{ wine.vintage }}{% endif %}#t2" target="_blank" onclick="event.stopPropagation()" title="Search on Wine-Searcher" style="color:#a07850;font-size:0.75rem;text-decoration:none;flex-shrink:0;">↗</a>
                 </div>
               </td>
-              <td>{{ wine.vintage or '—' }}</td>
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="vintage" data-value="{{ wine.vintage or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;white-space:nowrap;"><span class="editable-display">{{ wine.vintage or '—' }}</span></td>
               <td class="type-cell" data-wine-id="{{ wine.id }}" data-type="{{ wine.wine_type or '' }}" onclick="event.stopPropagation()" title="Click to change type" style="cursor:pointer;white-space:nowrap;">
                 <span class="type-badge type-{{ wine.wine_type or 'none' }}">{{ wine.wine_type or '—' }}</span>
               </td>
@@ -440,13 +441,13 @@
               <td class="size-cell" data-wine-id="{{ wine.id }}" data-size="{{ wine.size_ml or '' }}" onclick="event.stopPropagation()" title="Click to change size" style="cursor:pointer;white-space:nowrap;">
                 {{ wine.size_ml or '—' }}{% if wine.size_ml %}ml{% endif %}
               </td>
-              <td>{{ wine.quantity or '—' }}</td>
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="quantity" data-value="{{ wine.quantity or '' }}" data-input-type="number" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.quantity or '—' }}</span></td>
               <td class="price-cell" data-col="paid" data-wine-id="{{ wine.id }}" data-value="{{ wine.unit_price or '' }}" onclick="event.stopPropagation()" title="Click to edit"><span class="price-display">{% if wine.unit_price %}${{ "%.2f"|format(wine.unit_price) }}{% else %}—{% endif %}</span></td>
               <td class="source-cell" data-wine-id="{{ wine.id }}" data-retailer="{{ wine.retailer or '' }}" onclick="event.stopPropagation()" title="Click to edit source" style="cursor:pointer;white-space:nowrap;">
                 <span class="source-display">{{ wine.retailer or '—' }}</span>
               </td>
               {% set _months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
-              <td>{{ (_months[wine.order_date[5:7]|int - 1] + '-' + wine.order_date[2:4]) if wine.order_date else '—' }}</td>
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="order_date" data-value="{{ wine.order_date or '' }}" data-input-type="date" onclick="event.stopPropagation()" title="Click to edit date" style="cursor:pointer;white-space:nowrap;"><span class="editable-display">{{ (_months[wine.order_date[5:7]|int - 1] + '-' + wine.order_date[2:4]) if wine.order_date else '—' }}</span></td>
               <td class="text-center" style="vertical-align:middle;">
                 <span class="color-dot color-dot-{{ wine.color_code or '' }}"
                       data-wine-id="{{ wine.id }}"
@@ -911,7 +912,8 @@
 
     // Price cell inline editing
     document.querySelectorAll('.price-cell').forEach(cell => {
-      cell.addEventListener('click', () => {
+      cell.addEventListener('click', e => {
+        e.stopPropagation();
         if (cell.querySelector('input')) return;
         const display = cell.querySelector('.price-display');
         const current = cell.dataset.value;
@@ -1089,7 +1091,7 @@
         // If marking as Drank, show quick rating/notes prompt first
         if (newStatus === 'drank' && selected.length === 1) {
           const badge = selected[0];
-          const wineName = badge.closest('tr').querySelector('strong')?.textContent || 'this wine';
+          const wineName = badge.closest('tr').querySelector('[data-field="wine_name"] .editable-display')?.textContent || 'this wine';
           document.getElementById('drankWineName').textContent = wineName;
           document.getElementById('drankWineId').value = badge.dataset.wineId;
           document.getElementById('drankRating').value = '';
@@ -1189,7 +1191,7 @@
     }
 
     document.querySelectorAll('.notes-cell').forEach(cell => {
-      cell.addEventListener('click', e => openNotesPopup(cell));
+      cell.addEventListener('click', e => { e.stopPropagation(); openNotesPopup(cell); });
     });
 
     // Ctrl+Enter saves, Escape closes
@@ -1499,18 +1501,37 @@
       });
     });
 
-    // Generic inline editing for region, location, varietal, drinking_window
+    // Helper: format a stored value for display
+    function editableDisplayText(field, val) {
+      if (!val) return '—';
+      if (field === 'order_date') {
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const m = val.match(/^(\d{4})-(\d{2})-\d{2}$/);
+        if (m) return months[parseInt(m[2]) - 1] + '-' + m[1].slice(2);
+      }
+      return val;
+    }
+
+    // Generic inline editing — wine_name, vintage, quantity, order_date,
+    //                           region, origin, varietal, drinking_window
     document.querySelectorAll('.editable-cell').forEach(cell => {
-      cell.addEventListener('click', () => {
+      cell.addEventListener('click', e => {
+        e.stopPropagation();
+        // Don't activate edit when clicking the search-link arrow or the thumbnail
+        if (e.target.closest('a') || e.target.closest('.wine-thumb')) return;
         if (cell.querySelector('input')) return;
         const display = cell.querySelector('.editable-display');
+        if (!display) return;
         const current = cell.dataset.value;
         const field = cell.dataset.field;
+        const inputType = cell.dataset.inputType || 'text';
         const input = document.createElement('input');
-        input.type = 'text';
+        input.type = inputType;
         input.className = 'rating-input';
-        input.style.width = '130px';
+        input.style.width = (inputType === 'number') ? '60px' : (inputType === 'date') ? '140px' : '130px';
         input.value = current;
+        if (inputType === 'number') { input.min = '0'; input.step = '1'; }
+        if (field === 'wine_name') { input.style.width = '180px'; input.style.fontWeight = 'bold'; }
         display.replaceWith(input);
         input.focus(); input.select();
         const save = () => {
@@ -1523,7 +1544,8 @@
           cell.dataset.value = val;
           const span = document.createElement('span');
           span.className = 'editable-display';
-          span.textContent = val || '—';
+          span.textContent = editableDisplayText(field, val);
+          if (field === 'wine_name') { span.style.fontWeight = 'bold'; span.style.cursor = 'pointer'; }
           input.replaceWith(span);
           if (field === 'drinking_window') applyDrinkingWindowColor(cell, val);
         };
@@ -1534,7 +1556,8 @@
             input.removeEventListener('blur', save);
             const span = document.createElement('span');
             span.className = 'editable-display';
-            span.textContent = current || '—';
+            span.textContent = editableDisplayText(field, current);
+            if (field === 'wine_name') { span.style.fontWeight = 'bold'; span.style.cursor = 'pointer'; }
             input.replaceWith(span);
           }
         });
@@ -1665,6 +1688,7 @@
     // Inline source editing
     document.querySelectorAll('.source-cell').forEach(cell => {
       cell.addEventListener('click', e => {
+        e.stopPropagation();
         if (cell.querySelector('.source-input')) return;
         const display = cell.querySelector('.source-display');
         const current = cell.dataset.retailer;
@@ -1731,8 +1755,9 @@
     }
     document.querySelectorAll('.rating-cell').forEach(cell => {
       cell.addEventListener('click', e => {
+        e.stopPropagation();
         activeRatingCell = cell;
-        const wineName = cell.closest('tr').querySelector('strong')?.textContent || '';
+        const wineName = cell.closest('tr').querySelector('[data-field="wine_name"] .editable-display')?.textContent || '';
         document.getElementById('rating-popup-title').textContent = wineName;
         document.getElementById('rating-popup-input').value = cell.dataset.rating || '';
         document.getElementById('rating-popup').style.display = 'block';

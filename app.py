@@ -760,6 +760,61 @@ def update_notes(wine_id):
     return ("", 204)
 
 
+@app.route("/wine/<int:wine_id>/wine_name", methods=["POST"])
+@login_required
+def update_wine_name(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
+    value = request.form.get("wine_name", "").strip() or None
+    if not value:
+        return ("", 400)
+    p = ph(); conn = get_db(); cur = conn.cursor()
+    cur.execute(f"UPDATE wines SET wine_name = {p} WHERE id = {p}", (value, wine_id))
+    conn.commit(); conn.close()
+    return ("", 204)
+
+
+@app.route("/wine/<int:wine_id>/vintage", methods=["POST"])
+@login_required
+def update_vintage(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
+    raw = request.form.get("vintage", "").strip()
+    value = int(raw) if raw.isdigit() else None
+    p = ph(); conn = get_db(); cur = conn.cursor()
+    cur.execute(f"UPDATE wines SET vintage = {p} WHERE id = {p}", (value, wine_id))
+    conn.commit(); conn.close()
+    return ("", 204)
+
+
+@app.route("/wine/<int:wine_id>/quantity", methods=["POST"])
+@login_required
+def update_quantity(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
+    raw = request.form.get("quantity", "").strip()
+    value = int(raw) if raw.isdigit() and int(raw) > 0 else None
+    p = ph(); conn = get_db(); cur = conn.cursor()
+    cur.execute(f"UPDATE wines SET quantity = {p} WHERE id = {p}", (value, wine_id))
+    conn.commit(); conn.close()
+    return ("", 204)
+
+
+@app.route("/wine/<int:wine_id>/order_date", methods=["POST"])
+@login_required
+def update_order_date(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
+    import re as _re
+    value = request.form.get("order_date", "").strip()
+    if not _re.match(r'^\d{4}-\d{2}-\d{2}$', value):
+        value = None
+    p = ph(); conn = get_db(); cur = conn.cursor()
+    cur.execute(f"UPDATE wines SET order_date = {p} WHERE id = {p}", (value, wine_id))
+    conn.commit(); conn.close()
+    return ("", 204)
+
+
 @app.route("/wine/add", methods=["POST"])
 @login_required
 def add_wine():
