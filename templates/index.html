@@ -422,7 +422,7 @@
           <tbody>
             {% for wine in wines %}
             <tr>
-              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="wine_name" data-value="{{ wine.wine_name | e }}" onclick="event.stopPropagation()" title="Click name to edit">
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="wine_name" data-value="{{ wine.wine_name | e }}" onclick="event.stopPropagation()" title="Double-click to edit">
                 <div class="d-flex align-items-center gap-2">
                   {% if wine.image_url %}
                   <img src="{{ wine.image_url }}" class="wine-thumb" data-src="{{ wine.image_url }}" data-name="{{ wine.wine_name or '' }}" style="width:36px;height:48px;object-fit:cover;border-radius:3px;flex-shrink:0;cursor:zoom-in;" alt="" onclick="event.stopPropagation();openImagePopup(this)">
@@ -431,23 +431,23 @@
                   <a href="https://www.wine-searcher.com/find/{{ wine.wine_name | replace(' ', '+') }}{% if wine.vintage %}+{{ wine.vintage }}{% endif %}#t2" target="_blank" onclick="event.stopPropagation()" title="Search on Wine-Searcher" style="color:#a07850;font-size:0.75rem;text-decoration:none;flex-shrink:0;">↗</a>
                 </div>
               </td>
-              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="vintage" data-value="{{ wine.vintage or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;white-space:nowrap;"><span class="editable-display">{{ wine.vintage or '—' }}</span></td>
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="vintage" data-value="{{ wine.vintage or '' }}" onclick="event.stopPropagation()" title="Double-click to edit" style="cursor:pointer;white-space:nowrap;"><span class="editable-display">{{ wine.vintage or '—' }}</span></td>
               <td class="type-cell" data-wine-id="{{ wine.id }}" data-type="{{ wine.wine_type or '' }}" onclick="event.stopPropagation()" title="Click to change type" style="cursor:pointer;white-space:nowrap;">
                 <span class="type-badge type-{{ wine.wine_type or 'none' }}">{{ wine.wine_type or '—' }}</span>
               </td>
-              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="region" data-value="{{ wine.region or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.region or '—' }}</span></td>
-              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="origin" data-value="{{ wine.origin or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.origin or '—' }}</span></td>
-              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="varietal" data-value="{{ wine.varietal or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.varietal or '—' }}</span></td>
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="region" data-value="{{ wine.region or '' }}" onclick="event.stopPropagation()" title="Double-click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.region or '—' }}</span></td>
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="origin" data-value="{{ wine.origin or '' }}" onclick="event.stopPropagation()" title="Double-click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.origin or '—' }}</span></td>
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="varietal" data-value="{{ wine.varietal or '' }}" onclick="event.stopPropagation()" title="Double-click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.varietal or '—' }}</span></td>
               <td class="size-cell" data-wine-id="{{ wine.id }}" data-size="{{ wine.size_ml or '' }}" onclick="event.stopPropagation()" title="Click to change size" style="cursor:pointer;white-space:nowrap;">
                 {{ wine.size_ml or '—' }}{% if wine.size_ml %}ml{% endif %}
               </td>
-              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="quantity" data-value="{{ wine.quantity or '' }}" data-input-type="number" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.quantity or '—' }}</span></td>
-              <td class="price-cell" data-col="paid" data-wine-id="{{ wine.id }}" data-value="{{ wine.unit_price or '' }}" onclick="event.stopPropagation()" title="Click to edit"><span class="price-display">{% if wine.unit_price %}${{ "%.2f"|format(wine.unit_price) }}{% else %}—{% endif %}</span></td>
-              <td class="source-cell" data-wine-id="{{ wine.id }}" data-retailer="{{ wine.retailer or '' }}" onclick="event.stopPropagation()" title="Click to edit source" style="cursor:pointer;white-space:nowrap;">
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="quantity" data-value="{{ wine.quantity or '' }}" data-input-type="number" onclick="event.stopPropagation()" title="Double-click to edit" style="cursor:pointer;"><span class="editable-display">{{ wine.quantity or '—' }}</span></td>
+              <td class="price-cell" data-col="paid" data-wine-id="{{ wine.id }}" data-value="{{ wine.unit_price or '' }}" onclick="event.stopPropagation()" title="Double-click to edit"><span class="price-display">{% if wine.unit_price %}${{ "%.2f"|format(wine.unit_price) }}{% else %}—{% endif %}</span></td>
+              <td class="source-cell" data-wine-id="{{ wine.id }}" data-retailer="{{ wine.retailer or '' }}" onclick="event.stopPropagation()" title="Double-click to edit" style="cursor:pointer;white-space:nowrap;">
                 <span class="source-display">{{ wine.retailer or '—' }}</span>
               </td>
               {% set _months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'] %}
-              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="order_date" data-value="{{ wine.order_date or '' }}" data-input-type="date" onclick="event.stopPropagation()" title="Click to edit date" style="cursor:pointer;white-space:nowrap;"><span class="editable-display">{{ (_months[wine.order_date[5:7]|int - 1] + '-' + wine.order_date[2:4]) if wine.order_date else '—' }}</span></td>
+              <td class="editable-cell" data-wine-id="{{ wine.id }}" data-field="order_date" data-value="{{ wine.order_date or '' }}" data-input-type="date" onclick="event.stopPropagation()" title="Double-click to edit" style="cursor:pointer;white-space:nowrap;"><span class="editable-display">{{ (_months[wine.order_date[5:7]|int - 1] + '-' + wine.order_date[2:4]) if wine.order_date else '—' }}</span></td>
               <td class="text-center" style="vertical-align:middle;">
                 <span class="color-dot color-dot-{{ wine.color_code or '' }}"
                       data-wine-id="{{ wine.id }}"
@@ -458,7 +458,7 @@
               <td class="rating-cell" data-wine-id="{{ wine.id }}" data-rating="{{ wine.my_rating or '' }}" onclick="event.stopPropagation()" title="Click to rate">
                 <span class="rating-display">{{ "%.1f"|format(wine.my_rating) if wine.my_rating is not none else '—' }}</span>
               </td>
-              <td class="drinking-window-cell editable-cell" data-wine-id="{{ wine.id }}" data-field="drinking_window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}" onclick="event.stopPropagation()" title="Click to edit" style="cursor:pointer;white-space:nowrap;font-weight:700;"><span class="editable-display">{{ wine.drinking_window or '—' }}</span></td>
+              <td class="drinking-window-cell editable-cell" data-wine-id="{{ wine.id }}" data-field="drinking_window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}" onclick="event.stopPropagation()" title="Double-click to edit" style="cursor:pointer;white-space:nowrap;font-weight:700;"><span class="editable-display">{{ wine.drinking_window or '—' }}</span></td>
               <td onclick="event.stopPropagation()">
                 {% if wine.status == 'in_collection' %}
                 {% set loc_idx = (user_locations.index(wine.storage_location) % 5) if wine.storage_location in user_locations else 0 %}
@@ -485,7 +485,7 @@
               <td class="notes-cell" data-wine-id="{{ wine.id }}" data-wine-name="{{ wine.wine_name or '' }}" data-notes="{{ wine.notes | e if wine.notes else '' }}" onclick="event.stopPropagation()" title="{{ wine.notes or 'Click to add notes' }}" style="cursor:pointer;max-width:160px;">
                 <span class="notes-preview">{% if wine.notes %}<span style="color:#c9a96e;">&#x1F4DD;</span> {{ wine.notes[:40] }}{% if wine.notes|length > 40 %}…{% endif %}{% else %}<span style="color:#555;">—</span>{% endif %}</span>
               </td>
-              <td class="price-cell d-none" data-col="retail" data-wine-id="{{ wine.id }}" data-value="{{ wine.retail_price or '' }}" onclick="event.stopPropagation()" title="Click to edit"><span class="price-display">{% if wine.retail_price %}${{ "%.2f"|format(wine.retail_price) }}{% else %}—{% endif %}</span></td>
+              <td class="price-cell d-none" data-col="retail" data-wine-id="{{ wine.id }}" data-value="{{ wine.retail_price or '' }}" onclick="event.stopPropagation()" title="Double-click to edit"><span class="price-display">{% if wine.retail_price %}${{ "%.2f"|format(wine.retail_price) }}{% else %}—{% endif %}</span></td>
               <td onclick="event.stopPropagation()" style="white-space:nowrap;">
                 {% if not auth_enabled or access_level == 'edit' %}
                 <button class="btn btn-sm delete-btn" data-wine-id="{{ wine.id }}" data-wine-name="{{ wine.wine_name | e }}" title="Delete" style="background:none;border:none;color:#5c1a1a;font-size:1rem;padding:2px 6px;cursor:pointer;">🗑</button>
@@ -912,7 +912,7 @@
 
     // Price cell inline editing
     document.querySelectorAll('.price-cell').forEach(cell => {
-      cell.addEventListener('click', e => {
+      cell.addEventListener('dblclick', e => {
         e.stopPropagation();
         if (cell.querySelector('input')) return;
         const display = cell.querySelector('.price-display');
@@ -1515,7 +1515,7 @@
     // Generic inline editing — wine_name, vintage, quantity, order_date,
     //                           region, origin, varietal, drinking_window
     document.querySelectorAll('.editable-cell').forEach(cell => {
-      cell.addEventListener('click', e => {
+      cell.addEventListener('dblclick', e => {
         e.stopPropagation();
         // Don't activate edit when clicking the search-link arrow or the thumbnail
         if (e.target.closest('a') || e.target.closest('.wine-thumb')) return;
@@ -1687,7 +1687,7 @@
 
     // Inline source editing
     document.querySelectorAll('.source-cell').forEach(cell => {
-      cell.addEventListener('click', e => {
+      cell.addEventListener('dblclick', e => {
         e.stopPropagation();
         if (cell.querySelector('.source-input')) return;
         const display = cell.querySelector('.source-display');
