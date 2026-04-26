@@ -229,7 +229,7 @@
     .mobile-icon-line { color: #c8aa88; font-size: 0.78rem; margin-top: 5px; line-height: 1.25; display: flex; align-items: center; gap: 5px; }
     .mobile-icon-line .mobile-icon { width: 1.25em; text-align: center; flex: 0 0 auto; }
     .mobile-compact-content { display: none; }
-    .mobile-compact-title { color: #f5e6d3; font-size: 0.9rem; line-height: 1.15; font-weight: 800; padding-left: 28px; min-height: 1.15em; }
+    .mobile-compact-title { color: #f5e6d3; font-size: 0.9rem; line-height: 1.15; font-weight: 800; padding-left: 28px; min-height: 1.15em; overflow-wrap: anywhere; }
     .mobile-compact-row { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 3px; align-items: center; margin-top: 5px; color: #c8aa88; font-size: 0.76rem; line-height: 1.15; }
     .mobile-compact-meta { display: flex; align-items: center; gap: 10px; margin-top: 7px; color: #f5e6d3; font-size: 0.78rem; font-weight: 700; }
     .mobile-compact-label { color: #c8aa88; font-size: 0.82rem; text-align: center; }
@@ -326,7 +326,7 @@
       .mobile-wine-card:active { background: #2a1403; }
       .storage-badge, .status-badge { min-height: 34px; display: inline-flex; align-items: center; padding: 7px 12px; }
       body.mobile-compact .mobile-card-list { display: flex; flex-direction: column; gap: 7px; padding: 8px 8px 66px; }
-      body.mobile-compact .mobile-wine-card { padding: 10px 11px 9px; border: 1px solid #4a2208; border-radius: 7px; min-height: 105px; }
+      body.mobile-compact .mobile-wine-card { padding: 10px 11px 9px; border: 1px solid #4a2208; border-radius: 7px; min-height: 0; height: auto; overflow: visible; }
       body.mobile-compact .mobile-card-top,
       body.mobile-compact .mobile-pill-row,
       body.mobile-compact .mobile-info-grid,
