@@ -235,7 +235,7 @@
     .mobile-compact-label { color: #c8aa88; font-size: 0.82rem; text-align: center; }
     .mobile-compact-value { color: #f5e6d3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .mobile-card-body { min-width: 0; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
-    .mobile-pill-row { display: grid; grid-template-columns: auto auto minmax(54px, 0.8fr) minmax(74px, 1.2fr); gap: 5px; margin-top: 7px; align-items: center; }
+    .mobile-pill-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin-top: 7px; align-items: center; }
     .mobile-status-icon { width: 24px; height: 30px; position: relative; display: inline-block; flex: 0 0 auto; }
     .mobile-status-icon::before {
       content: ""; position: absolute; left: 8px; top: 1px; width: 8px; height: 9px;
@@ -251,8 +251,12 @@
     .mobile-status-icon.status-shipping::before,
     .mobile-status-icon.status-shipping::after { display: none; }
     .mobile-pill-row .color-dot { width: 21px; height: 21px; cursor: default; }
-    .mobile-pill-row .storage-badge { justify-content: center; min-width: 58px; }
-    .mobile-pill-row .mobile-drinking-window { justify-self: end; text-align: right; font-weight: 800; font-size: 0.8rem; }
+    .mobile-pill-row .mobile-status-icon,
+    .mobile-pill-row .color-dot,
+    .mobile-pill-row .storage-badge,
+    .mobile-pill-row .mobile-drinking-window { justify-self: center; }
+    .mobile-pill-row .storage-badge { justify-content: center; width: 100%; min-width: 0; padding-left: 4px; padding-right: 4px; }
+    .mobile-pill-row .mobile-drinking-window { text-align: center; font-weight: 800; font-size: 0.76rem; line-height: 1.1; }
     .mobile-info-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin-top: 7px; }
     .mobile-info-label { color: #8d6848; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0; }
     .mobile-info-value { color: #f5e6d3; font-size: 0.76rem; line-height: 1.15; overflow-wrap: anywhere; }
