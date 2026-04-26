@@ -235,7 +235,7 @@
     .mobile-compact-label { color: #c8aa88; font-size: 0.82rem; text-align: center; }
     .mobile-compact-value { color: #f5e6d3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .mobile-card-body { min-width: 0; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
-    .mobile-pill-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 5px; margin-top: 7px; align-items: center; }
+    .mobile-pill-row { display: grid; grid-template-columns: 0.75fr 0.75fr 0.85fr 1.65fr; gap: 5px; margin-top: 7px; align-items: center; }
     .mobile-status-icon { width: 24px; height: 30px; position: relative; display: inline-block; flex: 0 0 auto; }
     .mobile-status-icon::before {
       content: ""; position: absolute; left: 8px; top: 1px; width: 8px; height: 9px;
@@ -256,10 +256,10 @@
     .mobile-pill-row .storage-badge,
     .mobile-pill-row .mobile-drinking-window { justify-self: center; }
     .mobile-pill-row .storage-badge { justify-content: center; width: 100%; min-width: 0; padding-left: 4px; padding-right: 4px; }
-    .mobile-pill-row .mobile-drinking-window { text-align: center; font-weight: 800; font-size: 0.76rem; line-height: 1.1; }
-    .mobile-info-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; margin-top: 7px; }
-    .mobile-info-label { color: #8d6848; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0; }
-    .mobile-info-value { color: #f5e6d3; font-size: 0.76rem; line-height: 1.15; overflow-wrap: anywhere; }
+    .mobile-pill-row .mobile-drinking-window { text-align: center; font-weight: 800; font-size: 0.76rem; line-height: 1.1; white-space: nowrap; }
+    .mobile-info-grid { display: grid; grid-template-columns: 0.75fr 0.75fr 0.85fr 1.65fr; gap: 4px; margin-top: 7px; text-align: center; }
+    .mobile-info-label { color: #8d6848; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0; text-align: center; }
+    .mobile-info-value { color: #f5e6d3; font-size: 0.76rem; line-height: 1.15; overflow-wrap: anywhere; text-align: center; }
     .mobile-drink-line { color: #f5e6d3; font-size: 0.78rem; font-weight: 700; margin-top: 7px; }
     .mobile-notes-preview { color: #c8aa88; font-size: 0.78rem; margin-top: 8px; line-height: 1.3; }
     .mobile-browse-tools, .mobile-bottom-bar { display: none; }
