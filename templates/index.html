@@ -218,6 +218,7 @@
     .mobile-info-label { color: #8d6848; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0; }
     .mobile-info-value { color: #f5e6d3; font-size: 0.84rem; line-height: 1.2; overflow-wrap: anywhere; }
     .mobile-notes-preview { color: #c8aa88; font-size: 0.78rem; margin-top: 8px; line-height: 1.3; }
+    .mobile-browse-tools, .mobile-bottom-bar { display: none; }
     #bulk-status-bar { display: none; }
     #bulk-status-bar.visible { display: flex; }
 
@@ -243,24 +244,65 @@
     /* Mobile (< 768px) */
     @media (max-width: 767px) {
       .navbar-brand { font-size: 1.1rem !important; }
-      .navbar { margin-bottom: 8px !important; }
+      .navbar { margin-bottom: 0 !important; }
+      .navbar .container { padding-left: 8px; padding-right: 8px; }
+      .mobile-hide { display: none !important; }
+      #navActionBtns { margin-left: auto; }
+      #navActionBtns > .dropdown > .dropdown-toggle { font-size: 0 !important; width: 34px; height: 32px; padding: 0 !important; }
+      #navActionBtns > .dropdown > .dropdown-toggle::before { content: "Menu"; font-size: 0.72rem; }
       .container-fluid { padding-left: 8px !important; padding-right: 8px !important; }
       .stat-value { font-size: 1.4rem; }
       .card.stat-card { padding: 8px !important; }
       .row.g-3.mb-3 { margin-bottom: 8px !important; }
-      .card.p-3.mb-2 { padding: 8px !important; margin-bottom: 6px !important; }
+      .card.p-3.mb-2 { padding: 8px !important; margin-bottom: 0 !important; border-radius: 0; border-left: 0; border-right: 0; }
+      .card.p-2.mb-2 > div:first-child > div:first-child {
+        flex-wrap: nowrap !important; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none;
+      }
+      .card.p-2.mb-2 > div:first-child > div:first-child::-webkit-scrollbar { display: none; }
+      .card.p-2.mb-2 > div:first-child > div:last-child { display: none !important; }
+      .card.p-2.mb-2 .quick-chip { flex: 0 0 auto; }
       #filterForm > div { gap: 6px !important; }
       #filterForm .form-control,
       #filterForm .form-select { font-size: 0.85rem; min-width: 0 !important; }
       #filterForm input[name="q"] { flex-basis: 100% !important; }
       .btn-wine, .btn { font-size: 0.8rem; padding: 4px 10px; }
+      .mobile-browse-tools {
+        display: block; position: sticky; top: 0; z-index: 50;
+        background: #1a0a00; border-bottom: 1px solid #4a2208; padding: 8px;
+      }
+      .mobile-search-row { display: flex; gap: 6px; align-items: center; }
+      .mobile-search-row .form-control { flex: 1; min-width: 0; }
+      .mobile-sort-row { display: flex; gap: 6px; margin-top: 6px; }
+      .mobile-sort-row .form-select { flex: 1; min-width: 0; }
+      .mobile-mode-btn { white-space: nowrap; background:#2a1200; border:1px solid #5a2d0c; color:#c9a96e; border-radius:6px; }
       #tableScroll { display: none; }
-      .mobile-card-list { display: block; overflow-y: auto; overscroll-behavior: none; flex: 1; min-height: 0; }
+      .mobile-card-list { display: block; overflow-y: auto; overscroll-behavior: none; flex: 1; min-height: 0; padding-bottom: 66px; }
       .table-card { background: #1a0a00; }
+      .mobile-wine-card { cursor: pointer; }
+      .mobile-wine-card:active { background: #2a1403; }
       .storage-badge, .status-badge { min-height: 34px; display: inline-flex; align-items: center; padding: 7px 12px; }
+      body.mobile-compact .mobile-wine-card { padding: 8px 10px; }
+      body.mobile-compact .mobile-thumb,
+      body.mobile-compact .mobile-info-grid,
+      body.mobile-compact .mobile-notes-preview { display: none; }
+      body.mobile-compact .mobile-card-top { gap: 0; }
+      body.mobile-compact .mobile-wine-title { font-size: 0.92rem; }
+      body.mobile-compact .mobile-wine-meta { font-size: 0.73rem; }
+      body.mobile-compact .mobile-pill-row { margin-top: 7px; }
+      .mobile-bottom-bar {
+        display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 9000;
+        background: #220d00; border-top: 1px solid #5a2d0c; padding: 7px 8px;
+        gap: 6px; justify-content: space-around;
+      }
+      .mobile-bottom-bar button, .mobile-bottom-bar a {
+        flex: 1; min-width: 0; border-radius: 7px; border: 1px solid #5a2d0c;
+        background: #2a1200; color: #f5e6d3; text-decoration: none; text-align: center;
+        font-size: 0.78rem; padding: 7px 4px;
+      }
+      .mobile-bottom-bar .primary { background: #8b1a1a; border-color: #a02020; }
       .col-wine { min-width: 160px; }
       .col-date { min-width: 70px; }
-      footer { padding: 3px 8px !important; font-size: 0.72rem !important; }
+      footer { display: none; }
       #navActionBtns .btn, #navActionBtns .btn.dropdown-toggle { font-size: 0.72rem !important; padding: 3px 6px !important; }
     }
   </style>
@@ -269,17 +311,17 @@
   <nav class="navbar navbar-expand-lg mb-4">
     <div class="container d-flex justify-content-between align-items-center">
       <div class="d-flex align-items-center gap-2">
-        <a href="{{ url_for('home') }}" class="btn btn-sm" style="background:#3d0f0f;border:1px solid #5a2d0c;color:#c9a96e;">← Home</a>
+        <a href="{{ url_for('home') }}" class="btn btn-sm mobile-hide" style="background:#3d0f0f;border:1px solid #5a2d0c;color:#c9a96e;">← Home</a>
         <span class="navbar-brand mb-0">🍷 {{ cellar_display_name }}'s Cellar{% if not is_own_cellar %} <span style="font-size:0.75rem;color:#a07850;font-weight:normal;">(view only)</span>{% endif %}</span>
         {% if auth_enabled %}
-        <a href="{{ url_for('logout') }}" class="btn btn-sm" style="background:#3d0f0f;border:1px solid #5a2d0c;color:#c9a96e;">Log out</a>
+        <a href="{{ url_for('logout') }}" class="btn btn-sm mobile-hide" style="background:#3d0f0f;border:1px solid #5a2d0c;color:#c9a96e;">Log out</a>
         {% endif %}
       </div>
       <div class="d-flex gap-1 align-items-center" id="navActionBtns">
         {% if access_level == 'edit' %}
-        <button type="button" class="btn btn-wine btn-sm" data-bs-toggle="modal" data-bs-target="#addWineModal">+ Add Wine</button>
+        <button type="button" class="btn btn-wine btn-sm mobile-hide" data-bs-toggle="modal" data-bs-target="#addWineModal">+ Add Wine</button>
         {% endif %}
-        <a href="{{ url_for('user_analytics', username=cellar_username) }}" class="btn btn-sm" style="background:#1a1a3a;border:1px solid #3a3a8a;color:#c0c8f5;">📊 Analytics</a>
+        <a href="{{ url_for('user_analytics', username=cellar_username) }}" class="btn btn-sm mobile-hide" style="background:#1a1a3a;border:1px solid #3a3a8a;color:#c0c8f5;">📊 Analytics</a>
         <div class="dropdown">
           <button class="btn btn-sm dropdown-toggle" style="background:#2a1200;border:1px solid #5a2d0c;color:#c9a96e;" type="button" data-bs-toggle="dropdown" aria-expanded="false">
             ⚙ Refresh/Export
@@ -411,6 +453,30 @@
       <div id="activeFilters" style="display:none;flex-wrap:wrap;gap:6px;margin-top:6px;"></div>
     </div>
 
+    <div class="mobile-browse-tools" id="mobileBrowseTools">
+      <form method="get" class="mobile-search-row" id="mobileSearchForm">
+        {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+        {% if storage_filter %}<input type="hidden" name="storage_location" value="{{ storage_filter }}">{% endif %}
+        {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+        {% if order %}<input type="hidden" name="order" value="{{ order }}">{% endif %}
+        <input type="text" name="q" class="form-control form-control-sm" placeholder="Search wines" value="{{ search }}" id="mobileSearchInput">
+        <button type="submit" class="btn btn-wine btn-sm">Go</button>
+      </form>
+      <div class="mobile-sort-row">
+        <select class="form-select form-select-sm" id="mobileSortSelect" aria-label="Sort wines">
+          <option value="order_date|desc" {% if sort=='order_date' and order=='desc' %}selected{% endif %}>Recent first</option>
+          <option value="wine_name|asc" {% if sort=='wine_name' and order=='asc' %}selected{% endif %}>Wine A-Z</option>
+          <option value="vintage|desc" {% if sort=='vintage' and order=='desc' %}selected{% endif %}>Vintage newest</option>
+          <option value="vintage|asc" {% if sort=='vintage' and order=='asc' %}selected{% endif %}>Vintage oldest</option>
+          <option value="storage_location|asc" {% if sort=='storage_location' and order=='asc' %}selected{% endif %}>Storage</option>
+          <option value="wine_type|asc" {% if sort=='wine_type' and order=='asc' %}selected{% endif %}>Type</option>
+          <option value="unit_price|desc" {% if sort=='unit_price' and order=='desc' %}selected{% endif %}>Price high-low</option>
+          <option value="drinking_window|asc" {% if sort=='drinking_window' and order=='asc' %}selected{% endif %}>Drink window</option>
+        </select>
+        <button type="button" class="mobile-mode-btn btn btn-sm" id="mobileModeToggle">Compact</button>
+      </div>
+    </div>
+
     <!-- Wine Table -->
     <div class="card table-card">
       <div class="table-responsive" id="tableScroll">
@@ -525,7 +591,7 @@
       </div>
       <div class="mobile-card-list">
         {% for wine in wines %}
-        <div class="mobile-wine-card">
+        <div class="mobile-wine-card" data-detail-url="{{ url_for('wine_detail', wine_id=wine.id) }}">
           <div class="mobile-card-top">
             {% if wine.image_url %}
             <img src="{{ wine.image_url }}" class="mobile-thumb wine-thumb" data-src="{{ wine.image_url }}" data-name="{{ wine.wine_name or '' }}" alt="" onclick="event.stopPropagation();openImagePopup(this)">
@@ -597,6 +663,15 @@
       </div>
       <div style="padding:4px 12px;font-size:0.78rem;color:#5a3a1a;flex-shrink:0;">{{ wines|length }} result(s){% if fuzzy_used %} <span style="color:#a07850;font-style:italic;">— approximate matches</span>{% endif %}</div>
     </div>
+  </div>
+
+  <div class="mobile-bottom-bar" id="mobileBottomBar">
+    <button type="button" data-mobile-action="search">Search</button>
+    <button type="button" data-mobile-action="filters">Filters</button>
+    {% if access_level == 'edit' %}
+    <button type="button" class="primary" data-bs-toggle="modal" data-bs-target="#addWineModal">Add</button>
+    {% endif %}
+    <button type="button" data-mobile-action="top">Top</button>
   </div>
 
   <footer style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:8px;color:#5a3a1a;font-size:0.8rem;background:#1a0a00;z-index:100;">
@@ -1893,6 +1968,57 @@
     document.getElementById('rating-popup-input').addEventListener('keydown', e => {
       if (e.key === 'Enter') saveRatingPopup();
       if (e.key === 'Escape') closeRatingPopup();
+    });
+
+    // Mobile browsing controls
+    const mobileSortSelect = document.getElementById('mobileSortSelect');
+    if (mobileSortSelect) {
+      mobileSortSelect.addEventListener('change', () => {
+        const [sortField, sortOrder] = mobileSortSelect.value.split('|');
+        const params = new URLSearchParams(window.location.search);
+        params.set('sort', sortField);
+        params.set('order', sortOrder);
+        window.location.search = params.toString();
+      });
+    }
+
+    const mobileModeToggle = document.getElementById('mobileModeToggle');
+    function setMobileCardMode(mode) {
+      const compact = mode === 'compact';
+      document.body.classList.toggle('mobile-compact', compact);
+      if (mobileModeToggle) mobileModeToggle.textContent = compact ? 'Comfort' : 'Compact';
+      localStorage.setItem('wineMobileCardMode', compact ? 'compact' : 'comfort');
+    }
+    if (mobileModeToggle) {
+      setMobileCardMode(localStorage.getItem('wineMobileCardMode') || 'comfort');
+      mobileModeToggle.addEventListener('click', () => {
+        setMobileCardMode(document.body.classList.contains('mobile-compact') ? 'comfort' : 'compact');
+      });
+    }
+
+    document.querySelectorAll('.mobile-wine-card[data-detail-url]').forEach(card => {
+      card.addEventListener('click', e => {
+        if (e.target.closest('.status-badge, .storage-badge, .color-dot, .wine-thumb, button, a, input, select, textarea')) return;
+        window.location.href = card.dataset.detailUrl;
+      });
+    });
+
+    document.getElementById('mobileBottomBar')?.addEventListener('click', e => {
+      const btn = e.target.closest('[data-mobile-action]');
+      if (!btn) return;
+      const action = btn.dataset.mobileAction;
+      if (action === 'search') {
+        document.getElementById('mobileBrowseTools')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => document.getElementById('mobileSearchInput')?.focus(), 250);
+      } else if (action === 'filters') {
+        const filters = document.getElementById('moreFilters');
+        if (filters && !filters.classList.contains('show')) bootstrap.Collapse.getOrCreateInstance(filters).show();
+        filters?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else if (action === 'top') {
+        const scroller = document.querySelector('.mobile-card-list');
+        if (scroller && getComputedStyle(scroller).display !== 'none') scroller.scrollTo({ top: 0, behavior: 'smooth' });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     });
   </script>
 </body>
