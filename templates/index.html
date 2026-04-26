@@ -204,17 +204,37 @@
     }
     .mobile-card-list { display: none; }
     .mobile-wine-card {
-      background: #241000; border-bottom: 1px solid #4a2208; padding: 12px 10px;
+      background: #241000; border-bottom: 1px solid #4a2208; padding: 12px 10px; position: relative; overflow: hidden;
     }
+    .mobile-type-sash {
+      position: absolute; top: 9px; left: -34px; width: 118px; transform: rotate(-38deg);
+      text-align: center; font-size: 0.62rem; line-height: 1; font-weight: 800; letter-spacing: 0;
+      padding: 4px 0; color: #fff; z-index: 2; box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+    }
+    .mobile-sash-Red { background: #8f1515; color: #fff4f4; }
+    .mobile-sash-Rose { background: #ef8caf; color: #3b0b1a; }
+    .mobile-sash-White { background: #f4edc6; color: #3c3212; }
+    .mobile-sash-Sparkling { background: #b7e6a5; color: #17340d; }
+    .mobile-sash-Dessert { background: #a9d8ff; color: #102f4d; }
+    .mobile-sash-Fortified { background: #3157c8; color: #fff; }
+    .mobile-sash-Orange { background: #f4aa5c; color: #3d1d00; }
+    .mobile-sash-none { background: #5a3a1a; color: #f5e6d3; }
     .mobile-card-top { display: flex; gap: 10px; align-items: flex-start; }
     .mobile-thumb {
-      width: 52px; height: 68px; object-fit: cover; border-radius: 4px; flex-shrink: 0;
+      width: 86px; height: 116px; object-fit: cover; border-radius: 4px; flex-shrink: 0;
       background: #140700; border: 1px solid #4a2208;
     }
-    .mobile-wine-title { color: #f5e6d3; font-weight: 700; font-size: 0.98rem; line-height: 1.2; }
-    .mobile-wine-meta { color: #b68f68; font-size: 0.78rem; margin-top: 3px; line-height: 1.25; }
-    .mobile-pill-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; align-items: center; }
-    .mobile-info-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+    .mobile-wine-title { color: #f5e6d3; font-weight: 800; font-size: 1rem; line-height: 1.15; padding-right: 3px; }
+    .mobile-vintage-line { color: #d9c4aa; font-size: 0.88rem; margin-top: 4px; font-weight: 700; }
+    .mobile-icon-line { color: #c8aa88; font-size: 0.78rem; margin-top: 5px; line-height: 1.25; display: flex; align-items: center; gap: 5px; }
+    .mobile-icon-line .mobile-icon { width: 1.25em; text-align: center; flex: 0 0 auto; }
+    .mobile-pill-row { display: grid; grid-template-columns: auto auto auto 1fr; gap: 7px; margin-top: 11px; align-items: center; }
+    .mobile-status-icon { font-size: 1.25rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; min-width: 26px; }
+    .mobile-status-icon.status-drank { opacity: 0.45; filter: grayscale(1); }
+    .mobile-pill-row .color-dot { width: 21px; height: 21px; cursor: default; }
+    .mobile-pill-row .storage-badge { justify-content: center; min-width: 58px; }
+    .mobile-pill-row .mobile-drinking-window { justify-self: end; text-align: right; font-weight: 800; font-size: 0.8rem; }
+    .mobile-info-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
     .mobile-info-label { color: #8d6848; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0; }
     .mobile-info-value { color: #f5e6d3; font-size: 0.84rem; line-height: 1.2; overflow-wrap: anywhere; }
     .mobile-drink-line { color: #f5e6d3; font-size: 0.78rem; font-weight: 700; margin-top: 7px; }
@@ -287,6 +307,13 @@
       body.mobile-compact .mobile-info-grid,
       body.mobile-compact .mobile-notes-preview { display: none; }
       body.mobile-compact .mobile-drink-line { display: block !important; }
+      body.mobile-compact .mobile-type-sash,
+      body.mobile-compact .mobile-vintage-line,
+      body.mobile-compact .mobile-icon-line { display: none; }
+      body.mobile-compact .mobile-pill-row {
+        display: flex; flex-wrap: wrap; gap: 7px; margin-top: 7px; align-items: center;
+      }
+      body.mobile-compact .mobile-pill-row .mobile-drinking-window { display: none; }
       body.mobile-compact .mobile-card-top { gap: 0; }
       body.mobile-compact .mobile-wine-title { font-size: 0.92rem; }
       body.mobile-compact .mobile-wine-meta { font-size: 0.73rem; }
@@ -594,6 +621,15 @@
       <div class="mobile-card-list">
         {% for wine in wines %}
         <div class="mobile-wine-card" data-detail-url="{{ url_for('wine_detail', wine_id=wine.id) }}">
+          <div class="mobile-type-sash mobile-sash-{{ wine.wine_type or 'none' }}">{{ wine.wine_type or 'Wine' }}</div>
+          {% set origin_key = (wine.origin or '')|lower|trim %}
+          {% set flag_map = {
+            'argentina':'🇦🇷','australia':'🇦🇺','austria':'🇦🇹','canada':'🇨🇦','chile':'🇨🇱','france':'🇫🇷',
+            'germany':'🇩🇪','greece':'🇬🇷','hungary':'🇭🇺','italy':'🇮🇹','new zealand':'🇳🇿','portugal':'🇵🇹',
+            'south africa':'🇿🇦','spain':'🇪🇸','switzerland':'🇨🇭','united states':'🇺🇸','usa':'🇺🇸','us':'🇺🇸',
+            'united states of america':'🇺🇸'
+          } %}
+          {% set country_flag = flag_map.get(origin_key, '🌐') %}
           <div class="mobile-card-top">
             {% if wine.image_url %}
             <img src="{{ wine.image_url }}" class="mobile-thumb wine-thumb" data-src="{{ wine.image_url }}" data-name="{{ wine.wine_name or '' }}" alt="" onclick="event.stopPropagation();openImagePopup(this)">
@@ -602,32 +638,30 @@
             {% endif %}
             <div style="min-width:0;flex:1;">
               <div class="mobile-wine-title">{{ wine.wine_name or '—' }}</div>
-              <div class="mobile-wine-meta">
-                {{ wine.vintage or 'NV' }}{% if wine.wine_type %} • {{ wine.wine_type }}{% endif %}{% if wine.region %} • {{ wine.region }}{% endif %}{% if wine.origin %} • {{ wine.origin }}{% endif %}
-              </div>
-              <div class="mobile-pill-row">
-                <span class="badge status-badge badge-{{ wine.status or '' }}"
-                      data-wine-id="{{ wine.id }}"
-                      data-status="{{ wine.status or '' }}"
-                      data-storage="{{ wine.storage_location or '' }}"
-                      title="Click to change status">
-                  {% if wine.status == 'not_shipped' %}Not Shipped
-                  {% elif wine.status == 'drank' %}Drank
-                  {% elif wine.status == 'in_collection' %}In Collection
-                  {% else %}—{% endif %}
-                </span>
-                {% if wine.status == 'in_collection' %}
-                {% set loc_idx = (user_locations.index(wine.storage_location) % 5) if wine.storage_location in user_locations else 0 %}
-                <span class="badge storage-badge loc-color-{{ loc_idx }}"
-                      data-wine-id="{{ wine.id }}"
-                      data-storage="{{ wine.storage_location or '' }}"
-                      title="Click to move">{{ wine.storage_location or '—' }}</span>
-                {% endif %}
-                {% if wine.color_code %}
-                <span class="color-dot color-dot-{{ wine.color_code }}" data-wine-id="{{ wine.id }}" data-color="{{ wine.color_code }}" title="Click to change color"></span>
-                {% endif %}
-              </div>
+              <div class="mobile-vintage-line">{{ wine.vintage or 'NV' }}</div>
+              <div class="mobile-icon-line"><span class="mobile-icon">{{ country_flag }}</span><span>{{ wine.region or wine.origin or '—' }}</span></div>
+              <div class="mobile-icon-line"><span class="mobile-icon">🍇</span><span>{{ wine.varietal or '—' }}</span></div>
             </div>
+          </div>
+          <div class="mobile-pill-row">
+            <span class="mobile-status-icon {% if wine.status == 'drank' %}status-drank{% endif %}" title="{% if wine.status == 'not_shipped' %}Not shipped{% elif wine.status == 'drank' %}Drank{% else %}Available{% endif %}">
+              {% if wine.status == 'not_shipped' %}🚚{% elif wine.status == 'drank' %}⚱{% else %}🍾{% endif %}
+            </span>
+            {% if wine.color_code %}
+            <span class="color-dot color-dot-{{ wine.color_code }}" data-wine-id="{{ wine.id }}" data-color="{{ wine.color_code }}" title="Sticker color"></span>
+            {% else %}
+            <span class="color-dot" style="background:transparent;border-color:#444;" title="No sticker"></span>
+            {% endif %}
+            {% if wine.status == 'in_collection' %}
+            {% set loc_idx = (user_locations.index(wine.storage_location) % 5) if wine.storage_location in user_locations else 0 %}
+            <span class="badge storage-badge loc-color-{{ loc_idx }}"
+                  data-wine-id="{{ wine.id }}"
+                  data-storage="{{ wine.storage_location or '' }}"
+                  title="Click to move">{{ wine.storage_location or '—' }}</span>
+            {% else %}
+            <span class="badge storage-badge" data-wine-id="{{ wine.id }}" data-storage="{{ wine.storage_location or '' }}" style="background:#2a1200;color:#666;border:1px solid #4a2208;">—</span>
+            {% endif %}
+            <span class="mobile-drinking-window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}">{{ wine.drinking_window or '—' }}</span>
           </div>
           <div class="mobile-info-grid">
             <div>
@@ -643,16 +677,8 @@
               <div class="mobile-info-value">{% if wine.unit_price %}${{ "%.0f"|format(wine.unit_price) }}{% else %}—{% endif %}</div>
             </div>
             <div>
-              <div class="mobile-info-label">Varietal</div>
-              <div class="mobile-info-value">{{ wine.varietal or '—' }}</div>
-            </div>
-            <div>
-              <div class="mobile-info-label">Drink</div>
-              <div class="mobile-info-value mobile-drinking-window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}">{{ wine.drinking_window or '—' }}</div>
-            </div>
-            <div>
-              <div class="mobile-info-label">Rating</div>
-              <div class="mobile-info-value">{{ "%.1f"|format(wine.my_rating) if wine.my_rating is not none else '—' }}</div>
+              <div class="mobile-info-label">Source</div>
+              <div class="mobile-info-value">{{ wine.retailer or '—' }}</div>
             </div>
           </div>
           <div class="mobile-drink-line mobile-drinking-window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}" style="display:none;">Drink: {{ wine.drinking_window or '—' }}</div>
