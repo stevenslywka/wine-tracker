@@ -1465,8 +1465,9 @@
         opt.addEventListener('click', e => {
           e.stopPropagation();
           if (!activeStorageBadge) return;
+          const badgeToUpdate = activeStorageBadge;
           const newStorage = opt.dataset.storage;
-          const wineId = activeStorageBadge.dataset.wineId;
+          const wineId = badgeToUpdate.dataset.wineId;
           fetch(`/wine/${wineId}/storage_location`, {
             method: 'POST',
             headers: {'Content-Type': 'application/x-www-form-urlencoded'},
@@ -1475,9 +1476,11 @@
             if (r.ok) {
               const idx = locationList.indexOf(newStorage);
               const colorIdx = idx >= 0 ? idx % 5 : 0;
-              activeStorageBadge.className = `badge storage-badge loc-color-${colorIdx}`;
-              activeStorageBadge.dataset.storage = newStorage;
-              activeStorageBadge.textContent = newStorage;
+              badgeToUpdate.className = `badge storage-badge loc-color-${colorIdx}`;
+              badgeToUpdate.dataset.storage = newStorage;
+              badgeToUpdate.textContent = newStorage || '?';
+              const statusBadge = document.querySelector(`.status-badge[data-wine-id="${wineId}"]`);
+              if (statusBadge) statusBadge.dataset.storage = newStorage;
             }
           });
           popup.classList.remove('visible');
