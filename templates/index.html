@@ -229,25 +229,25 @@
     .mobile-icon-line { color: #c8aa88; font-size: 0.78rem; margin-top: 5px; line-height: 1.25; display: flex; align-items: center; gap: 5px; }
     .mobile-icon-line .mobile-icon { width: 1.25em; text-align: center; flex: 0 0 auto; }
     .mobile-compact-content { display: none; }
-    .mobile-compact-title { color: #f5e6d3; font-size: 0.9rem; line-height: 1.15; font-weight: 800; padding-left: 28px; min-height: 1.15em; overflow-wrap: anywhere; }
-    .mobile-compact-row { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 3px; align-items: center; margin-top: 5px; color: #c8aa88; font-size: 0.76rem; line-height: 1.15; }
-    .mobile-compact-meta { display: flex; align-items: center; gap: 10px; margin-top: 7px; color: #f5e6d3; font-size: 0.78rem; font-weight: 700; }
+    .mobile-compact-title { color: #f5e6d3; font-size: 0.9rem; line-height: 1.25; font-weight: 800; padding-left: 28px; min-height: 1.25em; overflow-wrap: anywhere; }
+    .mobile-compact-row { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 5px; align-items: center; margin-top: 7px; color: #c8aa88; font-size: 0.78rem; line-height: 1.25; }
+    .mobile-compact-meta { display: flex; align-items: center; gap: 12px; margin-top: 8px; color: #f5e6d3; font-size: 0.8rem; font-weight: 700; flex-wrap: wrap; row-gap: 5px; }
     .mobile-compact-label { color: #c8aa88; font-size: 0.82rem; text-align: center; }
     .mobile-compact-value { color: #f5e6d3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .mobile-card-body { min-width: 0; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
     .mobile-pill-row { display: grid; grid-template-columns: 0.75fr 0.75fr 0.85fr 1.65fr; gap: 5px; margin-top: 7px; align-items: center; }
-    .mobile-status-icon { width: 24px; height: 30px; position: relative; display: inline-block; flex: 0 0 auto; }
+    .mobile-status-icon { width: 24px; height: 30px; position: relative; display: inline-block; flex: 0 0 auto; transform: rotate(90deg); }
     .mobile-status-icon::before {
       content: ""; position: absolute; left: 8px; top: 1px; width: 8px; height: 9px;
-      border: 2px solid #7ecb9e; border-bottom: 0; border-radius: 3px 3px 0 0; background: #7ecb9e;
+      border: 2px solid #d33b32; border-bottom: 0; border-radius: 3px 3px 0 0; background: #d33b32;
     }
     .mobile-status-icon::after {
       content: ""; position: absolute; left: 5px; top: 9px; width: 14px; height: 19px;
-      border: 2px solid #7ecb9e; border-radius: 4px 4px 6px 6px; background: #7ecb9e;
+      border: 2px solid #d33b32; border-radius: 4px 4px 6px 6px; background: #d33b32;
     }
     .mobile-status-icon.status-drank::before,
-    .mobile-status-icon.status-drank::after { background: transparent; border-color: #7b6048; }
-    .mobile-status-icon.status-shipping { width: auto; min-width: 26px; height: auto; font-size: 1.25rem; line-height: 1; }
+    .mobile-status-icon.status-drank::after { background: transparent; border-color: #9c2f29; }
+    .mobile-status-icon.status-shipping { width: auto; min-width: 26px; height: auto; font-size: 1.25rem; line-height: 1; transform: none; }
     .mobile-status-icon.status-shipping::before,
     .mobile-status-icon.status-shipping::after { display: none; }
     .mobile-pill-row .color-dot { width: 21px; height: 21px; cursor: default; }
@@ -256,7 +256,9 @@
     .mobile-pill-row .storage-badge,
     .mobile-pill-row .mobile-drinking-window { justify-self: center; }
     .mobile-pill-row .storage-badge { justify-content: center; width: 100%; min-width: 0; padding-left: 4px; padding-right: 4px; }
-    .mobile-pill-row .mobile-drinking-window { text-align: center; font-weight: 800; font-size: 0.76rem; line-height: 1.1; white-space: nowrap; }
+    .mobile-pill-window { width: 100%; min-width: 0; text-align: center; }
+    .mobile-pill-label { color: #8d6848; font-size: 0.56rem; text-transform: uppercase; letter-spacing: 0; line-height: 1; margin-bottom: 2px; }
+    .mobile-pill-row .mobile-drinking-window { text-align: center; font-weight: 800; font-size: 0.76rem; line-height: 1.1; white-space: nowrap; display: block; }
     .mobile-info-grid { display: grid; grid-template-columns: 0.75fr 0.75fr 0.85fr 1.65fr; gap: 4px; margin-top: 7px; text-align: center; }
     .mobile-info-label { color: #8d6848; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0; text-align: center; }
     .mobile-info-value { color: #f5e6d3; font-size: 0.76rem; line-height: 1.15; overflow-wrap: anywhere; text-align: center; }
@@ -325,8 +327,8 @@
       .mobile-wine-card { cursor: pointer; }
       .mobile-wine-card:active { background: #2a1403; }
       .storage-badge, .status-badge { min-height: 34px; display: inline-flex; align-items: center; padding: 7px 12px; }
-      body.mobile-compact .mobile-card-list { display: flex; flex-direction: column; gap: 7px; padding: 8px 8px 66px; }
-      body.mobile-compact .mobile-wine-card { padding: 10px 11px 9px; border: 1px solid #4a2208; border-radius: 7px; min-height: 0; height: auto; overflow: visible; }
+      body.mobile-compact .mobile-card-list { display: flex; flex-direction: column; gap: 10px; padding: 10px 8px 70px; }
+      body.mobile-compact .mobile-wine-card { padding: 13px 12px 12px; border: 1px solid #4a2208; border-radius: 7px; min-height: 0; height: auto; overflow: visible; }
       body.mobile-compact .mobile-card-top,
       body.mobile-compact .mobile-pill-row,
       body.mobile-compact .mobile-info-grid,
@@ -645,7 +647,18 @@
             'south africa':'🇿🇦','spain':'🇪🇸','switzerland':'🇨🇭','united states':'🇺🇸','usa':'🇺🇸','us':'🇺🇸',
             'united states of america':'🇺🇸'
           } %}
-          {% set country_flag = flag_map.get(origin_key, '🌐') %}
+          {% set region_key = (wine.region or '')|lower|trim %}
+          {% set is_us_region = (
+            'napa' in region_key or 'sonoma' in region_key or 'russian river' in region_key or
+            'spring mt' in region_key or 'spring mountain' in region_key or 'st. helena' in region_key or
+            'saint helena' in region_key or 'howell mountain' in region_key or 'oakville' in region_key or
+            'rutherford' in region_key or 'carneros' in region_key or 'paso robles' in region_key or
+            'santa barbara' in region_key or 'santa rita' in region_key or 'sta. rita' in region_key or
+            'willamette' in region_key or 'columbia valley' in region_key or 'walla walla' in region_key or
+            'finger lakes' in region_key or 'california' in region_key or 'oregon' in region_key or
+            'washington' in region_key or 'new york' in region_key
+          ) %}
+          {% set country_flag = flag_map.get(origin_key, '🇺🇸' if is_us_region else '🌐') %}
           <div class="mobile-compact-content">
             <div class="mobile-compact-title">{{ wine.wine_name or '—' }}</div>
             <div class="mobile-compact-meta">
@@ -696,7 +709,10 @@
                   {% else %}
                   <span class="badge storage-badge" data-wine-id="{{ wine.id }}" data-storage="{{ wine.storage_location or '' }}" style="background:#2a1200;color:#666;border:1px solid #4a2208;">—</span>
                   {% endif %}
-                  <span class="mobile-drinking-window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}">{{ wine.drinking_window or '—' }}</span>
+                  <div class="mobile-pill-window">
+                    <div class="mobile-pill-label">Drink</div>
+                    <span class="mobile-drinking-window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}">{{ wine.drinking_window or '—' }}</span>
+                  </div>
                 </div>
                 <div class="mobile-info-grid">
                   <div>
