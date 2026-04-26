@@ -217,6 +217,7 @@
     .mobile-info-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
     .mobile-info-label { color: #8d6848; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0; }
     .mobile-info-value { color: #f5e6d3; font-size: 0.84rem; line-height: 1.2; overflow-wrap: anywhere; }
+    .mobile-drink-line { color: #f5e6d3; font-size: 0.78rem; font-weight: 700; margin-top: 7px; }
     .mobile-notes-preview { color: #c8aa88; font-size: 0.78rem; margin-top: 8px; line-height: 1.3; }
     .mobile-browse-tools, .mobile-bottom-bar { display: none; }
     #bulk-status-bar { display: none; }
@@ -285,6 +286,7 @@
       body.mobile-compact .mobile-thumb,
       body.mobile-compact .mobile-info-grid,
       body.mobile-compact .mobile-notes-preview { display: none; }
+      body.mobile-compact .mobile-drink-line { display: block !important; }
       body.mobile-compact .mobile-card-top { gap: 0; }
       body.mobile-compact .mobile-wine-title { font-size: 0.92rem; }
       body.mobile-compact .mobile-wine-meta { font-size: 0.73rem; }
@@ -473,7 +475,7 @@
           <option value="unit_price|desc" {% if sort=='unit_price' and order=='desc' %}selected{% endif %}>Price high-low</option>
           <option value="drinking_window|asc" {% if sort=='drinking_window' and order=='asc' %}selected{% endif %}>Drink window</option>
         </select>
-        <button type="button" class="mobile-mode-btn btn btn-sm" id="mobileModeToggle">Compact</button>
+        <button type="button" class="mobile-mode-btn btn btn-sm" id="mobileModeToggle">List</button>
       </div>
     </div>
 
@@ -646,13 +648,14 @@
             </div>
             <div>
               <div class="mobile-info-label">Drink</div>
-              <div class="mobile-info-value">{{ wine.drinking_window or '—' }}</div>
+              <div class="mobile-info-value mobile-drinking-window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}">{{ wine.drinking_window or '—' }}</div>
             </div>
             <div>
               <div class="mobile-info-label">Rating</div>
               <div class="mobile-info-value">{{ "%.1f"|format(wine.my_rating) if wine.my_rating is not none else '—' }}</div>
             </div>
           </div>
+          <div class="mobile-drink-line mobile-drinking-window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}" style="display:none;">Drink: {{ wine.drinking_window or '—' }}</div>
           {% if wine.notes %}
           <div class="mobile-notes-preview">{{ wine.notes[:90] }}{% if wine.notes|length > 90 %}…{% endif %}</div>
           {% endif %}
@@ -1788,6 +1791,9 @@
     document.querySelectorAll('.drinking-window-cell').forEach(cell => {
       applyDrinkingWindowColor(cell, cell.dataset.value);
     });
+    document.querySelectorAll('.mobile-drinking-window').forEach(cell => {
+      applyDrinkingWindowColor(cell, cell.dataset.value);
+    });
 
     // ── Wine Rec Modal ──
     // Filter chips — location (radio behaviour)
@@ -1986,7 +1992,7 @@
     function setMobileCardMode(mode) {
       const compact = mode === 'compact';
       document.body.classList.toggle('mobile-compact', compact);
-      if (mobileModeToggle) mobileModeToggle.textContent = compact ? 'Comfort' : 'Compact';
+      if (mobileModeToggle) mobileModeToggle.textContent = compact ? 'Cards' : 'List';
       localStorage.setItem('wineMobileCardMode', compact ? 'compact' : 'comfort');
     }
     if (mobileModeToggle) {
