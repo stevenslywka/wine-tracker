@@ -196,7 +196,12 @@
     }
     .rating-input:focus { outline: none; box-shadow: 0 0 0 0.15rem rgba(201,169,110,0.4); }
     .price-cell { cursor: pointer; }
-    .status-badge.status-selected { outline: 2px solid #c9a96e; box-shadow: 0 0 0 3px rgba(201,169,110,0.35); }
+    .status-badge.status-selected,
+    .storage-badge.storage-selected {
+      outline: 3px solid #00e5ff;
+      box-shadow: 0 0 0 4px rgba(0,229,255,0.45), 0 0 16px rgba(0,229,255,0.75);
+      filter: brightness(1.35);
+    }
     #bulk-status-bar { display: none; }
     #bulk-status-bar.visible { display: flex; }
 
@@ -1432,11 +1437,12 @@
     // Storage location badge picker
     (function() {
       const popup = document.getElementById('storage-picker-popup');
-      let activeStorageBadge = null;
+      const allStorageBadges = [...document.querySelectorAll('.storage-badge')];
+      let storageDragging = false, storageStartIdx = 0;
 
-      function showStoragePopup(badge) {
-        activeStorageBadge = badge;
-        const rect = badge.getBoundingClientRect();
+      function getStorageIdx(badge) { return allStorageBadges.indexOf(badge); }
+
+      function showStoragePopup(rect) {
         // Position below badge first, show, then flip up if off-screen
         popup.style.top = (rect.bottom + 4) + 'px';
         popup.style.left = Math.min(rect.left, window.innerWidth - 180) + 'px';
@@ -1447,16 +1453,36 @@
         }
       }
 
-      document.querySelectorAll('.storage-badge').forEach(badge => {
-        badge.addEventListener('click', e => {
+      function setStorageSelection(fromIdx, toIdx) {
+        const lo = Math.min(fromIdx, toIdx), hi = Math.max(fromIdx, toIdx);
+        allStorageBadges.forEach((b, i) => b.classList.toggle('storage-selected', i >= lo && i <= hi));
+      }
+
+      function clearStorageSelection() {
+        allStorageBadges.forEach(b => b.classList.remove('storage-selected'));
+        popup.classList.remove('visible');
+      }
+
+      allStorageBadges.forEach(badge => {
+        badge.addEventListener('mousedown', e => {
+          e.preventDefault();
           e.stopPropagation();
-          if (popup.classList.contains('visible') && activeStorageBadge === badge) {
-            popup.classList.remove('visible');
-            activeStorageBadge = null;
-          } else {
-            showStoragePopup(badge);
-          }
+          storageDragging = true;
+          storageStartIdx = getStorageIdx(badge);
+          setStorageSelection(storageStartIdx, storageStartIdx);
         });
+        badge.addEventListener('mouseover', () => {
+          if (!storageDragging) return;
+          setStorageSelection(storageStartIdx, getStorageIdx(badge));
+        });
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (!storageDragging) return;
+        storageDragging = false;
+        const selected = allStorageBadges.filter(b => b.classList.contains('storage-selected'));
+        if (!selected.length) return;
+        showStoragePopup(selected[selected.length - 1].getBoundingClientRect());
       });
 
       const locationList = {{ user_locations | tojson }};
@@ -1464,34 +1490,36 @@
         opt.addEventListener('mousedown', e => e.preventDefault());
         opt.addEventListener('click', e => {
           e.stopPropagation();
-          if (!activeStorageBadge) return;
-          const badgeToUpdate = activeStorageBadge;
+          const selected = allStorageBadges.filter(b => b.classList.contains('storage-selected'));
+          if (!selected.length) return;
           const newStorage = opt.dataset.storage;
-          const wineId = badgeToUpdate.dataset.wineId;
-          fetch(`/wine/${wineId}/storage_location`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: `storage_location=${encodeURIComponent(newStorage)}`
-          }).then(r => {
-            if (r.ok) {
-              const idx = locationList.indexOf(newStorage);
-              const colorIdx = idx >= 0 ? idx % 5 : 0;
-              badgeToUpdate.className = `badge storage-badge loc-color-${colorIdx}`;
-              badgeToUpdate.dataset.storage = newStorage;
-              badgeToUpdate.textContent = newStorage || '?';
-              const statusBadge = document.querySelector(`.status-badge[data-wine-id="${wineId}"]`);
-              if (statusBadge) statusBadge.dataset.storage = newStorage;
-            }
+          clearStorageSelection();
+          Promise.all(selected.map(badgeToUpdate => {
+            const wineId = badgeToUpdate.dataset.wineId;
+            return fetch(`/wine/${wineId}/storage_location`, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+              body: `storage_location=${encodeURIComponent(newStorage)}`
+            }).then(r => ({ r, badgeToUpdate, wineId }));
+          })).then(results => {
+            results.forEach(({ r, badgeToUpdate, wineId }) => {
+              if (r.ok) {
+                const idx = locationList.indexOf(newStorage);
+                const colorIdx = idx >= 0 ? idx % 5 : 0;
+                badgeToUpdate.className = `badge storage-badge loc-color-${colorIdx}`;
+                badgeToUpdate.dataset.storage = newStorage;
+                badgeToUpdate.textContent = newStorage || '—';
+                const statusBadge = document.querySelector(`.status-badge[data-wine-id="${wineId}"]`);
+                if (statusBadge) statusBadge.dataset.storage = newStorage;
+              }
+            });
           });
-          popup.classList.remove('visible');
-          activeStorageBadge = null;
         });
       });
 
       document.addEventListener('mousedown', e => {
         if (!e.target.closest('.storage-badge') && !e.target.closest('#storage-picker-popup')) {
-          popup.classList.remove('visible');
-          activeStorageBadge = null;
+          clearStorageSelection();
         }
       }, true);
     })();
