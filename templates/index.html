@@ -229,10 +229,10 @@
     .mobile-icon-line { color: #c8aa88; font-size: 0.78rem; margin-top: 5px; line-height: 1.25; display: flex; align-items: center; gap: 5px; }
     .mobile-icon-line .mobile-icon { width: 1.25em; text-align: center; flex: 0 0 auto; }
     .mobile-compact-content { display: none; }
-    .mobile-compact-title { color: #f5e6d3; display: block; font-size: 0.95rem; line-height: 1.3; font-weight: 800; padding-left: 26px; white-space: normal; overflow: visible; overflow-wrap: anywhere; }
-    .mobile-compact-row { display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 7px; align-items: start; color: #c8aa88; font-size: 0.82rem; line-height: 1.3; min-height: 1.3em; }
-    .mobile-compact-meta { display: flex; align-items: center; gap: 12px; color: #f5e6d3; font-size: 0.82rem; line-height: 1.25; font-weight: 700; flex-wrap: wrap; row-gap: 4px; min-height: 1.25em; }
-    .mobile-compact-label { color: #c8aa88; font-size: 0.9rem; line-height: 1.2; text-align: center; }
+    .mobile-compact-title { color: #f5e6d3; display: block; font-size: 0.95rem; line-height: 1.3; font-weight: 800; white-space: normal; overflow: visible; overflow-wrap: anywhere; text-align: left; }
+    .mobile-compact-row { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 6px; align-items: start; color: #c8aa88; font-size: 0.82rem; line-height: 1.3; min-height: 1.3em; text-align: left; }
+    .mobile-compact-meta { display: flex; align-items: center; gap: 12px; color: #f5e6d3; font-size: 0.82rem; line-height: 1.25; font-weight: 700; flex-wrap: wrap; row-gap: 4px; min-height: 1.25em; text-align: left; }
+    .mobile-compact-label { color: #c8aa88; font-size: 0.9rem; line-height: 1.2; text-align: left; }
     .mobile-compact-value { color: #f5e6d3; display: block; min-width: 0; white-space: normal; overflow: visible; overflow-wrap: anywhere; }
     .mobile-card-body { min-width: 0; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
     .mobile-pill-row { display: grid; grid-template-columns: 0.75fr 0.75fr 0.85fr 1.65fr; gap: 5px; margin-top: 7px; align-items: center; }
@@ -247,6 +247,9 @@
     }
     .mobile-status-icon.status-drank::before,
     .mobile-status-icon.status-drank::after { background: transparent; border-color: #9c2f29; }
+    .mobile-status-icon.status-available { width: auto; min-width: 26px; height: auto; font-size: 1.25rem; line-height: 1; transform: none; }
+    .mobile-status-icon.status-available::before,
+    .mobile-status-icon.status-available::after { display: none; }
     .mobile-status-icon.status-shipping { width: auto; min-width: 26px; height: auto; font-size: 1.25rem; line-height: 1; transform: none; }
     .mobile-status-icon.status-shipping::before,
     .mobile-status-icon.status-shipping::after { display: none; }
@@ -337,7 +340,7 @@
       body.mobile-compact .mobile-info-grid,
       body.mobile-compact .mobile-notes-preview,
       body.mobile-compact .mobile-drink-line { display: none !important; }
-      body.mobile-compact .mobile-compact-content { display: flex; flex-direction: column; gap: 7px; position: relative; z-index: 3; overflow: visible; }
+      body.mobile-compact .mobile-compact-content { display: flex; flex-direction: column; gap: 7px; padding-left: 24px; position: relative; z-index: 3; overflow: visible; }
       body.mobile-compact .mobile-type-sash {
         top: 11px; left: -13px; width: 66px; font-size: 0.42rem; padding: 3px 0;
         transform: rotate(-45deg); box-shadow: none; white-space: nowrap; overflow: hidden;
@@ -698,8 +701,8 @@
               </div>
               <div>
                 <div class="mobile-pill-row">
-                  <span class="mobile-status-icon {% if wine.status == 'drank' %}status-drank{% elif wine.status == 'not_shipped' %}status-shipping{% endif %}" title="{% if wine.status == 'not_shipped' %}Not shipped{% elif wine.status == 'drank' %}Drank{% else %}Available{% endif %}">
-                    {% if wine.status == 'not_shipped' %}🚚{% endif %}
+                  <span class="mobile-status-icon {% if wine.status == 'drank' %}status-drank{% elif wine.status == 'not_shipped' %}status-shipping{% else %}status-available{% endif %}" title="{% if wine.status == 'not_shipped' %}Not shipped{% elif wine.status == 'drank' %}Drank{% else %}Available{% endif %}">
+                    {% if wine.status == 'not_shipped' %}🚚{% elif wine.status != 'drank' %}🍷{% endif %}
                   </span>
                   {% if wine.color_code %}
                   <span class="color-dot color-dot-{{ wine.color_code }}" data-wine-id="{{ wine.id }}" data-color="{{ wine.color_code }}" title="Sticker color"></span>
