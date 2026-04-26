@@ -228,6 +228,11 @@
     .mobile-vintage-line { color: #d9c4aa; font-size: 0.88rem; margin-top: 4px; font-weight: 700; }
     .mobile-icon-line { color: #c8aa88; font-size: 0.78rem; margin-top: 5px; line-height: 1.25; display: flex; align-items: center; gap: 5px; }
     .mobile-icon-line .mobile-icon { width: 1.25em; text-align: center; flex: 0 0 auto; }
+    .mobile-compact-content { display: none; }
+    .mobile-compact-title { color: #f5e6d3; font-size: 0.88rem; line-height: 1.18; font-weight: 800; padding-left: 28px; min-height: 2.1em; }
+    .mobile-compact-row { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 6px; align-items: center; margin-top: 7px; color: #c8aa88; font-size: 0.76rem; line-height: 1.18; }
+    .mobile-compact-label { color: #8d6848; font-size: 0.66rem; text-transform: uppercase; }
+    .mobile-compact-value { color: #f5e6d3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .mobile-pill-row { display: grid; grid-template-columns: auto auto auto 1fr; gap: 7px; margin-top: 11px; align-items: center; }
     .mobile-status-icon { font-size: 1.25rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; min-width: 26px; }
     .mobile-status-icon.status-drank { opacity: 0.45; filter: grayscale(1); }
@@ -302,22 +307,15 @@
       .mobile-wine-card { cursor: pointer; }
       .mobile-wine-card:active { background: #2a1403; }
       .storage-badge, .status-badge { min-height: 34px; display: inline-flex; align-items: center; padding: 7px 12px; }
-      body.mobile-compact .mobile-wine-card { padding: 8px 10px; }
-      body.mobile-compact .mobile-thumb,
+      body.mobile-compact .mobile-card-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; padding: 8px 8px 66px; align-content: start; }
+      body.mobile-compact .mobile-wine-card { padding: 13px 9px 10px; border: 1px solid #4a2208; border-radius: 7px; min-height: 156px; }
+      body.mobile-compact .mobile-card-top,
+      body.mobile-compact .mobile-pill-row,
       body.mobile-compact .mobile-info-grid,
-      body.mobile-compact .mobile-notes-preview { display: none; }
-      body.mobile-compact .mobile-drink-line { display: block !important; }
-      body.mobile-compact .mobile-type-sash,
-      body.mobile-compact .mobile-vintage-line,
-      body.mobile-compact .mobile-icon-line { display: none; }
-      body.mobile-compact .mobile-pill-row {
-        display: flex; flex-wrap: wrap; gap: 7px; margin-top: 7px; align-items: center;
-      }
-      body.mobile-compact .mobile-pill-row .mobile-drinking-window { display: none; }
-      body.mobile-compact .mobile-card-top { gap: 0; }
-      body.mobile-compact .mobile-wine-title { font-size: 0.92rem; }
-      body.mobile-compact .mobile-wine-meta { font-size: 0.73rem; }
-      body.mobile-compact .mobile-pill-row { margin-top: 7px; }
+      body.mobile-compact .mobile-notes-preview,
+      body.mobile-compact .mobile-drink-line { display: none !important; }
+      body.mobile-compact .mobile-compact-content { display: block; }
+      body.mobile-compact .mobile-type-sash { top: 8px; left: -37px; width: 112px; font-size: 0.55rem; padding: 3px 0; }
       .mobile-bottom-bar {
         display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 9000;
         background: #220d00; border-top: 1px solid #5a2d0c; padding: 7px 8px;
@@ -630,6 +628,26 @@
             'united states of america':'🇺🇸'
           } %}
           {% set country_flag = flag_map.get(origin_key, '🌐') %}
+          <div class="mobile-compact-content">
+            <div class="mobile-compact-title">{{ wine.wine_name or '—' }}</div>
+            <div class="mobile-compact-row">
+              <div class="mobile-compact-label">Vintage</div>
+              <div class="mobile-compact-value">
+                {{ wine.vintage or 'NV' }}
+                {% if wine.color_code %}
+                <span class="color-dot color-dot-{{ wine.color_code }}" style="width:14px;height:14px;margin-left:6px;vertical-align:-2px;" title="Sticker color"></span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="mobile-compact-row">
+              <div class="mobile-compact-label">{{ country_flag }}</div>
+              <div class="mobile-compact-value">{{ wine.region or wine.origin or '—' }}</div>
+            </div>
+            <div class="mobile-compact-row">
+              <div class="mobile-compact-label">🍇</div>
+              <div class="mobile-compact-value">{{ wine.varietal or '—' }}</div>
+            </div>
+          </div>
           <div class="mobile-card-top">
             {% if wine.image_url %}
             <img src="{{ wine.image_url }}" class="mobile-thumb wine-thumb" data-src="{{ wine.image_url }}" data-name="{{ wine.wine_name or '' }}" alt="" onclick="event.stopPropagation();openImagePopup(this)">
