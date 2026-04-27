@@ -669,38 +669,6 @@
               {% endfor %}
             </div>
           </div>
-          <div class="mobile-filter-family">
-            <div class="mobile-filter-family-title">Location</div>
-            <div class="mobile-filter-family-options">
-              {% for loc in user_locations %}
-              <a href="?status=in_collection{{ preserved_quick_params(loc) }}" class="mobile-filter-chip {% if storage_filter==loc %}active{% endif %}" title="{{ loc }}">{{ loc }}</a>
-              {% endfor %}
-            </div>
-          </div>
-          <div class="mobile-filter-family">
-            <div class="mobile-filter-family-title">Type</div>
-            <div class="mobile-filter-family-options">
-              {% for t in ['Red', 'White', 'Rose'] %}
-              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(type_value=t) }}" class="mobile-filter-chip {% if type_filter==t %}active{% endif %}" title="{{ t }}">{{ t }}</a>
-              {% endfor %}
-            </div>
-          </div>
-          <div class="mobile-filter-family">
-            <div class="mobile-filter-family-title">Origin</div>
-            <div class="mobile-filter-family-options">
-              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='United States') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='United States' %}active{% endif %}" title="United States">🇺🇸</a>
-              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='France') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='France' %}active{% endif %}" title="France">🇫🇷</a>
-              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Italy') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Italy' %}active{% endif %}" title="Italy">🇮🇹</a>
-            </div>
-          </div>
-          <div class="mobile-filter-family wide">
-            <div class="mobile-filter-family-title">Sticker</div>
-            <div class="mobile-filter-family-options">
-              {% for c in ['Green', 'Yellow', 'Orange', 'Red', 'Blue'] %}
-              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(color_value=c) }}" class="mobile-filter-chip {% if color_filter==c %}active{% endif %}" title="{{ c }}"><span class="mobile-sticker-dot color-dot-{{ c }}"></span></a>
-              {% endfor %}
-            </div>
-          </div>
         </div>
 
         <!-- Search + Need a rec -->
