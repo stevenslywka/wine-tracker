@@ -493,11 +493,19 @@ def wine_detail(wine_id):
     cur = conn.cursor()
     cur.execute(f"SELECT * FROM wines WHERE id = {p}", (wine_id,))
     wine = cur.fetchone()
+    user_locations = []
+    if wine:
+        cur.execute(f"SELECT name FROM user_locations WHERE user_id = {p} ORDER BY sort_order", (wine["user_id"],))
+        user_locations = [r["name"] for r in cur.fetchall()]
     conn.close()
     if not wine:
         return "Wine not found", 404
     can_edit = (wine["user_id"] == session["user_id"])
     return render_template("detail.html", wine=wine,
+                           user_locations=user_locations,
+                           wine_types=WINE_TYPES,
+                           bottle_sizes=BOTTLE_SIZES,
+                           sticker_colors=("Red", "Blue", "Orange", "Yellow", "Green"),
                            access_level="edit" if can_edit else "view",
                            auth_enabled=True)
 
