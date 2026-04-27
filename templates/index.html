@@ -659,6 +659,7 @@
               <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='United States') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='United States' %}active{% endif %}" title="United States">🇺🇸</a>
               <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='France') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='France' %}active{% endif %}" title="France">🇫🇷</a>
               <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Italy') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Italy' %}active{% endif %}" title="Italy">🇮🇹</a>
+              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Other') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Other' %}active{% endif %}" title="Other origins">🌐</a>
             </div>
           </div>
           <div class="mobile-filter-family wide">
@@ -704,6 +705,7 @@
               </select>
               <select name="origin" class="form-select form-select-sm" style="flex:1;min-width:130px;">
                 <option value="">Origin</option>
+                <option value="Other" {% if origin_filter=='Other' %}selected{% endif %}>Other</option>
                 {% for o in origins %}<option value="{{ o }}" {% if origin_filter==o %}selected{% endif %}>{{ o }}</option>{% endfor %}
               </select>
               <select name="wine_type" class="form-select form-select-sm" style="flex:1;min-width:120px;">
@@ -837,6 +839,7 @@
             <div class="mobile-filter-section-title">Status</div>
             <select name="status" class="form-select form-select-sm">
               <option value="">Any</option>
+              <option value="Other" {% if origin_filter=='Other' %}selected{% endif %}>Other</option>
               <option value="in_collection" {% if status_filter=='in_collection' %}selected{% endif %}>Available</option>
               <option value="not_shipped" {% if status_filter=='not_shipped' %}selected{% endif %}>Not Shipped</option>
               <option value="drank" {% if status_filter=='drank' %}selected{% endif %}>Drank</option>
