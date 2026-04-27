@@ -358,6 +358,132 @@
         background: var(--mobile-burgundy);
         border-color: #a64b4c;
       }
+      .mobile-topbar { justify-content: flex-end; min-height: 22px; margin-bottom: 6px; }
+      .mobile-back { display: none; }
+      .hero-icons {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 9px;
+        color: var(--mobile-muted);
+        font-size: 0.9rem;
+        line-height: 1.25;
+      }
+      .hero-icon {
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255,248,238,0.08);
+        flex: 0 0 auto;
+      }
+      .hero-icon-text {
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      .quick-strip {
+        display: grid;
+        grid-template-columns: 0.86fr 0.94fr 1.2fr;
+        gap: 6px;
+        margin: 10px 0 14px;
+        overflow: visible;
+        padding: 0;
+      }
+      .quick-tile {
+        min-width: 0;
+        width: auto;
+        border-radius: 9px;
+        padding: 6px 6px;
+      }
+      .quick-tile form { margin: 0; }
+      .quick-control {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: var(--mobile-text);
+        font-size: 0.76rem;
+        font-weight: 900;
+        line-height: 1.1;
+        padding: 0;
+        text-align: left;
+      }
+      select.quick-control { appearance: none; }
+      input.quick-control { min-width: 0; }
+      .quick-control:focus {
+        outline: 0;
+        color: #fff;
+      }
+      .drink-ready { color: #3a8f3a !important; }
+      .drink-hold { color: #7eb8cb !important; }
+      .drink-soon { color: #e8a94a !important; }
+      .drink-overdue { color: #c04040 !important; }
+      .drink-empty { color: var(--mobile-text) !important; }
+      .priority-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .field-card {
+        min-width: 0;
+        border: 1px solid rgba(255,248,238,0.12);
+        border-radius: 10px;
+        background: var(--mobile-panel);
+        padding: 10px;
+      }
+      .field-card.wide { grid-column: 1 / -1; }
+      .field-card .edit-label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 0.72rem;
+        color: var(--mobile-label);
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+      .field-card .mobile-input,
+      .field-card .mobile-select {
+        text-align: left;
+        padding-left: 0;
+        padding-right: 0;
+      }
+      .field-card form:not(.color-picker)::after { display: none; }
+      .compact-color-picker {
+        justify-content: flex-start;
+        gap: 6px;
+      }
+      .compact-color-picker .color-choice {
+        width: 24px;
+        height: 24px;
+      }
+      .mobile-details {
+        margin-top: 14px;
+        border-top: 1px solid var(--mobile-line);
+      }
+      .mobile-details summary {
+        list-style: none;
+        cursor: pointer;
+        padding: 14px 0;
+        color: var(--mobile-label);
+        font-size: 0.76rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .mobile-details summary::-webkit-details-marker { display: none; }
+      .mobile-details summary::after {
+        content: "+";
+        float: right;
+        color: var(--mobile-muted);
+      }
+      .mobile-details[open] summary::after { content: "-"; }
+      .mobile-details .edit-row {
+        grid-template-columns: 88px minmax(0, 1fr);
+        min-height: 44px;
+      }
+      .notes-section { padding: 12px; }
+      .mobile-note-block .edit-label { display: none; }
+      .mobile-bottom-actions { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
   </style>
 </head>
@@ -371,13 +497,27 @@
   <div class="mobile-detail-page">
     {% set can_edit = access_level == 'edit' %}
     {% set status_label = 'Not shipped' if wine.status == 'not_shipped' else ('Drank' if wine.status == 'drank' else 'Available') %}
+    {% set origin_key = (wine.origin or '')|lower|trim %}
+    {% set flag_map = {
+      'argentina':'🇦🇷','australia':'🇦🇺','austria':'🇦🇹','canada':'🇨🇦','chile':'🇨🇱','france':'🇫🇷',
+      'germany':'🇩🇪','greece':'🇬🇷','hungary':'🇭🇺','italy':'🇮🇹','new zealand':'🇳🇿','portugal':'🇵🇹',
+      'south africa':'🇿🇦','spain':'🇪🇸','switzerland':'🇨🇭','united states':'🇺🇸','usa':'🇺🇸','us':'🇺🇸',
+      'united states of america':'🇺🇸'
+    } %}
+    {% set region_key = (wine.region or '')|lower|trim %}
+    {% set is_us_region = (
+      'napa' in region_key or 'sonoma' in region_key or 'russian river' in region_key or
+      'spring mt' in region_key or 'spring mountain' in region_key or 'st. helena' in region_key or
+      'saint helena' in region_key or 'howell mountain' in region_key or 'oakville' in region_key or
+      'rutherford' in region_key or 'carneros' in region_key or 'paso robles' in region_key or
+      'santa barbara' in region_key or 'santa rita' in region_key or 'sta. rita' in region_key or
+      'willamette' in region_key or 'columbia valley' in region_key or 'walla walla' in region_key or
+      'finger lakes' in region_key or 'california' in region_key or 'oregon' in region_key or
+      'washington' in region_key or 'new york' in region_key
+    ) %}
+    {% set country_flag = flag_map.get(origin_key, '🇺🇸' if is_us_region else '🌐') %}
     <div class="mobile-topbar">
-      <button type="button" class="mobile-back" aria-label="Back" onclick="history.back()">&larr;</button>
-      {% if can_edit %}
-      <div class="save-state" id="mobileSaveState"></div>
-      {% else %}
-      <div class="view-only-chip">View only</div>
-      {% endif %}
+      {% if can_edit %}<div class="save-state" id="mobileSaveState"></div>{% else %}<div class="view-only-chip">View only</div>{% endif %}
     </div>
 
     <section class="mobile-hero">
@@ -396,8 +536,8 @@
         <div class="hero-name">{{ wine.wine_name or 'Unknown Wine' }}</div>
         {% endif %}
         <div class="hero-meta">
-          {{ wine.region or wine.origin or 'Region unknown' }}<br>
-          {{ wine.varietal or 'Varietal unknown' }}
+          <div class="hero-icons"><span class="hero-icon">{{ country_flag }}</span><span class="hero-icon-text">{{ wine.region or wine.origin or 'Region unknown' }}</span></div>
+          <div class="hero-icons"><span class="hero-icon">🍇</span><span class="hero-icon-text">{{ wine.varietal or 'Varietal unknown' }}</span></div>
         </div>
       </div>
     </section>
@@ -405,43 +545,24 @@
     <div class="quick-strip">
       <div class="quick-tile">
         <div class="quick-label">Status</div>
-        <div class="quick-value" id="statusSummary">{{ status_label }}</div>
-      </div>
-      <div class="quick-tile">
-        <div class="quick-label">Storage</div>
-        <div class="quick-value" id="storageSummary">{{ wine.storage_location or 'Unassigned' }}</div>
-      </div>
-      <div class="quick-tile">
-        <div class="quick-label">Drink</div>
-        <div class="quick-value">{{ wine.drinking_window or 'Not set' }}</div>
-      </div>
-      <div class="quick-tile">
-        <div class="quick-label">Sticker</div>
-        <div class="quick-value" id="stickerSummary">{{ wine.color_code or 'None' }}</div>
-      </div>
-    </div>
-
-    <section class="detail-section" id="cellarFields">
-      <div class="section-title">Cellar</div>
-      <div class="edit-row">
-        <div class="edit-label">Status</div>
         {% if can_edit %}
-        <form class="status-grid" data-detail-form data-status-form action="/wine/{{ wine.id }}/status" method="post">
-          <input type="hidden" name="status" value="{{ wine.status or 'in_collection' }}">
+        <form data-detail-form data-status-form action="/wine/{{ wine.id }}/status" method="post">
           <input type="hidden" name="storage_location" value="{{ wine.storage_location or '' }}">
-          <button type="button" class="status-choice {% if wine.status == 'in_collection' or not wine.status %}active{% endif %}" data-status-choice="in_collection">Available</button>
-          <button type="button" class="status-choice {% if wine.status == 'not_shipped' %}active{% endif %}" data-status-choice="not_shipped">Shipping</button>
-          <button type="button" class="status-choice {% if wine.status == 'drank' %}active{% endif %}" data-status-choice="drank">Drank</button>
+          <select class="quick-control" name="status" id="statusControl">
+            <option value="in_collection" {% if wine.status == 'in_collection' or not wine.status %}selected{% endif %}>Available</option>
+            <option value="not_shipped" {% if wine.status == 'not_shipped' %}selected{% endif %}>Shipping</option>
+            <option value="drank" {% if wine.status == 'drank' %}selected{% endif %}>Drank</option>
+          </select>
         </form>
         {% else %}
-        <div class="read-only-value">{{ status_label }}</div>
+        <div class="quick-value">{{ status_label }}</div>
         {% endif %}
       </div>
-      <div class="edit-row">
-        <div class="edit-label">Storage</div>
+      <div class="quick-tile">
+        <div class="quick-label">Location</div>
         {% if can_edit %}
         <form data-detail-form data-storage-form action="/wine/{{ wine.id }}/storage_location" method="post">
-          <select class="mobile-select" name="storage_location">
+          <select class="quick-control" name="storage_location" id="locationControl">
             <option value="">Unassigned</option>
             {% for location in user_locations %}
             <option value="{{ location }}" {% if wine.storage_location == location %}selected{% endif %}>{{ location }}</option>
@@ -452,150 +573,93 @@
           </select>
         </form>
         {% else %}
-        <div class="read-only-value">{{ wine.storage_location or 'Unassigned' }}</div>
+        <div class="quick-value">{{ wine.storage_location or 'Unassigned' }}</div>
         {% endif %}
       </div>
-      <div class="edit-row">
-        <div class="edit-label">Sticker</div>
+      <div class="quick-tile">
+        <div class="quick-label">Drink</div>
         {% if can_edit %}
-        <form class="color-picker" data-detail-form data-color-form action="/wine/{{ wine.id }}/color" method="post">
-          <input type="hidden" name="color_code" value="{{ wine.color_code or '' }}">
-          <button type="button" class="color-choice color-clear {% if not wine.color_code %}active{% endif %}" data-color-choice="" aria-label="No sticker"></button>
-          {% for color in sticker_colors %}
-          <button type="button" class="color-choice color-{{ color }} {% if wine.color_code == color %}active{% endif %}" data-color-choice="{{ color }}" aria-label="{{ color }} sticker"></button>
-          {% endfor %}
+        <form data-detail-form action="/wine/{{ wine.id }}/drinking_window" method="post">
+          <input class="quick-control mobile-drinking-window" name="drinking_window" id="drinkControl" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}" value="{{ wine.drinking_window or '' }}" placeholder="Not set">
         </form>
         {% else %}
-        <div class="read-only-value">{{ wine.color_code or 'None' }}</div>
+        <div class="quick-value mobile-drinking-window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}">{{ wine.drinking_window or 'Not set' }}</div>
         {% endif %}
       </div>
-      <div class="edit-row">
-        <div class="edit-label">Quantity</div>
-        {% if can_edit %}
-        <form data-detail-form action="/wine/{{ wine.id }}/quantity" method="post">
-          <input class="mobile-input" name="quantity" type="number" min="1" inputmode="numeric" value="{{ wine.quantity or '' }}" placeholder="-">
-        </form>
-        {% else %}
-        <div class="read-only-value">{{ wine.quantity or '-' }}</div>
-        {% endif %}
-      </div>
-      <div class="edit-row">
-        <div class="edit-label">Size</div>
-        {% if can_edit %}
-        <form data-detail-form action="/wine/{{ wine.id }}/size" method="post">
-          <select class="mobile-select" name="size_ml">
-            <option value="">Not set</option>
-            {% for size in bottle_sizes %}
-            <option value="{{ size }}" {% if wine.size_ml == size %}selected{% endif %}>{{ size }} ml</option>
-            {% endfor %}
-          </select>
-        </form>
-        {% else %}
-        <div class="read-only-value">{{ wine.size_ml or '-' }}{% if wine.size_ml %} ml{% endif %}</div>
-        {% endif %}
-      </div>
-    </section>
+    </div>
 
-    <section class="detail-section" id="wineFields">
-      <div class="section-title">Wine</div>
-      <div class="edit-row">
-        <div class="edit-label">Type</div>
-        {% if can_edit %}
-        <form data-detail-form action="/wine/{{ wine.id }}/type" method="post">
-          <select class="mobile-select" name="wine_type">
-            <option value="">Wine</option>
-            {% for type in wine_types %}
-            <option value="{{ type }}" {% if wine.wine_type == type %}selected{% endif %}>{{ type }}</option>
-            {% endfor %}
-          </select>
-        </form>
-        {% else %}
-        <div class="read-only-value">{{ wine.wine_type or 'Wine' }}</div>
-        {% endif %}
+    <section class="detail-section" id="cellarFields">
+      <div class="section-title">Cellar</div>
+      <div class="priority-grid">
+        <div class="field-card">
+          <span class="edit-label">Quantity</span>
+          {% if can_edit %}
+          <form data-detail-form action="/wine/{{ wine.id }}/quantity" method="post"><input class="mobile-input" name="quantity" type="number" min="1" inputmode="numeric" value="{{ wine.quantity or '' }}" placeholder="-"></form>
+          {% else %}<div class="read-only-value" style="text-align:left;">{{ wine.quantity or '-' }}</div>{% endif %}
+        </div>
+        <div class="field-card">
+          <span class="edit-label">Source</span>
+          {% if can_edit %}
+          <form data-detail-form action="/wine/{{ wine.id }}/retailer" method="post"><input class="mobile-input" name="retailer" type="text" value="{{ wine.retailer or '' }}" placeholder="Not set"></form>
+          {% else %}<div class="read-only-value" style="text-align:left;">{{ wine.retailer or 'Not set' }}</div>{% endif %}
+        </div>
+        <div class="field-card wide">
+          <span class="edit-label">Sticker</span>
+          {% if can_edit %}
+          <form class="color-picker compact-color-picker" data-detail-form data-color-form action="/wine/{{ wine.id }}/color" method="post">
+            <input type="hidden" name="color_code" value="{{ wine.color_code or '' }}">
+            <button type="button" class="color-choice color-clear {% if not wine.color_code %}active{% endif %}" data-color-choice="" aria-label="No sticker"></button>
+            {% for color in sticker_colors %}<button type="button" class="color-choice color-{{ color }} {% if wine.color_code == color %}active{% endif %}" data-color-choice="{{ color }}" aria-label="{{ color }} sticker"></button>{% endfor %}
+          </form>
+          {% else %}<div class="read-only-value" style="text-align:left;">{{ wine.color_code or 'None' }}</div>{% endif %}
+        </div>
       </div>
-      {% for field, label, value, input_type in [
-        ('vintage', 'Vintage', wine.vintage, 'number'),
-        ('varietal', 'Varietal', wine.varietal, 'text'),
-        ('region', 'Region', wine.region, 'text'),
-        ('origin', 'Origin', wine.origin, 'text'),
-        ('drinking_window', 'Drinking', wine.drinking_window, 'text')
-      ] %}
-      <div class="edit-row">
-        <div class="edit-label">{{ label }}</div>
-        {% if can_edit %}
-        <form data-detail-form action="/wine/{{ wine.id }}/{{ field }}" method="post">
-          <input class="mobile-input" name="{{ field }}" type="{{ input_type }}" value="{{ value or '' }}" placeholder="Not set">
-        </form>
-        {% else %}
-        <div class="read-only-value">{{ value or 'Not set' }}</div>
-        {% endif %}
-      </div>
-      {% endfor %}
     </section>
 
     <section class="detail-section" id="tastingFields">
-      <div class="section-title">Rating</div>
-      <div class="edit-row">
-        <div class="edit-label">Rating</div>
-        {% if can_edit %}
-        <form data-detail-form action="/wine/{{ wine.id }}/rating" method="post">
-          <input class="mobile-input" name="my_rating" type="number" min="0" max="5" step="0.1" inputmode="decimal" value="{{ wine.my_rating if wine.my_rating is not none else '' }}" placeholder="0-5">
-        </form>
-        {% else %}
-        <div class="read-only-value">{{ "%.1f"|format(wine.my_rating) if wine.my_rating is not none else 'Not rated' }}</div>
-        {% endif %}
+      <div class="section-title">Rating & Notes</div>
+      <div class="priority-grid">
+        <div class="field-card">
+          <span class="edit-label">Rating</span>
+          {% if can_edit %}
+          <form data-detail-form action="/wine/{{ wine.id }}/rating" method="post"><input class="mobile-input" id="ratingInput" name="my_rating" type="number" min="0" max="5" step="0.1" inputmode="decimal" value="{{ wine.my_rating if wine.my_rating is not none else '' }}" placeholder="0-5"></form>
+          {% else %}<div class="read-only-value" style="text-align:left;">{{ "%.1f"|format(wine.my_rating) if wine.my_rating is not none else 'Not rated' }}</div>{% endif %}
+        </div>
+        <div class="field-card">
+          <span class="edit-label">Drink</span>
+          <div class="read-only-value mobile-drinking-window" style="text-align:left;" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}">{{ wine.drinking_window or 'Not set' }}</div>
+        </div>
+        <div class="field-card wide" id="notesFields">
+          <span class="edit-label">Notes</span>
+          {% if can_edit %}
+          <form data-detail-form action="/wine/{{ wine.id }}/notes" method="post"><textarea class="mobile-textarea" id="notesInput" name="notes" rows="4" placeholder="Tasting notes, food pairings, when to drink...">{{ wine.notes or '' }}</textarea><div class="field-hint">Saved automatically</div></form>
+          {% else %}<div class="read-only-value" style="text-align:left;">{{ wine.notes or 'No notes yet.' }}</div>{% endif %}
+        </div>
       </div>
     </section>
 
-    <section class="notes-section" id="notesFields">
-      <div class="section-title">Notes</div>
-      <div class="mobile-note-block">
-        <div class="edit-label mb-2">Notes</div>
-        {% if can_edit %}
-        <form data-detail-form action="/wine/{{ wine.id }}/notes" method="post">
-          <textarea class="mobile-textarea" name="notes" rows="5" placeholder="Tasting notes, food pairings, when to drink...">{{ wine.notes or '' }}</textarea>
-          <div class="field-hint">Saved automatically</div>
-        </form>
-        {% else %}
-        <div class="read-only-value" style="text-align:left;">{{ wine.notes or 'No notes yet.' }}</div>
-        {% endif %}
-      </div>
-    </section>
-
-    <section class="detail-section" id="purchaseFields">
-      <div class="section-title">Purchase</div>
-      {% for field, label, value, input_type in [
-        ('retailer', 'Retailer', wine.retailer, 'text'),
-        ('order_date', 'Order date', wine.order_date[:10] if wine.order_date else '', 'date'),
-        ('unit_price', 'Paid each', wine.unit_price, 'number'),
-        ('retail_price', 'Retail', wine.retail_price, 'number')
-      ] %}
-      <div class="edit-row">
-        <div class="edit-label">{{ label }}</div>
-        {% if can_edit %}
-        <form data-detail-form action="/wine/{{ wine.id }}/{{ field }}" method="post">
-          <input class="mobile-input" name="{{ field }}" type="{{ input_type }}" {% if input_type == 'number' %}step="0.01" inputmode="decimal"{% endif %} value="{{ value or '' }}" placeholder="Not set">
-        </form>
-        {% else %}
-        <div class="read-only-value">{{ value or 'Not set' }}</div>
-        {% endif %}
-      </div>
+    <details class="mobile-details" id="wineFields">
+      <summary>Wine details</summary>
+      <div class="edit-row"><div class="edit-label">Type</div>{% if can_edit %}<form data-detail-form action="/wine/{{ wine.id }}/type" method="post"><select class="mobile-select" name="wine_type"><option value="">Wine</option>{% for type in wine_types %}<option value="{{ type }}" {% if wine.wine_type == type %}selected{% endif %}>{{ type }}</option>{% endfor %}</select></form>{% else %}<div class="read-only-value">{{ wine.wine_type or 'Wine' }}</div>{% endif %}</div>
+      {% for field, label, value, input_type in [('vintage', 'Vintage', wine.vintage, 'number'), ('varietal', 'Varietal', wine.varietal, 'text'), ('region', 'Region', wine.region, 'text'), ('origin', 'Origin', wine.origin, 'text')] %}
+      <div class="edit-row"><div class="edit-label">{{ label }}</div>{% if can_edit %}<form data-detail-form action="/wine/{{ wine.id }}/{{ field }}" method="post"><input class="mobile-input" name="{{ field }}" type="{{ input_type }}" value="{{ value or '' }}" placeholder="Not set"></form>{% else %}<div class="read-only-value">{{ value or 'Not set' }}</div>{% endif %}</div>
       {% endfor %}
-      <div class="edit-row">
-        <div class="edit-label">Total paid</div>
-        <div class="read-only-value">{% if wine.total_price %}${{ "%.2f"|format(wine.total_price) }}{% else %}Not set{% endif %}</div>
-      </div>
-    </section>
+      <div class="edit-row"><div class="edit-label">Size</div>{% if can_edit %}<form data-detail-form action="/wine/{{ wine.id }}/size" method="post"><select class="mobile-select" name="size_ml"><option value="">Not set</option>{% for size in bottle_sizes %}<option value="{{ size }}" {% if wine.size_ml == size %}selected{% endif %}>{{ size }} ml</option>{% endfor %}</select></form>{% else %}<div class="read-only-value">{{ wine.size_ml or 'Not set' }}{% if wine.size_ml %} ml{% endif %}</div>{% endif %}</div>
+    </details>
+
+    <details class="mobile-details" id="purchaseFields">
+      <summary>Purchase</summary>
+      {% for field, label, value, input_type in [('order_date', 'Order date', wine.order_date[:10] if wine.order_date else '', 'date'), ('unit_price', 'Paid each', wine.unit_price, 'number'), ('retail_price', 'Retail', wine.retail_price, 'number')] %}
+      <div class="edit-row"><div class="edit-label">{{ label }}</div>{% if can_edit %}<form data-detail-form action="/wine/{{ wine.id }}/{{ field }}" method="post"><input class="mobile-input" name="{{ field }}" type="{{ input_type }}" {% if input_type == 'number' %}step="0.01" inputmode="decimal"{% endif %} value="{{ value or '' }}" placeholder="Not set"></form>{% else %}<div class="read-only-value">{{ value or 'Not set' }}</div>{% endif %}</div>
+      {% endfor %}
+      <div class="edit-row"><div class="edit-label">Total paid</div><div class="read-only-value">{% if wine.total_price %}${{ "%.2f"|format(wine.total_price) }}{% else %}Not set{% endif %}</div></div>
+    </details>
 
     <nav class="mobile-bottom-actions" aria-label="Wine detail actions">
       <button type="button" onclick="history.back()">Back</button>
-      <a href="#cellarFields">Cellar</a>
-      <a href="#notesFields">Notes</a>
-      {% if can_edit %}
-      <button type="button" class="primary-action" id="markDrankAction">Drank</button>
-      {% else %}
-      <a class="primary-action" href="#wineFields">Wine</a>
-      {% endif %}
+      <button type="button" id="rateAction">Rate</button>
+      <button type="button" id="notesAction">Notes</button>
+      {% if can_edit %}<button type="button" class="primary-action" id="markDrankAction">Drank</button>{% else %}<a class="primary-action" href="#wineFields">Wine</a>{% endif %}
     </nav>
   </div>
 
@@ -744,6 +808,44 @@
       }
     }
 
+    function applyDetailDrinkingWindowColor(cell, text) {
+      if (!cell) return;
+      cell.classList.remove('drink-hold', 'drink-ready', 'drink-soon', 'drink-overdue', 'drink-empty');
+      if ((cell.dataset.status || '') === 'drank') {
+        cell.classList.add('drink-empty');
+        cell.title = 'Drank';
+        return;
+      }
+      const match = text && text.match(/(\d{4})\s*[-–]\s*(\d{4})/);
+      if (!match) {
+        cell.classList.add('drink-empty');
+        cell.title = 'Tap to edit';
+        return;
+      }
+      const start = parseInt(match[1]);
+      const end = parseInt(match[2]);
+      const mid = (start + end) / 2;
+      const now = new Date().getFullYear();
+      let colorClass, label;
+      if (now < start) { colorClass = 'drink-hold'; label = 'Not ready - hold'; }
+      else if (now <= mid) { colorClass = 'drink-ready'; label = 'In window - prime'; }
+      else if (now <= end) { colorClass = 'drink-soon'; label = 'Past peak - drink soon'; }
+      else { colorClass = 'drink-overdue'; label = 'Overdue - past window'; }
+      cell.classList.add(colorClass);
+      cell.title = `${text} - ${label}`;
+    }
+
+    document.querySelectorAll('.mobile-drinking-window').forEach(cell => {
+      applyDetailDrinkingWindowColor(cell, cell.dataset.value || cell.value || cell.textContent.trim());
+    });
+
+    function focusMobileField(target) {
+      const el = document.querySelector(target);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => el.focus({ preventScroll: true }), 350);
+    }
+
     if (canEditMobile) {
       document.querySelectorAll('[data-detail-form]').forEach(form => {
         let blurTimer;
@@ -771,20 +873,18 @@
       });
 
       const statusForm = document.querySelector('[data-status-form]');
-      statusForm?.querySelectorAll('[data-status-choice]').forEach(button => {
-        button.addEventListener('click', () => {
-          statusForm.querySelector('[name="status"]').value = button.dataset.statusChoice;
-          statusForm.querySelectorAll('[data-status-choice]').forEach(btn => btn.classList.toggle('active', btn === button));
-          const statusSummary = document.getElementById('statusSummary');
-          if (statusSummary) statusSummary.textContent = button.textContent.trim() === 'Shipping' ? 'Not shipped' : button.textContent.trim();
-          submitDetailForm(statusForm);
+      statusForm?.querySelector('[name="status"]')?.addEventListener('change', event => {
+        document.querySelectorAll('.mobile-drinking-window').forEach(cell => {
+          cell.dataset.status = event.target.value;
+          applyDetailDrinkingWindowColor(cell, cell.dataset.value || cell.value || cell.textContent.trim());
         });
       });
 
       document.getElementById('markDrankAction')?.addEventListener('click', () => {
-        const drankButton = statusForm?.querySelector('[data-status-choice="drank"]');
-        if (drankButton) {
-          drankButton.click();
+        const statusControl = statusForm?.querySelector('[name="status"]');
+        if (statusControl) {
+          statusControl.value = 'drank';
+          statusControl.dispatchEvent(new Event('change', { bubbles: true }));
           document.getElementById('cellarFields')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       });
@@ -797,6 +897,14 @@
         if (statusStorageInput) statusStorageInput.value = event.target.value;
       });
 
+      document.getElementById('drinkControl')?.addEventListener('input', event => {
+        document.querySelectorAll('.mobile-drinking-window').forEach(cell => {
+          cell.dataset.value = event.target.value;
+          if (cell !== event.target) cell.textContent = event.target.value || 'Not set';
+          applyDetailDrinkingWindowColor(cell, event.target.value);
+        });
+      });
+
       const colorForm = document.querySelector('[data-color-form]');
       colorForm?.querySelectorAll('[data-color-choice]').forEach(button => {
         button.addEventListener('click', () => {
@@ -807,6 +915,9 @@
           submitDetailForm(colorForm);
         });
       });
+
+      document.getElementById('rateAction')?.addEventListener('click', () => focusMobileField('#ratingInput'));
+      document.getElementById('notesAction')?.addEventListener('click', () => focusMobileField('#notesInput'));
     }
   </script>
 </body>
