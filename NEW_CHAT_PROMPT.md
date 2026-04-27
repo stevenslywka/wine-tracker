@@ -38,9 +38,35 @@ Recent UI work already pushed:
   - 8f80a27, `Refine mobile carousel and filter controls`
   - 7556545, `Remove duplicate mobile carousel groups`
   - deaa4e9, `Add other origin mobile filter`
+  - 5c091ad, `Support mobile wine detail editing`
+  - 79384d1, `Redesign mobile wine detail page`
+  - 695f980, `Refine mobile wine detail profile`
+  - 8d004bb, `Compact mobile wine detail layout`
+  - 0c8103c, `Polish mobile wine detail fields`
+
+Current mobile detail page context:
+- We are now iterating on the separate wine detail page only: `GET /wine/<id>` rendered by `templates/detail.html`.
+- Mobile card/list items in `templates/index.html` navigate to this page through `data-detail-url`. Do not change the mobile Cards/List layout unless I explicitly ask.
+- `app.py -> wine_detail()` now passes detail-page option data: `user_locations`, `wine_types`, `bottle_sizes`, and `sticker_colors`.
+- The mobile detail page has a mobile-only layout while desktop detail remains separate in the same template.
+- Current mobile detail layout:
+  - Hero with bottle image, type/vintage, current sticker dot, editable wine name, inferred flag, region/origin, grape emoji, and varietal.
+  - One compact editable top row: Status, Location, Drinking Window.
+  - Drinking Window uses the same color logic as the main cellar view: hold, ready/prime, drink soon, overdue, and drank.
+  - Main visible body combines Cellar + Rating/Notes: Qty, Source, Sticker, Rating in a compact four-cell grid, with Notes below.
+  - Lower priority info is collapsed under `Wine details` and `Purchase`.
+  - Bottom action bar: Back, Rate, Notes, Drank. Rate/Notes jump to and focus those fields.
+- Naming preference: use `Location`, not `Storage`; use `Source`, not `Retailer`.
+- Current design-feedback goal: critique this mobile detail page and suggest how to make it feel more like the redesigned mobile Cards layout: visual, dense, easy to scan, creative with icons/buttons/graphics, and not like a clunky form.
+- Unless I ask for implementation, give design feedback first. If implementing, touch only `templates/detail.html` unless route data in `app.py` is truly required.
+
+Local file note:
+- Local `templates/index.html` was accidentally blank earlier and was restored from GitHub `main`; it is no longer blank.
+- Because Codex sometimes updates GitHub through the Contents API, local `git status` may show files as modified even after changes are already pushed. Compare against GitHub `main` before reverting anything.
 
 Current design preference:
 - Do not touch the mobile card layout or compact/list wine row layout unless I explicitly ask. It is okay to work on the mobile header, top controls, filters, and carousel when requested.
+- Current active focus is the separate mobile wine detail page (`templates/detail.html`), not the mobile card/list layout.
 
 Important workflow notes:
 - Local Git writes to `.git` sometimes fail in Codex with `index.lock` permission errors.
