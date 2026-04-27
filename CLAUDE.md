@@ -39,9 +39,33 @@ Recent mobile UI work pushed to GitHub:
   - `8f80a27` (`Refine mobile carousel and filter controls`)
   - `7556545` (`Remove duplicate mobile carousel groups`)
   - `deaa4e9` (`Add other origin mobile filter`)
+  - `5c091ad` (`Support mobile wine detail editing`)
+  - `79384d1` (`Redesign mobile wine detail page`)
+  - `695f980` (`Refine mobile wine detail profile`)
+  - `8d004bb` (`Compact mobile wine detail layout`)
+  - `0c8103c` (`Polish mobile wine detail fields`)
+
+Latest mobile detail page context:
+- Current focus is the separate wine detail page at `GET /wine/<id>`, rendered by `templates/detail.html`.
+- On mobile, tapping a card/list item in `templates/index.html` navigates to this separate page via `data-detail-url`; do not change the mobile card/list layout unless Steve explicitly asks.
+- `app.py -> wine_detail()` now passes `user_locations`, `wine_types`, `bottle_sizes`, and `sticker_colors` into `detail.html`.
+- Mobile `detail.html` now has a mobile-only layout; desktop detail view remains separate in the same template and should not be redesigned unless requested.
+- The mobile detail header uses the bottle image, wine type/vintage, current sticker dot, editable wine name, inferred flag, and grape/varietal row.
+- The top control row has three compact editable controls: Status, Location, and Drinking Window. Drinking Window uses the same color logic as the main cellar view: hold / ready / drink soon / overdue / drank.
+- The visible body combines Cellar, Rating, and Notes: Qty, Source, Sticker, Rating in a compact four-cell grid, with Notes below.
+- Lower-priority information is collapsed under `Wine details` and `Purchase`.
+- Bottom mobile action bar is: Back, Rate, Notes, Drank. Rate and Notes scroll to and focus their fields.
+- Current user sentiment: improved but still wants design feedback. Steve wants the mobile detail page to feel more like the creative mobile Cards layout: dense, visual, easy to scan, not a plain form, and not wasteful of vertical space.
+- Specific naming preference: use `Location`, not `Storage`; use `Source`, not `Retailer`.
+- User may ask Claude Code next for design critique only before further implementation.
+
+Local file note:
+- Earlier in this thread, local `templates/index.html` was accidentally 0 bytes. It was restored locally from GitHub `main` and is no longer blank.
+- Because local git history may lag GitHub `main`, `git status` may still show `templates/index.html`, `app.py`, `templates/detail.html`, or docs as modified after API pushes. Do not blindly revert these. Compare with GitHub `main` if unsure.
 
 Session preference:
 - Do not touch the mobile card layout or compact/list wine row layout unless Steve explicitly asks. Top controls, filters, and header are okay to adjust when requested.
+- For current design review work, focus only on the separate mobile wine detail page (`templates/detail.html`) unless Steve says otherwise.
 
 ---
 
