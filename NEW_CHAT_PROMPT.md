@@ -31,7 +31,7 @@ Recent UI work already pushed:
 - Mobile home/cellar header now centers `🍷 Steven's wine cellar`; hamburger opens Menu and the search icon reveals search.
 - Mobile Filter and sort sheet is live, with Cards/List toggle on the same row as Filter and sort and the wine counter below.
 - Mobile quick carousel is live with one sequence only: Location, Type, Origin, Sticker.
-- Origin carousel options are USA, France, Italy, and globe `Other`. `Other` means anything outside USA/France/Italy, while USA includes common stored US origins like California, Oregon, Washington, and New York.
+- Origin carousel options are USA, France, Italy, and Earth emoji `Other`. `Other` means anything outside USA/France/Italy, while USA includes common stored US origins like California, Oregon, Washington, and New York.
 - "Add" is now "Add Wine"; "all in collection" is now "Available".
 - Latest relevant GitHub commits:
   - 6506d12, `Polish mobile cellar UI`
