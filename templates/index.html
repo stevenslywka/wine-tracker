@@ -203,6 +203,8 @@
       filter: brightness(1.35);
     }
     .mobile-card-list { display: none; }
+    .mobile-nav-dropdown, .mobile-nav-search { display: none; }
+    .mobile-title-text { display: none; }
     .mobile-wine-card {
       background: #241000; border-bottom: 1px solid #4a2208; padding: 12px 10px; position: relative; overflow: hidden;
     }
@@ -267,7 +269,7 @@
     .mobile-info-value { color: #f5e6d3; font-size: 0.76rem; line-height: 1.15; overflow-wrap: anywhere; text-align: center; }
     .mobile-drink-line { color: #f5e6d3; font-size: 0.78rem; font-weight: 700; margin-top: 7px; }
     .mobile-notes-preview { color: #c8aa88; font-size: 0.78rem; margin-top: 8px; line-height: 1.3; }
-    .mobile-browse-tools, .mobile-bottom-bar, .mobile-filter-sheet, .mobile-filter-backdrop { display: none; }
+    .mobile-browse-tools, .mobile-bottom-bar, .mobile-filter-sheet, .mobile-filter-backdrop, .mobile-filter-carousel { display: none; }
     #bulk-status-bar { display: none; }
     #bulk-status-bar.visible { display: flex; }
 
@@ -293,13 +295,43 @@
     /* Mobile (< 768px) */
     @media (max-width: 767px) {
       body { background: #160800; }
-      .navbar-brand { font-size: 1.05rem !important; max-width: calc(100vw - 82px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .navbar-brand {
+        color: #f5e6d3 !important; font-size: 1.02rem !important; line-height: 1.1;
+        max-width: calc(100vw - 112px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        justify-self: center; text-align: center;
+      }
       .navbar { margin-bottom: 0 !important; }
-      .navbar .container { padding-left: 10px; padding-right: 10px; min-height: 48px; }
+      .navbar .container {
+        display: grid !important; grid-template-columns: 44px minmax(0, 1fr) 44px;
+        padding-left: 10px; padding-right: 10px; min-height: 54px;
+      }
       .mobile-hide { display: none !important; }
-      #navActionBtns { margin-left: auto; }
-      #navActionBtns > .dropdown > .dropdown-toggle { font-size: 0 !important; width: 36px; height: 34px; padding: 0 !important; border-radius: 8px; }
-      #navActionBtns > .dropdown > .dropdown-toggle::before { content: "Menu"; font-size: 0.72rem; }
+      .desktop-title-text { display: none; }
+      .mobile-title-text { display: inline; }
+      .mobile-nav-dropdown, .mobile-nav-search { display: block; }
+      .mobile-brand-wrap { justify-content: center; min-width: 0; }
+      #navActionBtns { display: none !important; }
+      .mobile-nav-icon {
+        width: 40px; height: 40px; border: 0; background: transparent; color: #c9a96e;
+        display: inline-flex; align-items: center; justify-content: center; padding: 0;
+      }
+      .mobile-nav-icon .hamburger-lines,
+      .mobile-nav-icon .search-icon {
+        position: relative; display: inline-block; width: 25px; height: 18px;
+      }
+      .mobile-nav-icon .hamburger-lines::before,
+      .mobile-nav-icon .hamburger-lines::after,
+      .mobile-nav-icon .hamburger-lines span {
+        content: ""; position: absolute; left: 0; width: 25px; height: 2px; background: #c9a96e; border-radius: 2px;
+      }
+      .mobile-nav-icon .hamburger-lines::before { top: 0; }
+      .mobile-nav-icon .hamburger-lines span { top: 8px; }
+      .mobile-nav-icon .hamburger-lines::after { bottom: 0; }
+      .mobile-nav-icon .search-icon { width: 22px; height: 22px; border: 3px solid #c9a96e; border-radius: 50%; }
+      .mobile-nav-icon .search-icon::after {
+        content: ""; position: absolute; width: 10px; height: 3px; background: #c9a96e;
+        right: -7px; bottom: -4px; transform: rotate(45deg); border-radius: 2px;
+      }
       .container-fluid { padding-left: 0 !important; padding-right: 0 !important; max-width: none !important; }
       .stat-value { font-size: 1.4rem; }
       .card.stat-card { padding: 8px !important; }
@@ -336,17 +368,43 @@
         background: #1a0a00; border-bottom: 1px solid #4a2208; padding: 7px 8px 6px;
         box-shadow: 0 8px 18px rgba(0,0,0,0.24);
       }
-      .mobile-command-row { display: grid; grid-template-columns: minmax(0, 1fr) 104px 72px; gap: 6px; align-items: center; }
+      .mobile-command-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
       .mobile-search-form { min-width: 0; }
       .mobile-search-form .form-control { width: 100%; min-width: 0; height: 32px; border-radius: 8px; font-size: 0.84rem; }
+      .mobile-search-panel { display: none; margin-bottom: 6px; }
+      .mobile-search-panel.visible { display: block; }
       .mobile-sort-select { height: 32px; border-radius: 8px; font-size: 0.78rem; padding-left: 8px; padding-right: 22px; }
       .mobile-filter-trigger {
-        height: 32px; white-space: nowrap; background:#2a1200; border:1px solid #5a2d0c; color:#f5e6d3; border-radius:8px; padding: 0 8px;
+        height: 36px; white-space: nowrap; background:transparent; border:0; color:#f5e6d3; border-radius:0; padding: 0;
+        display: inline-flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 800;
       }
-      .mobile-filter-trigger.has-filters { border-color:#c9a96e; color:#c9a96e; }
+      .mobile-filter-trigger.has-filters { color:#c9a96e; }
+      .mobile-filter-count {
+        display: inline-flex; align-items: center; justify-content: center; width: 17px; height: 17px;
+        border: 1px solid currentColor; border-radius: 50%; font-size: 0.67rem; line-height: 1;
+      }
+      .mobile-filter-icon {
+        position: relative; display: inline-block; width: 26px; height: 18px; flex: 0 0 auto;
+      }
+      .mobile-filter-icon::before,
+      .mobile-filter-icon::after,
+      .mobile-filter-icon span {
+        content: ""; position: absolute; left: 0; right: 0; height: 2px; background: currentColor; border-radius: 2px;
+      }
+      .mobile-filter-icon::before { top: 2px; }
+      .mobile-filter-icon span { top: 8px; }
+      .mobile-filter-icon::after { top: 14px; }
+      .mobile-filter-icon i {
+        position: absolute; width: 5px; height: 5px; border: 2px solid currentColor; border-radius: 50%; background: #1a0a00;
+      }
+      .mobile-filter-icon i:nth-child(1) { top: -1px; left: 6px; }
+      .mobile-filter-icon i:nth-child(2) { top: 5px; right: 5px; }
+      .mobile-filter-icon i:nth-child(3) { top: 11px; left: 13px; }
+      .mobile-product-count { color: #f5e6d3; font-size: 0.9rem; text-align: right; white-space: nowrap; }
       .mobile-view-row { display: flex; justify-content: flex-end; align-items: center; margin-top: 5px; }
+      .mobile-view-summary-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 5px; }
       .mobile-filter-summary {
-        display: none; margin-top: 5px; color: #c9a96e; font-size: 0.74rem; line-height: 1.2;
+        display: none; min-width: 0; color: #c9a96e; font-size: 0.74rem; line-height: 1.2;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
       .mobile-filter-summary.visible { display: block; }
@@ -359,6 +417,32 @@
         border:0; background:transparent; color:#a07850; font-size:0.76rem; line-height:1; padding:0;
       }
       .mobile-view-btn.active { background:#8b1a1a; color:#fff1d8; font-weight:700; }
+      .mobile-filter-carousel {
+        display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 8px 8px 9px;
+        background: #160800; border-bottom: 1px solid #3a1a00;
+      }
+      .mobile-filter-carousel::-webkit-scrollbar { display: none; }
+      .mobile-filter-family {
+        flex: 0 0 142px; border: 1px solid #4a2208; background: #1f0d00; border-radius: 8px; overflow: hidden;
+      }
+      .mobile-filter-family-title {
+        color: #c9a96e; font-size: 0.66rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.08em;
+        border-bottom: 1px solid #4a2208; padding: 6px 8px;
+      }
+      .mobile-filter-family-options { display: flex; gap: 5px; padding: 7px; overflow-x: auto; scrollbar-width: none; }
+      .mobile-filter-family-options::-webkit-scrollbar { display: none; }
+      .mobile-filter-chip {
+        min-width: 34px; height: 28px; padding: 0 8px; border: 1px solid #5a2d0c; border-radius: 999px;
+        background: #241000; color: #f5e6d3; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
+        font-size: 0.73rem; font-weight: 800; white-space: nowrap;
+      }
+      .mobile-filter-chip.active {
+        background: #8b1a1a; border-color: #c9a96e; color: #fff; box-shadow: 0 0 0 2px rgba(201,169,110,0.24);
+      }
+      .mobile-filter-chip.flag-chip { font-size: 1.02rem; padding: 0 7px; }
+      .mobile-sticker-dot {
+        width: 16px; height: 16px; border-radius: 50%; display: inline-block; border: 2px solid rgba(255,255,255,0.35);
+      }
       #tableScroll { display: none; }
       .mobile-card-list { display: block; overflow-y: auto; overscroll-behavior: none; flex: 1; min-height: 0; padding-bottom: 66px; }
       .table-card { background: #1a0a00; order: 3; }
@@ -396,20 +480,28 @@
       }
       .mobile-filter-backdrop.visible { display: block; }
       .mobile-filter-sheet {
-        position: fixed; left: 0; right: 0; bottom: 0; z-index: 9200; display: none;
-        max-height: 86vh; overflow-y: auto; background: #1f0d00; border-top: 1px solid #7a3d12;
-        border-radius: 14px 14px 0 0; padding: 12px 12px calc(14px + env(safe-area-inset-bottom));
+        position: fixed; left: 12px; right: 12px; top: 70px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 9200; display: none;
+        overflow-y: auto; background: #f7f2ec; color: #1d1a16; border: 1px solid rgba(0,0,0,0.1);
+        border-radius: 13px; padding: 24px 24px calc(18px + env(safe-area-inset-bottom));
         box-shadow: 0 -14px 34px rgba(0,0,0,0.5);
       }
       .mobile-filter-sheet.visible { display: block; }
-      .mobile-filter-header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
-      .mobile-filter-title { color:#f5e6d3; font-weight:800; font-size:1rem; }
-      .mobile-filter-close { border:1px solid #5a2d0c; background:#2a1200; color:#c9a96e; border-radius:8px; padding:6px 10px; }
-      .mobile-filter-grid { display:grid; grid-template-columns: 1fr 1fr; gap:8px; }
+      .mobile-filter-header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:24px; }
+      .mobile-filter-title { color:#1d1a16; font-family: Georgia, 'Times New Roman', serif; font-weight:400; font-size:1.65rem; }
+      .mobile-filter-close { border:0; background:transparent; color:#1d1a16; border-radius:0; padding:2px; font-size:2rem; line-height:1; }
+      .mobile-filter-grid { display:grid; grid-template-columns: 1fr; gap:0; }
       .mobile-filter-grid .full { grid-column: 1 / -1; }
-      .mobile-filter-sheet label { color:#a07850; font-size:0.72rem; font-weight:700; margin-bottom:3px; }
-      .mobile-filter-actions { display:flex; gap:8px; position:sticky; bottom:0; background:#1f0d00; padding-top:10px; margin-top:10px; }
-      .mobile-filter-actions .btn { flex:1; padding:9px 8px; }
+      .mobile-filter-section {
+        border-top: 1px solid #d4cdc4; padding: 15px 0;
+      }
+      .mobile-filter-section-title {
+        color:#1d1a16; font-size:0.82rem; font-weight:900; letter-spacing:0.16em; text-transform:uppercase; margin-bottom:9px;
+      }
+      .mobile-filter-sheet label { color:#1d1a16; font-size:0.78rem; font-weight:800; margin-bottom:4px; }
+      .mobile-filter-sheet .form-control,
+      .mobile-filter-sheet .form-select { border-color:#d4cdc4; border-radius:0; background:#fff; color:#1d1a16; }
+      .mobile-filter-actions { display:flex; gap:8px; position:sticky; bottom:0; background:#f7f2ec; padding-top:14px; margin-top:14px; }
+      .mobile-filter-actions .btn { flex:1; padding:10px 8px; }
       .col-wine { min-width: 160px; }
       .col-date { min-width: 70px; }
       footer { display: none; }
@@ -420,13 +512,44 @@
 <body>
   <nav class="navbar navbar-expand-lg mb-4">
     <div class="container d-flex justify-content-between align-items-center">
-      <div class="d-flex align-items-center gap-2">
+      <div class="dropdown mobile-nav-dropdown">
+        <button class="mobile-nav-icon" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menu">
+          <span class="hamburger-lines"><span></span></span>
+        </button>
+        <ul class="dropdown-menu" style="background:#2a1200;border:1px solid #5a2d0c;min-width:180px;">
+          <li><a class="dropdown-item" href="{{ url_for('home') }}" style="color:#c9a96e;">Home</a></li>
+          {% if auth_enabled %}
+          <li><a class="dropdown-item" href="{{ url_for('logout') }}" style="color:#c9a96e;">Log out</a></li>
+          {% endif %}
+          <li><a class="dropdown-item" href="{{ url_for('user_analytics', username=cellar_username) }}" style="color:#c0c8f5;">Analytics</a></li>
+          {% if access_level == 'edit' %}
+          <li><hr class="dropdown-divider" style="border-color:#5a2d0c;margin:4px 0;"></li>
+          <li>
+            <form method="POST" action="/refresh" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Refreshing...';">
+              <button type="submit" class="dropdown-item" style="color:#f5e6d3;background:none;">Refresh Emails</button>
+            </form>
+          </li>
+          {% endif %}
+          <li><a class="dropdown-item" href="/export/csv" style="color:#c0f5d8;">Export CSV</a></li>
+          {% if access_level == 'edit' %}
+          <li><a class="dropdown-item" href="{{ url_for('settings_locations') }}" style="color:#c9a96e;">Storage Locations</a></li>
+          {% endif %}
+        </ul>
+      </div>
+      <div class="d-flex align-items-center gap-2 mobile-brand-wrap">
         <a href="{{ url_for('home') }}" class="btn btn-sm mobile-hide" style="background:#3d0f0f;border:1px solid #5a2d0c;color:#c9a96e;">← Home</a>
-        <span class="navbar-brand mb-0">🍷 {{ cellar_display_name }}'s Cellar{% if not is_own_cellar %} <span style="font-size:0.75rem;color:#a07850;font-weight:normal;">(view only)</span>{% endif %}</span>
+        <span class="navbar-brand mb-0">
+          <span class="desktop-title-text">🍷 {{ cellar_display_name }}'s Cellar</span>
+          <span class="mobile-title-text">{{ cellar_display_name }}'s wine cellar</span>
+          {% if not is_own_cellar %} <span style="font-size:0.75rem;color:#a07850;font-weight:normal;">(view only)</span>{% endif %}
+        </span>
         {% if auth_enabled %}
         <a href="{{ url_for('logout') }}" class="btn btn-sm mobile-hide" style="background:#3d0f0f;border:1px solid #5a2d0c;color:#c9a96e;">Log out</a>
         {% endif %}
       </div>
+      <button type="button" class="mobile-nav-icon mobile-nav-search" data-mobile-action="search" aria-label="Search">
+        <span class="search-icon"></span>
+      </button>
       <div class="d-flex gap-1 align-items-center" id="navActionBtns">
         {% if access_level == 'edit' %}
         <button type="button" class="btn btn-wine btn-sm mobile-hide" data-bs-toggle="modal" data-bs-target="#addWineModal">+ Add Wine</button>
@@ -459,21 +582,27 @@
   <div class="container-fluid px-4 main-content" style="max-width: 1600px;">
 
     {% set mobile_filters_active = status_filter or storage_filter or varietal_filter or region_filter or origin_filter or vintage_min or vintage_max or price_min or price_max or color_filter or type_filter or size_filter or retailer_filter %}
+    {% set mobile_active_filter_count = namespace(total=0) %}
+    {% for active_filter in [status_filter, storage_filter, varietal_filter, region_filter, origin_filter, vintage_min, vintage_max, price_min, price_max, color_filter, type_filter, size_filter, retailer_filter] %}
+      {% if active_filter %}{% set mobile_active_filter_count.total = mobile_active_filter_count.total + 1 %}{% endif %}
+    {% endfor %}
 
     <!-- Quick filters: location counts + status + rec button -->
     <div class="card p-2 mb-2 cellar-controls-card">
-      {% macro preserved_quick_params(storage_value=None) -%}
-        {%- if storage_value %}&storage_location={{ storage_value|urlencode }}{% endif -%}
+      {% macro preserved_quick_params(storage_value=None, type_value=None, origin_value=None, color_value=None) -%}
+        {%- if storage_value != '__clear__' -%}
+          {%- if storage_value %}&storage_location={{ storage_value|urlencode }}{% elif storage_filter %}&storage_location={{ storage_filter|urlencode }}{% endif -%}
+        {%- endif -%}
         {%- if search %}&q={{ search|urlencode }}{% endif -%}
         {%- if varietal_filter %}&varietal={{ varietal_filter|urlencode }}{% endif -%}
         {%- if region_filter %}&region={{ region_filter|urlencode }}{% endif -%}
-        {%- if origin_filter %}&origin={{ origin_filter|urlencode }}{% endif -%}
-        {%- if color_filter %}&color_code={{ color_filter|urlencode }}{% endif -%}
+        {%- if origin_value %}&origin={{ origin_value|urlencode }}{% elif origin_filter %}&origin={{ origin_filter|urlencode }}{% endif -%}
+        {%- if color_value %}&color_code={{ color_value|urlencode }}{% elif color_filter %}&color_code={{ color_filter|urlencode }}{% endif -%}
         {%- if vintage_min %}&vintage_min={{ vintage_min|urlencode }}{% endif -%}
         {%- if vintage_max %}&vintage_max={{ vintage_max|urlencode }}{% endif -%}
         {%- if price_min %}&price_min={{ price_min|urlencode }}{% endif -%}
         {%- if price_max %}&price_max={{ price_max|urlencode }}{% endif -%}
-        {%- if type_filter %}&wine_type={{ type_filter|urlencode }}{% endif -%}
+        {%- if type_value %}&wine_type={{ type_value|urlencode }}{% elif type_filter %}&wine_type={{ type_filter|urlencode }}{% endif -%}
         {%- if size_filter %}&size_ml={{ size_filter|urlencode }}{% endif -%}
         {%- if retailer_filter %}&retailer={{ retailer_filter|urlencode }}{% endif -%}
         {%- if sort %}&sort={{ sort|urlencode }}{% endif -%}
@@ -482,7 +611,7 @@
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
 
         <!-- Location count chips -->
-        <div class="mobile-quick-filter-row" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex:1;">
+        <div class="mobile-quick-filter-row mobile-hide" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex:1;">
           <a href="?status=in_collection{{ preserved_quick_params() }}" class="quick-chip {% if status_filter=='in_collection' and not storage_filter %}active{% endif %}" style="text-decoration:none;">
             Available
             <span class="chip-count">{{ location_counts.values()|sum }}</span>
@@ -502,6 +631,44 @@
           {% if status_filter or storage_filter or search or varietal_filter or region_filter or origin_filter or vintage_min or vintage_max or price_min or price_max or color_filter or type_filter or size_filter or retailer_filter %}
           <a href="{{ url_for('cellar', username=cellar_username) }}" class="quick-chip" style="text-decoration:none;background:#3d0f0f;border-color:#8b1a1a;color:#e08080;">✕ Clear</a>
           {% endif %}
+        </div>
+
+        <div class="mobile-filter-carousel">
+          <div class="mobile-filter-family">
+            <div class="mobile-filter-family-title">Location</div>
+            <div class="mobile-filter-family-options">
+              {% for loc in user_locations %}
+              <a href="?status=in_collection{{ preserved_quick_params(loc) }}" class="mobile-filter-chip {% if storage_filter==loc %}active{% endif %}" title="{{ loc }}">{{ loc }}</a>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="mobile-filter-family">
+            <div class="mobile-filter-family-title">Type</div>
+            <div class="mobile-filter-family-options">
+              {% for t in ['Red', 'White', 'Rose', 'Sparkling', 'Orange'] %}
+              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(type_value=t) }}" class="mobile-filter-chip {% if type_filter==t %}active{% endif %}" title="{{ t }}">{{ t }}</a>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="mobile-filter-family">
+            <div class="mobile-filter-family-title">Origin</div>
+            <div class="mobile-filter-family-options">
+              {% if 'France' in origins %}<a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='France') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='France' %}active{% endif %}" title="France">🇫🇷</a>{% endif %}
+              {% if 'Italy' in origins %}<a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Italy') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Italy' %}active{% endif %}" title="Italy">🇮🇹</a>{% endif %}
+              {% if 'United States' in origins %}<a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='United States') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='United States' %}active{% endif %}" title="United States">🇺🇸</a>{% elif 'USA' in origins %}<a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='USA') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='USA' %}active{% endif %}" title="USA">🇺🇸</a>{% endif %}
+              {% if 'Spain' in origins %}<a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Spain') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Spain' %}active{% endif %}" title="Spain">🇪🇸</a>{% endif %}
+              {% if 'Portugal' in origins %}<a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Portugal') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Portugal' %}active{% endif %}" title="Portugal">🇵🇹</a>{% endif %}
+              {% if 'Australia' in origins %}<a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Australia') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Australia' %}active{% endif %}" title="Australia">🇦🇺</a>{% endif %}
+            </div>
+          </div>
+          <div class="mobile-filter-family">
+            <div class="mobile-filter-family-title">Sticker</div>
+            <div class="mobile-filter-family-options">
+              {% for c in ['Red', 'Blue', 'Orange', 'Yellow', 'Green'] %}
+              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(color_value=c) }}" class="mobile-filter-chip {% if color_filter==c %}active{% endif %}" title="{{ c }}"><span class="mobile-sticker-dot color-dot-{{ c }}"></span></a>
+              {% endfor %}
+            </div>
+          </div>
         </div>
 
         <!-- Search + Need a rec -->
@@ -582,7 +749,7 @@
     </div>
 
     <div class="mobile-browse-tools" id="mobileBrowseTools">
-      <div class="mobile-command-row">
+      <div class="mobile-search-panel {% if search %}visible{% endif %}" id="mobileSearchPanel">
         <form method="get" class="mobile-search-form" id="mobileSearchForm">
           {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
           {% if storage_filter %}<input type="hidden" name="storage_location" value="{{ storage_filter }}">{% endif %}
@@ -599,40 +766,40 @@
           {% if price_max %}<input type="hidden" name="price_max" value="{{ price_max }}">{% endif %}
           {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
           {% if order %}<input type="hidden" name="order" value="{{ order }}">{% endif %}
-          <input type="search" name="q" class="form-control form-control-sm" placeholder="Search" value="{{ search }}" id="mobileSearchInput">
+          <input type="search" name="q" class="form-control form-control-sm" placeholder="Search wines" value="{{ search }}" id="mobileSearchInput">
         </form>
-        <select class="form-select form-select-sm mobile-sort-select" id="mobileSortSelect" aria-label="Sort wines">
-          <option value="order_date|desc" {% if sort=='order_date' and order=='desc' %}selected{% endif %}>Recent first</option>
-          <option value="wine_name|asc" {% if sort=='wine_name' and order=='asc' %}selected{% endif %}>Wine A-Z</option>
-          <option value="vintage|desc" {% if sort=='vintage' and order=='desc' %}selected{% endif %}>Vintage newest</option>
-          <option value="vintage|asc" {% if sort=='vintage' and order=='asc' %}selected{% endif %}>Vintage oldest</option>
-          <option value="storage_location|asc" {% if sort=='storage_location' and order=='asc' %}selected{% endif %}>Storage</option>
-          <option value="wine_type|asc" {% if sort=='wine_type' and order=='asc' %}selected{% endif %}>Type</option>
-          <option value="unit_price|desc" {% if sort=='unit_price' and order=='desc' %}selected{% endif %}>Price high-low</option>
-          <option value="drinking_window|asc" {% if sort=='drinking_window' and order=='asc' %}selected{% endif %}>Drink window</option>
-        </select>
-        <button type="button" class="btn btn-sm mobile-filter-trigger {% if mobile_filters_active %}has-filters{% endif %}" data-mobile-action="filters">Filters</button>
+      </div>
+      <div class="mobile-command-row">
+        <button type="button" class="mobile-filter-trigger {% if mobile_filters_active %}has-filters{% endif %}" data-mobile-action="filters">
+          Filter and sort
+          {% if mobile_active_filter_count.total %}<span class="mobile-filter-count">{{ mobile_active_filter_count.total }}</span>{% endif %}
+          <span class="mobile-filter-icon"><i></i><i></i><i></i><span></span></span>
+        </button>
+        <div class="mobile-product-count">{{ wines|length }} wine{% if wines|length != 1 %}s{% endif %}</div>
       </div>
       {% if status_filter or storage_filter or search or mobile_filters_active %}
       {% set current_bottle_count = namespace(total=0) %}
       {% for wine in wines %}
         {% set current_bottle_count.total = current_bottle_count.total + (wine.quantity or 0) %}
       {% endfor %}
-      <div class="mobile-filter-summary visible">
-        Viewing:
-        {% if storage_filter %}{{ storage_filter }}
-        {% elif status_filter == 'in_collection' %}Available
-        {% elif status_filter == 'not_shipped' %}Not Shipped
-        {% elif status_filter == 'drank' %}Drank
-        {% elif search %}Search
-        {% else %}Filtered{% endif %}
-        {% if search %} &middot; "{{ search }}"{% endif %}
-        &middot; {{ wines|length }} wine{% if wines|length != 1 %}s{% endif %}
-        &middot; {{ current_bottle_count.total }} bottle{% if current_bottle_count.total != 1 %}s{% endif %}
-        <a href="{{ url_for('cellar', username=cellar_username) }}">Clear</a>
-      </div>
+      <div class="mobile-view-summary-row">
+        <div class="mobile-filter-summary visible">
+          Viewing:
+          {% if storage_filter %}{{ storage_filter }}
+          {% elif status_filter == 'in_collection' %}Available
+          {% elif status_filter == 'not_shipped' %}Not Shipped
+          {% elif status_filter == 'drank' %}Drank
+          {% elif search %}Search
+          {% else %}Filtered{% endif %}
+          {% if search %} &middot; "{{ search }}"{% endif %}
+          &middot; {{ wines|length }} wine{% if wines|length != 1 %}s{% endif %}
+          &middot; {{ current_bottle_count.total }} bottle{% if current_bottle_count.total != 1 %}s{% endif %}
+          <a href="{{ url_for('cellar', username=cellar_username) }}">Clear</a>
+        </div>
+      {% else %}
+      <div class="mobile-view-summary-row">
+        <div class="mobile-filter-summary visible">Viewing: Available</div>
       {% endif %}
-      <div class="mobile-view-row">
         <div class="mobile-view-toggle" id="mobileViewToggle" aria-label="Choose mobile view">
           <button type="button" class="mobile-view-btn" data-mobile-mode="comfort">Cards</button>
           <button type="button" class="mobile-view-btn" data-mobile-mode="compact">List</button>
@@ -644,33 +811,46 @@
     <div class="mobile-filter-sheet" id="mobileFilterSheet" aria-label="Wine filters">
       <div class="mobile-filter-header">
         <div>
-          <div class="mobile-filter-title">Filters</div>
+          <div class="mobile-filter-title">Filter and sort</div>
         </div>
-        <button type="button" class="mobile-filter-close" data-mobile-action="close-filters">Close</button>
+        <button type="button" class="mobile-filter-close" data-mobile-action="close-filters" aria-label="Close">&times;</button>
       </div>
       <form method="get" id="mobileFilterForm">
         {% if search %}<input type="hidden" name="q" value="{{ search }}">{% endif %}
-        {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
-        {% if order %}<input type="hidden" name="order" value="{{ order }}">{% endif %}
+        <input type="hidden" name="sort" id="mobileFilterSortField" value="{{ sort }}">
+        <input type="hidden" name="order" id="mobileFilterSortOrder" value="{{ order }}">
+        <div class="mobile-filter-section">
+          <div class="mobile-filter-section-title">Sort by</div>
+          <select class="form-select form-select-sm" id="mobileSheetSortSelect" aria-label="Sort wines">
+            <option value="order_date|desc" {% if sort=='order_date' and order=='desc' %}selected{% endif %}>Recent first</option>
+            <option value="wine_name|asc" {% if sort=='wine_name' and order=='asc' %}selected{% endif %}>Wine A-Z</option>
+            <option value="vintage|desc" {% if sort=='vintage' and order=='desc' %}selected{% endif %}>Vintage newest</option>
+            <option value="vintage|asc" {% if sort=='vintage' and order=='asc' %}selected{% endif %}>Vintage oldest</option>
+            <option value="storage_location|asc" {% if sort=='storage_location' and order=='asc' %}selected{% endif %}>Storage</option>
+            <option value="wine_type|asc" {% if sort=='wine_type' and order=='asc' %}selected{% endif %}>Type</option>
+            <option value="unit_price|desc" {% if sort=='unit_price' and order=='desc' %}selected{% endif %}>Price high-low</option>
+            <option value="drinking_window|asc" {% if sort=='drinking_window' and order=='asc' %}selected{% endif %}>Drink window</option>
+          </select>
+        </div>
         <div class="mobile-filter-grid">
-          <div>
-            <label>Status</label>
+          <div class="mobile-filter-section">
+            <div class="mobile-filter-section-title">Status</div>
             <select name="status" class="form-select form-select-sm">
               <option value="">Any</option>
-              <option value="in_collection" {% if status_filter=='in_collection' %}selected{% endif %}>In Collection</option>
+              <option value="in_collection" {% if status_filter=='in_collection' %}selected{% endif %}>Available</option>
               <option value="not_shipped" {% if status_filter=='not_shipped' %}selected{% endif %}>Not Shipped</option>
               <option value="drank" {% if status_filter=='drank' %}selected{% endif %}>Drank</option>
             </select>
           </div>
-          <div>
-            <label>Storage</label>
+          <div class="mobile-filter-section">
+            <div class="mobile-filter-section-title">Location</div>
             <select name="storage_location" class="form-select form-select-sm">
               <option value="">Any</option>
               {% for loc in user_locations %}<option value="{{ loc }}" {% if storage_filter==loc %}selected{% endif %}>{{ loc }}</option>{% endfor %}
             </select>
           </div>
-          <div>
-            <label>Type</label>
+          <div class="mobile-filter-section">
+            <div class="mobile-filter-section-title">Type</div>
             <select name="wine_type" class="form-select form-select-sm">
               <option value="">Any</option>
               <option value="Red"       {% if type_filter=='Red'       %}selected{% endif %}>Red</option>
@@ -682,8 +862,8 @@
               <option value="Orange"    {% if type_filter=='Orange'    %}selected{% endif %}>Orange</option>
             </select>
           </div>
-          <div>
-            <label>Sticker</label>
+          <div class="mobile-filter-section">
+            <div class="mobile-filter-section-title">Sticker</div>
             <select name="color_code" class="form-select form-select-sm">
               <option value="">Any</option>
               <option value="Red"    {% if color_filter=='Red'    %}selected{% endif %}>Red</option>
@@ -693,56 +873,54 @@
               <option value="Green"  {% if color_filter=='Green'  %}selected{% endif %}>Green</option>
             </select>
           </div>
-          <div class="full">
-            <label>Region</label>
-            <select name="region" class="form-select form-select-sm">
-              <option value="">Any</option>
-              {% for r in regions %}<option value="{{ r }}" {% if region_filter==r %}selected{% endif %}>{{ r }}</option>{% endfor %}
-            </select>
-          </div>
-          <div>
-            <label>Origin</label>
+          <div class="mobile-filter-section full">
+            <div class="mobile-filter-section-title">Origin</div>
             <select name="origin" class="form-select form-select-sm">
               <option value="">Any</option>
               {% for o in origins %}<option value="{{ o }}" {% if origin_filter==o %}selected{% endif %}>{{ o }}</option>{% endfor %}
             </select>
           </div>
-          <div>
-            <label>Varietal</label>
+          <div class="mobile-filter-section full">
+            <div class="mobile-filter-section-title">Region</div>
+            <select name="region" class="form-select form-select-sm">
+              <option value="">Any</option>
+              {% for r in regions %}<option value="{{ r }}" {% if region_filter==r %}selected{% endif %}>{{ r }}</option>{% endfor %}
+            </select>
+          </div>
+          <div class="mobile-filter-section">
+            <div class="mobile-filter-section-title">Varietal</div>
             <select name="varietal" class="form-select form-select-sm">
               <option value="">Any</option>
               {% for v in varietals %}<option value="{{ v }}" {% if varietal_filter==v %}selected{% endif %}>{{ v }}</option>{% endfor %}
             </select>
           </div>
-          <div>
-            <label>Size</label>
+          <div class="mobile-filter-section">
+            <div class="mobile-filter-section-title">Size</div>
             <select name="size_ml" class="form-select form-select-sm">
               <option value="">Any</option>
               {% for s in sizes %}<option value="{{ s }}" {% if size_filter==s|string %}selected{% endif %}>{{ s }}ml</option>{% endfor %}
             </select>
           </div>
-          <div>
-            <label>Source</label>
+          <div class="mobile-filter-section">
+            <div class="mobile-filter-section-title">Source</div>
             <select name="retailer" class="form-select form-select-sm">
               <option value="">Any</option>
               {% for r in retailers %}<option value="{{ r }}" {% if retailer_filter==r %}selected{% endif %}>{{ r }}</option>{% endfor %}
             </select>
           </div>
-          <div>
-            <label>Vintage from</label>
-            <input type="number" name="vintage_min" class="form-control form-control-sm" value="{{ vintage_min }}" min="1900" max="2099">
+          <div class="mobile-filter-section">
+            <div class="mobile-filter-section-title">Vintage</div>
+            <div class="d-flex gap-2">
+              <input type="number" name="vintage_min" class="form-control form-control-sm" value="{{ vintage_min }}" min="1900" max="2099" placeholder="From">
+              <input type="number" name="vintage_max" class="form-control form-control-sm" value="{{ vintage_max }}" min="1900" max="2099" placeholder="To">
+            </div>
           </div>
-          <div>
-            <label>Vintage to</label>
-            <input type="number" name="vintage_max" class="form-control form-control-sm" value="{{ vintage_max }}" min="1900" max="2099">
-          </div>
-          <div>
-            <label>Price min</label>
-            <input type="number" name="price_min" class="form-control form-control-sm" value="{{ price_min }}" min="0" step="1">
-          </div>
-          <div>
-            <label>Price max</label>
-            <input type="number" name="price_max" class="form-control form-control-sm" value="{{ price_max }}" min="0" step="1">
+          <div class="mobile-filter-section">
+            <div class="mobile-filter-section-title">Price</div>
+            <div class="d-flex gap-2">
+              <input type="number" name="price_min" class="form-control form-control-sm" value="{{ price_min }}" min="0" step="1" placeholder="Min">
+              <input type="number" name="price_max" class="form-control form-control-sm" value="{{ price_max }}" min="0" step="1" placeholder="Max">
+            </div>
           </div>
         </div>
         <div class="mobile-filter-actions">
@@ -2295,6 +2473,15 @@
       });
     }
 
+    const mobileFilterForm = document.getElementById('mobileFilterForm');
+    const mobileSheetSortSelect = document.getElementById('mobileSheetSortSelect');
+    mobileFilterForm?.addEventListener('submit', () => {
+      if (!mobileSheetSortSelect) return;
+      const [sortField, sortOrder] = mobileSheetSortSelect.value.split('|');
+      document.getElementById('mobileFilterSortField').value = sortField;
+      document.getElementById('mobileFilterSortOrder').value = sortOrder;
+    });
+
     const mobileViewButtons = [...document.querySelectorAll('[data-mobile-mode]')];
     function setMobileCardMode(mode) {
       const compact = mode === 'compact';
@@ -2332,8 +2519,12 @@
       if (!btn) return;
       const action = btn.dataset.mobileAction;
       if (action === 'search') {
-        document.getElementById('mobileBrowseTools')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        setTimeout(() => document.getElementById('mobileSearchInput')?.focus(), 250);
+        const panel = document.getElementById('mobileSearchPanel');
+        panel?.classList.toggle('visible');
+        if (panel?.classList.contains('visible')) {
+          document.getElementById('mobileBrowseTools')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          setTimeout(() => document.getElementById('mobileSearchInput')?.focus(), 150);
+        }
       } else if (action === 'filters') {
         openMobileFilters();
       } else if (action === 'close-filters') {
