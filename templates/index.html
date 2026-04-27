@@ -400,7 +400,7 @@
       .mobile-filter-icon i:nth-child(1) { top: -1px; left: 6px; }
       .mobile-filter-icon i:nth-child(2) { top: 5px; right: 5px; }
       .mobile-filter-icon i:nth-child(3) { top: 11px; left: 13px; }
-      .mobile-product-count { color: #f5e6d3; font-size: 0.9rem; text-align: right; white-space: nowrap; }
+      .mobile-product-count { color: #d9c4aa; font-size: 0.82rem; text-align: right; white-space: nowrap; }
       .mobile-view-row { display: flex; justify-content: flex-end; align-items: center; margin-top: 5px; }
       .mobile-view-summary-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 5px; }
       .mobile-filter-summary {
@@ -423,17 +423,20 @@
       }
       .mobile-filter-carousel::-webkit-scrollbar { display: none; }
       .mobile-filter-family {
-        flex: 0 0 142px; border: 1px solid #4a2208; background: #1f0d00; border-radius: 8px; overflow: hidden;
+        flex: 0 0 148px; border: 1px solid #4a2208; background: #1f0d00; border-radius: 8px; overflow: hidden;
+      }
+      .mobile-filter-family.wide {
+        flex-basis: 184px;
       }
       .mobile-filter-family-title {
         color: #c9a96e; font-size: 0.66rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.08em;
-        border-bottom: 1px solid #4a2208; padding: 6px 8px;
+        border-bottom: 1px solid #4a2208; padding: 6px 8px; text-align: center;
       }
-      .mobile-filter-family-options { display: flex; gap: 5px; padding: 7px; overflow-x: auto; scrollbar-width: none; }
+      .mobile-filter-family-options { display: flex; gap: 5px; padding: 7px; justify-content: space-evenly; scrollbar-width: none; }
       .mobile-filter-family-options::-webkit-scrollbar { display: none; }
       .mobile-filter-chip {
-        min-width: 34px; height: 28px; padding: 0 8px; border: 1px solid #5a2d0c; border-radius: 999px;
-        background: #241000; color: #f5e6d3; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
+        flex: 1 1 0; min-width: 0; height: 28px; padding: 0 7px; border: 1px solid #87423d; border-radius: 999px;
+        background: #4a1916; color: #f5e6d3; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
         font-size: 0.73rem; font-weight: 800; white-space: nowrap;
       }
       .mobile-filter-chip.active {
@@ -482,20 +485,20 @@
       .mobile-filter-sheet {
         position: fixed; left: 12px; right: 12px; top: 70px; bottom: calc(18px + env(safe-area-inset-bottom)); z-index: 9200; display: none;
         overflow-y: auto; background: #f7f2ec; color: #1d1a16; border: 1px solid rgba(0,0,0,0.1);
-        border-radius: 13px; padding: 24px 24px calc(18px + env(safe-area-inset-bottom));
+        border-radius: 13px; padding: 22px 24px calc(18px + env(safe-area-inset-bottom));
         box-shadow: 0 -14px 34px rgba(0,0,0,0.5);
       }
       .mobile-filter-sheet.visible { display: block; }
-      .mobile-filter-header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:24px; }
+      .mobile-filter-header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:18px; }
       .mobile-filter-title { color:#1d1a16; font-family: Georgia, 'Times New Roman', serif; font-weight:400; font-size:1.65rem; }
       .mobile-filter-close { border:0; background:transparent; color:#1d1a16; border-radius:0; padding:2px; font-size:2rem; line-height:1; }
       .mobile-filter-grid { display:grid; grid-template-columns: 1fr; gap:0; }
       .mobile-filter-grid .full { grid-column: 1 / -1; }
       .mobile-filter-section {
-        border-top: 1px solid #d4cdc4; padding: 15px 0;
+        border-top: 1px solid #d4cdc4; padding: 11px 0;
       }
       .mobile-filter-section-title {
-        color:#1d1a16; font-size:0.82rem; font-weight:900; letter-spacing:0.16em; text-transform:uppercase; margin-bottom:9px;
+        color:#1d1a16; font-size:0.82rem; font-weight:900; letter-spacing:0.16em; text-transform:uppercase; margin-bottom:7px;
       }
       .mobile-filter-sheet label { color:#1d1a16; font-size:0.78rem; font-weight:800; margin-bottom:4px; }
       .mobile-filter-sheet .form-control,
@@ -540,7 +543,7 @@
         <a href="{{ url_for('home') }}" class="btn btn-sm mobile-hide" style="background:#3d0f0f;border:1px solid #5a2d0c;color:#c9a96e;">← Home</a>
         <span class="navbar-brand mb-0">
           <span class="desktop-title-text">🍷 {{ cellar_display_name }}'s Cellar</span>
-          <span class="mobile-title-text">{{ cellar_display_name }}'s wine cellar</span>
+          <span class="mobile-title-text">🍷 {{ cellar_display_name }}'s wine cellar</span>
           {% if not is_own_cellar %} <span style="font-size:0.75rem;color:#a07850;font-weight:normal;">(view only)</span>{% endif %}
         </span>
         {% if auth_enabled %}
@@ -645,7 +648,7 @@
           <div class="mobile-filter-family">
             <div class="mobile-filter-family-title">Type</div>
             <div class="mobile-filter-family-options">
-              {% for t in ['Red', 'White', 'Rose', 'Sparkling', 'Orange'] %}
+              {% for t in ['Red', 'White', 'Rose'] %}
               <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(type_value=t) }}" class="mobile-filter-chip {% if type_filter==t %}active{% endif %}" title="{{ t }}">{{ t }}</a>
               {% endfor %}
             </div>
@@ -653,18 +656,47 @@
           <div class="mobile-filter-family">
             <div class="mobile-filter-family-title">Origin</div>
             <div class="mobile-filter-family-options">
-              {% if 'France' in origins %}<a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='France') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='France' %}active{% endif %}" title="France">🇫🇷</a>{% endif %}
-              {% if 'Italy' in origins %}<a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Italy') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Italy' %}active{% endif %}" title="Italy">🇮🇹</a>{% endif %}
-              {% if 'United States' in origins %}<a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='United States') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='United States' %}active{% endif %}" title="United States">🇺🇸</a>{% elif 'USA' in origins %}<a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='USA') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='USA' %}active{% endif %}" title="USA">🇺🇸</a>{% endif %}
-              {% if 'Spain' in origins %}<a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Spain') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Spain' %}active{% endif %}" title="Spain">🇪🇸</a>{% endif %}
-              {% if 'Portugal' in origins %}<a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Portugal') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Portugal' %}active{% endif %}" title="Portugal">🇵🇹</a>{% endif %}
-              {% if 'Australia' in origins %}<a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Australia') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Australia' %}active{% endif %}" title="Australia">🇦🇺</a>{% endif %}
+              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='United States') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='United States' %}active{% endif %}" title="United States">🇺🇸</a>
+              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='France') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='France' %}active{% endif %}" title="France">🇫🇷</a>
+              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Italy') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Italy' %}active{% endif %}" title="Italy">🇮🇹</a>
+            </div>
+          </div>
+          <div class="mobile-filter-family wide">
+            <div class="mobile-filter-family-title">Sticker</div>
+            <div class="mobile-filter-family-options">
+              {% for c in ['Green', 'Yellow', 'Orange', 'Red', 'Blue'] %}
+              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(color_value=c) }}" class="mobile-filter-chip {% if color_filter==c %}active{% endif %}" title="{{ c }}"><span class="mobile-sticker-dot color-dot-{{ c }}"></span></a>
+              {% endfor %}
             </div>
           </div>
           <div class="mobile-filter-family">
+            <div class="mobile-filter-family-title">Location</div>
+            <div class="mobile-filter-family-options">
+              {% for loc in user_locations %}
+              <a href="?status=in_collection{{ preserved_quick_params(loc) }}" class="mobile-filter-chip {% if storage_filter==loc %}active{% endif %}" title="{{ loc }}">{{ loc }}</a>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="mobile-filter-family">
+            <div class="mobile-filter-family-title">Type</div>
+            <div class="mobile-filter-family-options">
+              {% for t in ['Red', 'White', 'Rose'] %}
+              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(type_value=t) }}" class="mobile-filter-chip {% if type_filter==t %}active{% endif %}" title="{{ t }}">{{ t }}</a>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="mobile-filter-family">
+            <div class="mobile-filter-family-title">Origin</div>
+            <div class="mobile-filter-family-options">
+              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='United States') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='United States' %}active{% endif %}" title="United States">🇺🇸</a>
+              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='France') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='France' %}active{% endif %}" title="France">🇫🇷</a>
+              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Italy') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Italy' %}active{% endif %}" title="Italy">🇮🇹</a>
+            </div>
+          </div>
+          <div class="mobile-filter-family wide">
             <div class="mobile-filter-family-title">Sticker</div>
             <div class="mobile-filter-family-options">
-              {% for c in ['Red', 'Blue', 'Orange', 'Yellow', 'Green'] %}
+              {% for c in ['Green', 'Yellow', 'Orange', 'Red', 'Blue'] %}
               <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(color_value=c) }}" class="mobile-filter-chip {% if color_filter==c %}active{% endif %}" title="{{ c }}"><span class="mobile-sticker-dot color-dot-{{ c }}"></span></a>
               {% endfor %}
             </div>
@@ -775,7 +807,10 @@
           {% if mobile_active_filter_count.total %}<span class="mobile-filter-count">{{ mobile_active_filter_count.total }}</span>{% endif %}
           <span class="mobile-filter-icon"><i></i><i></i><i></i><span></span></span>
         </button>
-        <div class="mobile-product-count">{{ wines|length }} wine{% if wines|length != 1 %}s{% endif %}</div>
+        <div class="mobile-view-toggle" id="mobileViewToggle" aria-label="Choose mobile view">
+          <button type="button" class="mobile-view-btn" data-mobile-mode="comfort">Cards</button>
+          <button type="button" class="mobile-view-btn" data-mobile-mode="compact">List</button>
+        </div>
       </div>
       {% if status_filter or storage_filter or search or mobile_filters_active %}
       {% set current_bottle_count = namespace(total=0) %}
@@ -800,10 +835,7 @@
       <div class="mobile-view-summary-row">
         <div class="mobile-filter-summary visible">Viewing: Available</div>
       {% endif %}
-        <div class="mobile-view-toggle" id="mobileViewToggle" aria-label="Choose mobile view">
-          <button type="button" class="mobile-view-btn" data-mobile-mode="comfort">Cards</button>
-          <button type="button" class="mobile-view-btn" data-mobile-mode="compact">List</button>
-        </div>
+        <div class="mobile-product-count">{{ wines|length }} wine{% if wines|length != 1 %}s{% endif %}</div>
       </div>
     </div>
 
