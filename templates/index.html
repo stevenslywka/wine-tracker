@@ -462,24 +462,41 @@
 
     <!-- Quick filters: location counts + status + rec button -->
     <div class="card p-2 mb-2 cellar-controls-card">
+      {% macro preserved_quick_params(storage_value=None) -%}
+        {%- if storage_value %}&storage_location={{ storage_value|urlencode }}{% endif -%}
+        {%- if search %}&q={{ search|urlencode }}{% endif -%}
+        {%- if varietal_filter %}&varietal={{ varietal_filter|urlencode }}{% endif -%}
+        {%- if region_filter %}&region={{ region_filter|urlencode }}{% endif -%}
+        {%- if origin_filter %}&origin={{ origin_filter|urlencode }}{% endif -%}
+        {%- if color_filter %}&color_code={{ color_filter|urlencode }}{% endif -%}
+        {%- if vintage_min %}&vintage_min={{ vintage_min|urlencode }}{% endif -%}
+        {%- if vintage_max %}&vintage_max={{ vintage_max|urlencode }}{% endif -%}
+        {%- if price_min %}&price_min={{ price_min|urlencode }}{% endif -%}
+        {%- if price_max %}&price_max={{ price_max|urlencode }}{% endif -%}
+        {%- if type_filter %}&wine_type={{ type_filter|urlencode }}{% endif -%}
+        {%- if size_filter %}&size_ml={{ size_filter|urlencode }}{% endif -%}
+        {%- if retailer_filter %}&retailer={{ retailer_filter|urlencode }}{% endif -%}
+        {%- if sort %}&sort={{ sort|urlencode }}{% endif -%}
+        {%- if order %}&order={{ order|urlencode }}{% endif -%}
+      {%- endmacro %}
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
 
         <!-- Location count chips -->
         <div class="mobile-quick-filter-row" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex:1;">
-          <a href="?status=in_collection&q={{ search }}" class="quick-chip {% if status_filter=='in_collection' and not storage_filter %}active{% endif %}" style="text-decoration:none;">
+          <a href="?status=in_collection{{ preserved_quick_params() }}" class="quick-chip {% if status_filter=='in_collection' and not storage_filter %}active{% endif %}" style="text-decoration:none;">
             Available
             <span class="chip-count">{{ location_counts.values()|sum }}</span>
           </a>
           {% for loc in user_locations %}
-          <a href="?status=in_collection&storage_location={{ loc }}&q={{ search }}" class="quick-chip loc-color-{{ loop.index0 % 5 }} {% if storage_filter==loc %}active{% endif %}" style="text-decoration:none;">
+          <a href="?status=in_collection{{ preserved_quick_params(loc) }}" class="quick-chip loc-color-{{ loop.index0 % 5 }} {% if storage_filter==loc %}active{% endif %}" style="text-decoration:none;">
             {{ loc }}
             <span class="chip-count">{{ location_counts.get(loc, 0) }}</span>
           </a>
           {% endfor %}
-          <a href="?status=not_shipped&q={{ search }}" class="quick-chip {% if status_filter=='not_shipped' %}active{% endif %}" style="text-decoration:none;">
+          <a href="?status=not_shipped{{ preserved_quick_params() }}" class="quick-chip {% if status_filter=='not_shipped' %}active{% endif %}" style="text-decoration:none;">
             Not Shipped{% if not_shipped_count %} <span class="chip-count">{{ not_shipped_count }}</span>{% endif %}
           </a>
-          <a href="?status=drank&q={{ search }}" class="quick-chip {% if status_filter=='drank' %}active{% endif %}" style="text-decoration:none;">
+          <a href="?status=drank{{ preserved_quick_params() }}" class="quick-chip {% if status_filter=='drank' %}active{% endif %}" style="text-decoration:none;">
             Drank{% if drank_count %} <span class="chip-count">{{ drank_count }}</span>{% endif %}
           </a>
           {% if status_filter or storage_filter or search or varietal_filter or region_filter or origin_filter or vintage_min or vintage_max or price_min or price_max or color_filter or type_filter or size_filter or retailer_filter %}
@@ -962,7 +979,7 @@
   <div class="mobile-bottom-bar" id="mobileBottomBar">
     <button type="button" data-mobile-action="filters">Filters</button>
     {% if access_level == 'edit' %}
-    <button type="button" class="primary" data-bs-toggle="modal" data-bs-target="#addWineModal">Add</button>
+    <button type="button" class="primary" data-bs-toggle="modal" data-bs-target="#addWineModal">Add Wine</button>
     {% endif %}
     <button type="button" data-mobile-action="top">Top</button>
   </div>
