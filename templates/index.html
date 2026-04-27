@@ -597,6 +597,10 @@
         <button type="button" class="btn btn-sm mobile-filter-trigger {% if mobile_filters_active %}has-filters{% endif %}" data-mobile-action="filters">Filters</button>
       </div>
       {% if status_filter or storage_filter or search or mobile_filters_active %}
+      {% set current_bottle_count = namespace(total=0) %}
+      {% for wine in wines %}
+        {% set current_bottle_count.total = current_bottle_count.total + (wine.quantity or 0) %}
+      {% endfor %}
       <div class="mobile-filter-summary visible">
         Viewing:
         {% if storage_filter %}{{ storage_filter }}
@@ -607,6 +611,7 @@
         {% else %}Filtered{% endif %}
         {% if search %} &middot; "{{ search }}"{% endif %}
         &middot; {{ wines|length }} wine{% if wines|length != 1 %}s{% endif %}
+        &middot; {{ current_bottle_count.total }} bottle{% if current_bottle_count.total != 1 %}s{% endif %}
         <a href="{{ url_for('cellar', username=cellar_username) }}">Clear</a>
       </div>
       {% endif %}
