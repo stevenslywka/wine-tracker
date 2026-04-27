@@ -484,6 +484,61 @@
       .notes-section { padding: 12px; }
       .mobile-note-block .edit-label { display: none; }
       .mobile-bottom-actions { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .hero-sticker {
+        width: 13px;
+        height: 13px;
+        display: inline-block;
+        border-radius: 50%;
+        border: 2px solid rgba(255,255,255,0.28);
+        vertical-align: -2px;
+        margin-left: 6px;
+      }
+      .quick-label,
+      .quick-control,
+      .quick-value { text-align: center; }
+      .quick-strip { grid-template-columns: 0.86fr 0.94fr 1.24fr; }
+      .priority-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 7px;
+      }
+      .field-card {
+        padding: 8px 7px;
+        min-height: 68px;
+      }
+      .field-card.wide { grid-column: 1 / -1; }
+      .field-card .edit-label {
+        text-align: center;
+        font-size: 0.62rem;
+        margin-bottom: 4px;
+      }
+      .field-card .mobile-input,
+      .field-card .mobile-select,
+      .field-card .read-only-value {
+        text-align: center !important;
+        font-size: 0.82rem;
+        padding: 4px 0;
+      }
+      .field-card .mobile-textarea {
+        font-size: 0.88rem;
+      }
+      .compact-color-picker {
+        justify-content: center;
+        gap: 2px;
+      }
+      .compact-color-picker .color-choice {
+        width: 12px;
+        height: 12px;
+        border-width: 1px;
+      }
+      .mobile-details summary::after,
+      .mobile-details[open] summary::after { content: ""; }
+      .mobile-details .edit-row form:not(.status-grid):not(.color-picker)::after { content: none; }
+      .mobile-details .mobile-input,
+      .mobile-details .mobile-select,
+      .mobile-details .read-only-value {
+        text-align: left !important;
+        padding-left: 0;
+      }
     }
   </style>
 </head>
@@ -527,7 +582,10 @@
       <div class="mobile-bottle placeholder">No image</div>
       {% endif %}
       <div class="hero-copy">
-        <div class="hero-kicker">{{ wine.wine_type or 'Wine' }}{% if wine.vintage %} &middot; {{ wine.vintage }}{% endif %}</div>
+        <div class="hero-kicker">
+          {{ wine.wine_type or 'Wine' }}{% if wine.vintage %} &middot; {{ wine.vintage }}{% endif %}
+          <span id="heroSticker" class="hero-sticker {% if wine.color_code %}color-{{ wine.color_code }}{% endif %}" title="{{ wine.color_code or 'No sticker' }}" {% if not wine.color_code %}style="display:none;"{% endif %}></span>
+        </div>
         {% if can_edit %}
         <form data-detail-form action="/wine/{{ wine.id }}/wine_name" method="post">
           <textarea class="hero-name" name="wine_name" rows="3" spellcheck="false">{{ wine.wine_name or '' }}</textarea>
@@ -577,7 +635,7 @@
         {% endif %}
       </div>
       <div class="quick-tile">
-        <div class="quick-label">Drink</div>
+        <div class="quick-label">Drinking Window</div>
         {% if can_edit %}
         <form data-detail-form action="/wine/{{ wine.id }}/drinking_window" method="post">
           <input class="quick-control mobile-drinking-window" name="drinking_window" id="drinkControl" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}" value="{{ wine.drinking_window or '' }}" placeholder="Not set">
@@ -592,7 +650,7 @@
       <div class="section-title">Cellar</div>
       <div class="priority-grid">
         <div class="field-card">
-          <span class="edit-label">Quantity</span>
+          <span class="edit-label">Qty</span>
           {% if can_edit %}
           <form data-detail-form action="/wine/{{ wine.id }}/quantity" method="post"><input class="mobile-input" name="quantity" type="number" min="1" inputmode="numeric" value="{{ wine.quantity or '' }}" placeholder="-"></form>
           {% else %}<div class="read-only-value" style="text-align:left;">{{ wine.quantity or '-' }}</div>{% endif %}
@@ -603,7 +661,7 @@
           <form data-detail-form action="/wine/{{ wine.id }}/retailer" method="post"><input class="mobile-input" name="retailer" type="text" value="{{ wine.retailer or '' }}" placeholder="Not set"></form>
           {% else %}<div class="read-only-value" style="text-align:left;">{{ wine.retailer or 'Not set' }}</div>{% endif %}
         </div>
-        <div class="field-card wide">
+        <div class="field-card">
           <span class="edit-label">Sticker</span>
           {% if can_edit %}
           <form class="color-picker compact-color-picker" data-detail-form data-color-form action="/wine/{{ wine.id }}/color" method="post">
@@ -613,21 +671,11 @@
           </form>
           {% else %}<div class="read-only-value" style="text-align:left;">{{ wine.color_code or 'None' }}</div>{% endif %}
         </div>
-      </div>
-    </section>
-
-    <section class="detail-section" id="tastingFields">
-      <div class="section-title">Rating & Notes</div>
-      <div class="priority-grid">
         <div class="field-card">
           <span class="edit-label">Rating</span>
           {% if can_edit %}
           <form data-detail-form action="/wine/{{ wine.id }}/rating" method="post"><input class="mobile-input" id="ratingInput" name="my_rating" type="number" min="0" max="5" step="0.1" inputmode="decimal" value="{{ wine.my_rating if wine.my_rating is not none else '' }}" placeholder="0-5"></form>
           {% else %}<div class="read-only-value" style="text-align:left;">{{ "%.1f"|format(wine.my_rating) if wine.my_rating is not none else 'Not rated' }}</div>{% endif %}
-        </div>
-        <div class="field-card">
-          <span class="edit-label">Drink</span>
-          <div class="read-only-value mobile-drinking-window" style="text-align:left;" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}">{{ wine.drinking_window or 'Not set' }}</div>
         </div>
         <div class="field-card wide" id="notesFields">
           <span class="edit-label">Notes</span>
@@ -912,6 +960,12 @@
           colorForm.querySelectorAll('[data-color-choice]').forEach(btn => btn.classList.toggle('active', btn === button));
           const stickerSummary = document.getElementById('stickerSummary');
           if (stickerSummary) stickerSummary.textContent = button.dataset.colorChoice || 'None';
+          const heroSticker = document.getElementById('heroSticker');
+          if (heroSticker) {
+            heroSticker.className = `hero-sticker ${button.dataset.colorChoice ? `color-${button.dataset.colorChoice}` : ''}`;
+            heroSticker.title = button.dataset.colorChoice ? `${button.dataset.colorChoice} sticker` : 'No sticker';
+            heroSticker.style.display = button.dataset.colorChoice ? 'inline-block' : 'none';
+          }
           submitDetailForm(colorForm);
         });
       });
