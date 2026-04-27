@@ -35,22 +35,23 @@
 
     @media (max-width: 767px) {
       :root {
-        --mobile-page: #12100e;
-        --mobile-panel: #1d1712;
-        --mobile-panel-2: #251d17;
-        --mobile-line: #43362c;
-        --mobile-text: #fff8ee;
-        --mobile-muted: #cbb8a1;
-        --mobile-label: #d7b377;
-        --mobile-accent: #e0b86e;
-        --mobile-green: #8ccaa2;
+        --mobile-page: #11100f;
+        --mobile-panel: #191613;
+        --mobile-panel-2: #221d18;
+        --mobile-line: rgba(255,248,238,0.12);
+        --mobile-text: #fffaf2;
+        --mobile-muted: #cfbfae;
+        --mobile-label: #d9b76f;
+        --mobile-accent: #e7bd70;
+        --mobile-green: #8fd0a7;
+        --mobile-burgundy: #7f2022;
       }
       body { background: var(--mobile-page); color: var(--mobile-text); }
       .desktop-detail-page, body > .navbar { display: none !important; }
       .mobile-detail-page {
         display: block;
         min-height: 100vh;
-        padding: 12px 12px calc(24px + env(safe-area-inset-bottom));
+        padding: 10px 12px calc(90px + env(safe-area-inset-bottom));
       }
       .mobile-topbar {
         display: flex;
@@ -60,11 +61,11 @@
         margin-bottom: 12px;
       }
       .mobile-back {
-        width: 38px;
-        height: 38px;
+        width: 40px;
+        height: 40px;
         border-radius: 999px;
-        border: 1px solid var(--mobile-line);
-        background: #191410;
+        border: 1px solid rgba(255,248,238,0.14);
+        background: #171411;
         color: var(--mobile-text);
         font-size: 1.25rem;
         line-height: 1;
@@ -86,21 +87,23 @@
       }
       .mobile-hero {
         display: grid;
-        grid-template-columns: 104px minmax(0, 1fr);
-        gap: 14px;
-        padding: 14px;
-        border: 1px solid var(--mobile-line);
-        border-radius: 8px;
-        background: var(--mobile-panel);
-        box-shadow: 0 12px 30px rgba(0,0,0,0.22);
+        grid-template-columns: 112px minmax(0, 1fr);
+        gap: 16px;
+        padding: 14px 14px 16px;
+        border: 1px solid rgba(255,248,238,0.12);
+        border-radius: 10px;
+        background:
+          linear-gradient(150deg, rgba(127,32,34,0.26), rgba(17,16,15,0) 56%),
+          var(--mobile-panel);
+        box-shadow: 0 14px 34px rgba(0,0,0,0.28);
       }
       .mobile-bottle {
-        width: 104px;
-        height: 146px;
-        border-radius: 7px;
+        width: 112px;
+        height: 158px;
+        border-radius: 8px;
         object-fit: cover;
         background: #0c0907;
-        border: 1px solid var(--mobile-line);
+        border: 1px solid rgba(255,248,238,0.12);
       }
       .mobile-bottle.placeholder {
         display: flex;
@@ -114,7 +117,7 @@
       .hero-copy { min-width: 0; }
       .hero-kicker {
         color: var(--mobile-label);
-        font-size: 0.74rem;
+        font-size: 0.72rem;
         font-weight: 900;
         text-transform: uppercase;
         letter-spacing: 0.04em;
@@ -125,8 +128,8 @@
         border: 0;
         background: transparent;
         color: var(--mobile-text);
-        font-size: 1.18rem;
-        line-height: 1.14;
+        font-size: 1.26rem;
+        line-height: 1.12;
         font-weight: 900;
         padding: 0;
         resize: none;
@@ -135,80 +138,95 @@
       .hero-name:focus { outline: 0; color: #fff; }
       .hero-meta {
         color: var(--mobile-muted);
-        font-size: 0.86rem;
+        font-size: 0.9rem;
         line-height: 1.35;
-        margin-top: 8px;
+        margin-top: 10px;
       }
       .quick-strip {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        display: flex;
         gap: 8px;
-        margin: 10px 0 14px;
+        margin: 12px -12px 10px;
+        overflow-x: auto;
+        padding: 0 12px 3px;
+        scrollbar-width: none;
       }
+      .quick-strip::-webkit-scrollbar { display: none; }
       .quick-tile {
-        border: 1px solid var(--mobile-line);
-        border-radius: 8px;
+        flex: 0 0 auto;
+        min-width: 128px;
+        border: 1px solid rgba(255,248,238,0.12);
+        border-radius: 999px;
         background: var(--mobile-panel-2);
-        padding: 9px 10px;
-        min-height: 58px;
+        padding: 8px 11px;
+        min-height: 0;
       }
       .quick-label {
         color: var(--mobile-label);
         text-transform: uppercase;
-        font-size: 0.66rem;
+        font-size: 0.58rem;
         letter-spacing: 0.04em;
         font-weight: 900;
-        margin-bottom: 4px;
+        margin-bottom: 2px;
       }
       .quick-value {
         color: var(--mobile-text);
-        font-size: 0.96rem;
+        font-size: 0.86rem;
         line-height: 1.15;
         font-weight: 850;
         overflow-wrap: anywhere;
       }
       .detail-section {
-        border: 1px solid var(--mobile-line);
-        border-radius: 8px;
-        background: var(--mobile-panel);
-        margin-top: 12px;
-        overflow: hidden;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        margin-top: 20px;
+        overflow: visible;
       }
       .section-title {
         color: var(--mobile-label);
-        font-size: 0.75rem;
+        font-size: 0.72rem;
         text-transform: uppercase;
         letter-spacing: 0.06em;
         font-weight: 900;
-        padding: 12px 13px 7px;
+        padding: 0 2px 7px;
       }
       .edit-row {
         display: grid;
         grid-template-columns: 96px minmax(0, 1fr);
         align-items: center;
         gap: 10px;
-        min-height: 48px;
-        padding: 8px 13px;
-        border-top: 1px solid rgba(255,255,255,0.07);
+        min-height: 50px;
+        padding: 8px 0;
+        border-top: 1px solid var(--mobile-line);
       }
-      .edit-row:first-of-type { border-top: 0; }
+      .section-title + .edit-row { border-top: 0; }
       .edit-label {
         color: var(--mobile-muted);
-        font-size: 0.78rem;
+        font-size: 0.8rem;
         font-weight: 850;
+      }
+      .edit-row form { position: relative; }
+      .edit-row form:not(.status-grid):not(.color-picker)::after {
+        content: ">";
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #8f7d6c;
+        pointer-events: none;
       }
       .mobile-input,
       .mobile-select,
       .mobile-textarea {
         width: 100%;
         border: 1px solid transparent;
-        border-radius: 7px;
+        border-radius: 8px;
         background: transparent;
         color: var(--mobile-text);
         font-size: 0.96rem;
         font-weight: 800;
         text-align: right;
-        padding: 6px 7px;
+        padding: 7px 18px 7px 7px;
       }
       .mobile-input::placeholder,
       .mobile-textarea::placeholder { color: #7e6b58; }
@@ -226,17 +244,18 @@
         background-position: calc(100% - 12px) 50%, calc(100% - 7px) 50%;
         background-size: 5px 5px, 5px 5px;
         background-repeat: no-repeat;
-        padding-right: 22px;
+        padding-right: 26px;
       }
       .mobile-textarea {
         display: block;
-        min-height: 112px;
+        min-height: 120px;
         text-align: left;
         line-height: 1.35;
         font-weight: 700;
         resize: vertical;
-        background: #14110e;
-        border-color: rgba(255,255,255,0.08);
+        background: var(--mobile-panel);
+        border-color: rgba(255,248,238,0.12);
+        padding: 11px;
       }
       .status-grid {
         display: grid;
@@ -244,8 +263,8 @@
         gap: 7px;
       }
       .status-choice {
-        border: 1px solid var(--mobile-line);
-        border-radius: 7px;
+        border: 1px solid rgba(255,248,238,0.12);
+        border-radius: 999px;
         background: #16120f;
         color: var(--mobile-muted);
         padding: 8px 4px;
@@ -254,7 +273,7 @@
       }
       .status-choice.active {
         border-color: var(--mobile-accent);
-        background: #46331c;
+        background: rgba(231,189,112,0.16);
         color: #fff5dc;
       }
       .color-picker {
@@ -285,7 +304,16 @@
           linear-gradient(45deg, transparent 46%, #8b7660 48%, #8b7660 52%, transparent 54%),
           #17120e;
       }
-      .mobile-note-block { padding: 8px 13px 13px; border-top: 1px solid rgba(255,255,255,0.07); }
+      .notes-section {
+        margin-top: 18px;
+        padding: 14px;
+        border: 1px solid rgba(255,248,238,0.12);
+        border-radius: 10px;
+        background:
+          linear-gradient(145deg, rgba(231,189,112,0.08), rgba(231,189,112,0) 45%),
+          var(--mobile-panel);
+      }
+      .mobile-note-block { padding: 0; border-top: 0; }
       .field-hint {
         color: #8d7b69;
         font-size: 0.72rem;
@@ -298,6 +326,37 @@
         font-weight: 800;
         text-align: right;
         overflow-wrap: anywhere;
+      }
+      .mobile-bottom-actions {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 20;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 7px;
+        padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+        background: rgba(17,16,15,0.94);
+        border-top: 1px solid rgba(255,248,238,0.12);
+        backdrop-filter: blur(12px);
+      }
+      .mobile-bottom-actions button,
+      .mobile-bottom-actions a {
+        border: 1px solid rgba(255,248,238,0.12);
+        border-radius: 999px;
+        background: #1c1713;
+        color: var(--mobile-text);
+        text-decoration: none;
+        text-align: center;
+        font-size: 0.76rem;
+        font-weight: 900;
+        padding: 10px 6px;
+        line-height: 1;
+      }
+      .mobile-bottom-actions .primary-action {
+        background: var(--mobile-burgundy);
+        border-color: #a64b4c;
       }
     }
   </style>
@@ -362,7 +421,7 @@
       </div>
     </div>
 
-    <section class="detail-section">
+    <section class="detail-section" id="cellarFields">
       <div class="section-title">Cellar</div>
       <div class="edit-row">
         <div class="edit-label">Status</div>
@@ -437,7 +496,7 @@
       </div>
     </section>
 
-    <section class="detail-section">
+    <section class="detail-section" id="wineFields">
       <div class="section-title">Wine</div>
       <div class="edit-row">
         <div class="edit-label">Type</div>
@@ -474,8 +533,8 @@
       {% endfor %}
     </section>
 
-    <section class="detail-section">
-      <div class="section-title">Tasting</div>
+    <section class="detail-section" id="tastingFields">
+      <div class="section-title">Rating</div>
       <div class="edit-row">
         <div class="edit-label">Rating</div>
         {% if can_edit %}
@@ -486,6 +545,10 @@
         <div class="read-only-value">{{ "%.1f"|format(wine.my_rating) if wine.my_rating is not none else 'Not rated' }}</div>
         {% endif %}
       </div>
+    </section>
+
+    <section class="notes-section" id="notesFields">
+      <div class="section-title">Notes</div>
       <div class="mobile-note-block">
         <div class="edit-label mb-2">Notes</div>
         {% if can_edit %}
@@ -499,7 +562,7 @@
       </div>
     </section>
 
-    <section class="detail-section">
+    <section class="detail-section" id="purchaseFields">
       <div class="section-title">Purchase</div>
       {% for field, label, value, input_type in [
         ('retailer', 'Retailer', wine.retailer, 'text'),
@@ -523,6 +586,17 @@
         <div class="read-only-value">{% if wine.total_price %}${{ "%.2f"|format(wine.total_price) }}{% else %}Not set{% endif %}</div>
       </div>
     </section>
+
+    <nav class="mobile-bottom-actions" aria-label="Wine detail actions">
+      <button type="button" onclick="history.back()">Back</button>
+      <a href="#cellarFields">Cellar</a>
+      <a href="#notesFields">Notes</a>
+      {% if can_edit %}
+      <button type="button" class="primary-action" id="markDrankAction">Drank</button>
+      {% else %}
+      <a class="primary-action" href="#wineFields">Wine</a>
+      {% endif %}
+    </nav>
   </div>
 
   <div class="container desktop-detail-page" style="max-width: 720px;">
@@ -705,6 +779,14 @@
           if (statusSummary) statusSummary.textContent = button.textContent.trim() === 'Shipping' ? 'Not shipped' : button.textContent.trim();
           submitDetailForm(statusForm);
         });
+      });
+
+      document.getElementById('markDrankAction')?.addEventListener('click', () => {
+        const drankButton = statusForm?.querySelector('[data-status-choice="drank"]');
+        if (drankButton) {
+          drankButton.click();
+          document.getElementById('cellarFields')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       });
 
       const storageForm = document.querySelector('[data-storage-form]');
