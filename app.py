@@ -318,7 +318,16 @@ def cellar(username):
     if region_filter:
         base_query += f" AND region = {p}"
         base_params.append(region_filter)
-    if origin_filter:
+    us_origin_values = ("United States", "USA", "US", "United States of America",
+                        "California", "Oregon", "Washington", "New York")
+    primary_origin_values = us_origin_values + ("France", "Italy")
+    if origin_filter == "United States":
+        base_query += f" AND origin IN ({','.join([p] * len(us_origin_values))})"
+        base_params.extend(us_origin_values)
+    elif origin_filter == "Other":
+        base_query += f" AND origin IS NOT NULL AND TRIM(origin) != '' AND origin NOT IN ({','.join([p] * len(primary_origin_values))})"
+        base_params.extend(primary_origin_values)
+    elif origin_filter:
         base_query += f" AND origin = {p}"
         base_params.append(origin_filter)
     if storage_filter:
