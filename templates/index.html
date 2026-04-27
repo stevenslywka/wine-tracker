@@ -307,18 +307,24 @@
       .card.p-3.mb-2 { padding: 8px !important; margin-bottom: 0 !important; border-radius: 0; border-left: 0; border-right: 0; }
       .cellar-controls-card {
         order: 2; background: #160800; border: 0; border-radius: 0; margin: 0 !important;
-        padding: 6px 8px 8px !important;
+        padding: 5px 8px 7px !important;
       }
       .cellar-controls-card > div:first-child { display: block !important; }
       .mobile-quick-filter-row {
         flex-wrap: nowrap !important; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none;
-        gap: 6px !important;
+        gap: 5px !important;
       }
       .mobile-quick-filter-row::-webkit-scrollbar { display: none; }
       .desktop-filter-actions, .desktop-more-filters { display: none !important; }
       .cellar-controls-card .quick-chip {
-        flex: 0 0 auto; border-radius: 999px; padding: 6px 11px; font-size: 0.77rem;
-        background: #241000; border-color: #4a2208;
+        flex: 0 0 auto; border-radius: 999px; padding: 4px 9px; font-size: 0.72rem;
+        background: transparent; border-color: #4a2208; color: #b58b61; font-weight: 700;
+      }
+      .cellar-controls-card .quick-chip.active {
+        background: #3d1a00; border-color: #c9a96e; color: #f5e6d3;
+      }
+      .cellar-controls-card .quick-chip .chip-count {
+        background: rgba(201,169,110,0.14); color: #c9a96e; padding: 0 5px;
       }
       #filterForm > div { gap: 6px !important; }
       #filterForm .form-control,
@@ -327,20 +333,27 @@
       .btn-wine, .btn { font-size: 0.8rem; padding: 4px 10px; }
       .mobile-browse-tools {
         display: block; position: sticky; top: 0; z-index: 50; order: 1;
-        background: #1a0a00; border-bottom: 1px solid #4a2208; padding: 8px;
+        background: #1a0a00; border-bottom: 1px solid #4a2208; padding: 7px 8px 6px;
         box-shadow: 0 8px 18px rgba(0,0,0,0.24);
       }
-      .mobile-search-row { display: flex; gap: 6px; align-items: center; }
-      .mobile-search-row .form-control { flex: 1; min-width: 0; }
+      .mobile-command-row { display: grid; grid-template-columns: minmax(0, 1fr) 104px 72px; gap: 6px; align-items: center; }
+      .mobile-search-form { min-width: 0; }
+      .mobile-search-form .form-control { width: 100%; min-width: 0; height: 32px; border-radius: 8px; font-size: 0.84rem; }
+      .mobile-sort-select { height: 32px; border-radius: 8px; font-size: 0.78rem; padding-left: 8px; padding-right: 22px; }
       .mobile-filter-trigger {
-        white-space: nowrap; background:#2a1200; border:1px solid #5a2d0c; color:#f5e6d3; border-radius:7px;
+        height: 32px; white-space: nowrap; background:#2a1200; border:1px solid #5a2d0c; color:#f5e6d3; border-radius:8px; padding: 0 8px;
       }
       .mobile-filter-trigger.has-filters { border-color:#c9a96e; color:#c9a96e; }
-      .mobile-sort-row { display: flex; gap: 6px; margin-top: 6px; }
-      .mobile-sort-row .form-select { flex: 1; min-width: 0; }
+      .mobile-view-row { display: flex; justify-content: flex-end; align-items: center; margin-top: 5px; }
+      .mobile-filter-summary {
+        display: none; margin-top: 5px; color: #c9a96e; font-size: 0.74rem; line-height: 1.2;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      .mobile-filter-summary.visible { display: block; }
+      .mobile-filter-summary a { color: #e08080; text-decoration: none; margin-left: 6px; }
       .mobile-view-toggle {
         display: grid; grid-template-columns: 1fr 1fr; background:#241000; border:1px solid #5a2d0c;
-        border-radius:8px; overflow:hidden; flex: 0 0 116px; height: 31px;
+        border-radius:8px; overflow:hidden; width: 116px; height: 29px;
       }
       .mobile-view-btn {
         border:0; background:transparent; color:#a07850; font-size:0.76rem; line-height:1; padding:0;
@@ -454,7 +467,7 @@
         <!-- Location count chips -->
         <div class="mobile-quick-filter-row" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;flex:1;">
           <a href="?status=in_collection&q={{ search }}" class="quick-chip {% if status_filter=='in_collection' and not storage_filter %}active{% endif %}" style="text-decoration:none;">
-            All In Collection
+            Available
             <span class="chip-count">{{ location_counts.values()|sum }}</span>
           </a>
           {% for loc in user_locations %}
@@ -552,28 +565,26 @@
     </div>
 
     <div class="mobile-browse-tools" id="mobileBrowseTools">
-      <form method="get" class="mobile-search-row" id="mobileSearchForm">
-        {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
-        {% if storage_filter %}<input type="hidden" name="storage_location" value="{{ storage_filter }}">{% endif %}
-        {% if varietal_filter %}<input type="hidden" name="varietal" value="{{ varietal_filter }}">{% endif %}
-        {% if region_filter %}<input type="hidden" name="region" value="{{ region_filter }}">{% endif %}
-        {% if origin_filter %}<input type="hidden" name="origin" value="{{ origin_filter }}">{% endif %}
-        {% if type_filter %}<input type="hidden" name="wine_type" value="{{ type_filter }}">{% endif %}
-        {% if color_filter %}<input type="hidden" name="color_code" value="{{ color_filter }}">{% endif %}
-        {% if size_filter %}<input type="hidden" name="size_ml" value="{{ size_filter }}">{% endif %}
-        {% if retailer_filter %}<input type="hidden" name="retailer" value="{{ retailer_filter }}">{% endif %}
-        {% if vintage_min %}<input type="hidden" name="vintage_min" value="{{ vintage_min }}">{% endif %}
-        {% if vintage_max %}<input type="hidden" name="vintage_max" value="{{ vintage_max }}">{% endif %}
-        {% if price_min %}<input type="hidden" name="price_min" value="{{ price_min }}">{% endif %}
-        {% if price_max %}<input type="hidden" name="price_max" value="{{ price_max }}">{% endif %}
-        {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
-        {% if order %}<input type="hidden" name="order" value="{{ order }}">{% endif %}
-        <input type="text" name="q" class="form-control form-control-sm" placeholder="Search wines" value="{{ search }}" id="mobileSearchInput">
-        <button type="submit" class="btn btn-wine btn-sm">Go</button>
-        <button type="button" class="btn btn-sm mobile-filter-trigger {% if mobile_filters_active %}has-filters{% endif %}" data-mobile-action="filters">Filters{% if mobile_filters_active %} On{% endif %}</button>
-      </form>
-      <div class="mobile-sort-row">
-        <select class="form-select form-select-sm" id="mobileSortSelect" aria-label="Sort wines">
+      <div class="mobile-command-row">
+        <form method="get" class="mobile-search-form" id="mobileSearchForm">
+          {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+          {% if storage_filter %}<input type="hidden" name="storage_location" value="{{ storage_filter }}">{% endif %}
+          {% if varietal_filter %}<input type="hidden" name="varietal" value="{{ varietal_filter }}">{% endif %}
+          {% if region_filter %}<input type="hidden" name="region" value="{{ region_filter }}">{% endif %}
+          {% if origin_filter %}<input type="hidden" name="origin" value="{{ origin_filter }}">{% endif %}
+          {% if type_filter %}<input type="hidden" name="wine_type" value="{{ type_filter }}">{% endif %}
+          {% if color_filter %}<input type="hidden" name="color_code" value="{{ color_filter }}">{% endif %}
+          {% if size_filter %}<input type="hidden" name="size_ml" value="{{ size_filter }}">{% endif %}
+          {% if retailer_filter %}<input type="hidden" name="retailer" value="{{ retailer_filter }}">{% endif %}
+          {% if vintage_min %}<input type="hidden" name="vintage_min" value="{{ vintage_min }}">{% endif %}
+          {% if vintage_max %}<input type="hidden" name="vintage_max" value="{{ vintage_max }}">{% endif %}
+          {% if price_min %}<input type="hidden" name="price_min" value="{{ price_min }}">{% endif %}
+          {% if price_max %}<input type="hidden" name="price_max" value="{{ price_max }}">{% endif %}
+          {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+          {% if order %}<input type="hidden" name="order" value="{{ order }}">{% endif %}
+          <input type="search" name="q" class="form-control form-control-sm" placeholder="Search" value="{{ search }}" id="mobileSearchInput">
+        </form>
+        <select class="form-select form-select-sm mobile-sort-select" id="mobileSortSelect" aria-label="Sort wines">
           <option value="order_date|desc" {% if sort=='order_date' and order=='desc' %}selected{% endif %}>Recent first</option>
           <option value="wine_name|asc" {% if sort=='wine_name' and order=='asc' %}selected{% endif %}>Wine A-Z</option>
           <option value="vintage|desc" {% if sort=='vintage' and order=='desc' %}selected{% endif %}>Vintage newest</option>
@@ -583,6 +594,23 @@
           <option value="unit_price|desc" {% if sort=='unit_price' and order=='desc' %}selected{% endif %}>Price high-low</option>
           <option value="drinking_window|asc" {% if sort=='drinking_window' and order=='asc' %}selected{% endif %}>Drink window</option>
         </select>
+        <button type="button" class="btn btn-sm mobile-filter-trigger {% if mobile_filters_active %}has-filters{% endif %}" data-mobile-action="filters">Filters</button>
+      </div>
+      {% if status_filter or storage_filter or search or mobile_filters_active %}
+      <div class="mobile-filter-summary visible">
+        Viewing:
+        {% if storage_filter %}{{ storage_filter }}
+        {% elif status_filter == 'in_collection' %}Available
+        {% elif status_filter == 'not_shipped' %}Not Shipped
+        {% elif status_filter == 'drank' %}Drank
+        {% elif search %}Search
+        {% else %}Filtered{% endif %}
+        {% if search %} &middot; "{{ search }}"{% endif %}
+        &middot; {{ wines|length }} wine{% if wines|length != 1 %}s{% endif %}
+        <a href="{{ url_for('cellar', username=cellar_username) }}">Clear</a>
+      </div>
+      {% endif %}
+      <div class="mobile-view-row">
         <div class="mobile-view-toggle" id="mobileViewToggle" aria-label="Choose mobile view">
           <button type="button" class="mobile-view-btn" data-mobile-mode="comfort">Cards</button>
           <button type="button" class="mobile-view-btn" data-mobile-mode="compact">List</button>
@@ -931,7 +959,6 @@
     {% if access_level == 'edit' %}
     <button type="button" class="primary" data-bs-toggle="modal" data-bs-target="#addWineModal">Add</button>
     {% endif %}
-    <button type="button" data-mobile-action="view">View</button>
     <button type="button" data-mobile-action="top">Top</button>
   </div>
 
