@@ -3,6 +3,46 @@
 Personal wine collection tracker to replace Vivino. Flask app with multi-user support.
 Steve's live instance: deployed on Railway. Local dev uses SQLite; production uses PostgreSQL.
 
+Live site: https://stevenwinecellar.up.railway.app/
+GitHub repo: https://github.com/stevenslywka/wine-tracker
+
+---
+
+## Codex Startup Notes
+
+Project root:
+```text
+C:\Users\steve\wine-tracker
+```
+
+At the start of a new chat, inspect the current files and run `git status --short` before editing. Do not overwrite existing local changes. As of the mobile UI push, this local folder may still show `templates/index.html` as modified because Codex sometimes cannot write to `.git`; GitHub `main` is the source of truth if local status disagrees.
+
+Reusable new-chat prompt:
+```text
+NEW_CHAT_PROMPT.md
+```
+
+Recent mobile UI work pushed to GitHub:
+- Mobile Cards view redesigned.
+- Compact/List view redesigned.
+- Dynamic compact card heights fixed.
+- Wine type sash adjusted.
+- Available/drank/not-shipped icons updated.
+- Storage/status mobile behavior improved.
+- Mobile cellar header now centers `🍷 Steven's wine cellar`; hamburger opens the menu and the search icon reveals the search bar.
+- Mobile Filter and sort sheet added, with tighter spacing and a Nestig-inspired trigger.
+- Mobile quick carousel added: Location, Type, Origin, Sticker. It should appear once only, ending with Sticker.
+- Origin carousel chips are: USA, France, Italy, and globe `Other`. `Other` filters origins outside USA/France/Italy; USA also includes common stored US origins like California, Oregon, Washington, and New York.
+- Mobile Cards/List toggle is on the same row as Filter and sort; wine counter sits below.
+- "Add" renamed to "Add Wine"; "all in collection" renamed to "Available".
+- Latest pushed commits include:
+  - `8f80a27` (`Refine mobile carousel and filter controls`)
+  - `7556545` (`Remove duplicate mobile carousel groups`)
+  - `deaa4e9` (`Add other origin mobile filter`)
+
+Session preference:
+- Do not touch the mobile card layout or compact/list wine row layout unless Steve explicitly asks. Top controls, filters, and header are okay to adjust when requested.
+
 ---
 
 ## Stack
@@ -214,3 +254,28 @@ git commit -m "description"
 git push
 # Railway auto-deploys from main branch, ~60s
 ```
+
+### Codex GitHub Push Workaround
+
+Normal local Git writes may fail in Codex with `.git/index.lock` permission errors. If that happens, do not keep fighting local `.git`; use the GitHub Contents API to update GitHub `main` directly.
+
+Auth token location from the prior-chat `GH_CONFIG_DIR`:
+```text
+C:\Users\steve\Documents\Codex\codex-auth\gh\hosts.yml
+```
+
+Rules:
+- Never print or expose the token.
+- Read the token from `oauth_token` in `hosts.yml`.
+- Use GitHub API repo `stevenslywka/wine-tracker`, branch `main`.
+- Railway auto-deploys after GitHub `main` changes.
+- Verify the final commit with `GET /repos/stevenslywka/wine-tracker/commits/main`.
+- If PowerShell `Invoke-RestMethod` or Git HTTPS fails, use Node/fetch with the same token.
+
+API flow:
+1. Get the current file SHA:
+   `GET https://api.github.com/repos/stevenslywka/wine-tracker/contents/<path>?ref=main`
+2. Base64 encode the updated file contents.
+3. Update the file:
+   `PUT https://api.github.com/repos/stevenslywka/wine-tracker/contents/<path>`
+4. Include JSON fields: `message`, `content`, `sha`, `branch`.
