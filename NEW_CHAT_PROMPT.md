@@ -47,6 +47,7 @@ Current mobile UI state as of Apr 28, 2026 (supersedes older mobile bullets belo
 - Mobile search has an X clear button and uses 16px font to avoid iOS zoom sticking after focus.
 - The old tiny bottom-left result counter is removed. When no filters/search are active, the mobile summary says `Viewing - All Wines`; filtered states show the active view and counts.
 - Mobile Select mode is live for shipment arrivals/location moves: tap `Select`, tap cards or `All`, tap `Move`, then choose a location. This posts to `/wines/bulk-status` with `status=in_collection` plus the chosen location. Do not treat this as inventory-history or quantity-drinking behavior.
+- Mobile Batch Scan is live in Add Wine: one multi-bottle photo, client-side compression, `/wine/scan-batch-labels` extraction, editable review cards, and `/wine/add-batch-scan` insert. It uses `origin` (not `location`), leaves `image_url` null for group photos, flags likely duplicates, and does not reuse receipt `/wine/add-bulk`.
 - Empty mobile results say `No wines yet - tap Add Wine to get started` in white.
 - Wine cards without images show a dark `No photo` bottle silhouette placeholder.
 - Bottom mobile cellar button says `Need a Wine Rec?`.

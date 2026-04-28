@@ -35,6 +35,7 @@ Recent mobile UI work pushed to GitHub:
 - Origin carousel chips are: USA, France, Italy, and Earth emoji `Other`. `Other` filters origins outside USA/France/Italy; USA also includes common stored US origins like California, Oregon, Washington, and New York.
 - Mobile Cards/List toggle is on the same row as Filter and sort; wine counter sits below.
 - Mobile Select mode added for shipment arrivals/location moves: tap `Select`, tap cards or `All`, tap `Move`, then choose a location. This posts selected IDs to `/wines/bulk-status` with `status=in_collection` and `storage_location=<chosen location>`. It intentionally does not implement bottle history or quantity-drinking behavior.
+- Mobile Batch Scan added in Add Wine: one multi-bottle photo, client-side compression, `/wine/scan-batch-labels` extraction, editable review cards, and `/wine/add-batch-scan` insert. It uses `origin` (not `location`), leaves `image_url` null for group photos, flags likely duplicates, and intentionally does not reuse receipt `/wine/add-bulk`.
 - "Add" renamed to "Add Wine"; "all in collection" renamed to "Available".
 - Latest pushed commits include:
   - `c8b293e` (`Polish mobile wine detail page UI`)
@@ -224,6 +225,8 @@ else:
 - `POST /wines/bulk-status` — multi-select status change
 - `POST /wine/add` — add single wine
 - `POST /wine/add-bulk` — add from receipt scan
+- `POST /wine/scan-batch-labels` — AI scan of one multi-bottle photo, returns editable batch candidates
+- `POST /wine/add-batch-scan` — add selected/reviewed batch-scan candidates
 - `POST /wine/<id>/delete`
 - `POST /wine/scan-receipt` — Claude receipt scan
 - `POST /wine/scan-label` — Claude label scan

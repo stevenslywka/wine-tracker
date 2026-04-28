@@ -1098,6 +1098,122 @@ def lookup_receipt(image_data, media_type):
         return None
 
 
+BATCH_SCAN_PROMPT = (
+    "Look at this photo and identify every distinct wine bottle visible. "
+    "For each bottle, read the label as carefully as possible and extract the "
+    "wine information. Use your wine knowledge to fill in varietal, origin, and "
+    "drinking_window even if not printed on the label. "
+    "Return ONLY a JSON array - one object per distinct wine, not one per "
+    "physical bottle. If you see two copies of the same wine, return one entry. "
+    "If a label is partially obscured, still include it with low confidence. "
+    "Each object must have exactly these keys, using null for anything you cannot determine:\n"
+    "{\n"
+    '  "wine_name": "producer + wine name exactly as written",\n'
+    '  "vintage": 2021,\n'
+    '  "region": "appellation + broader region e.g. Napa Valley or Chateauneuf-du-Pape, Rhone",\n'
+    '  "origin": "country e.g. USA, France, Italy",\n'
+    '  "varietal": "grape variety or blend description",\n'
+    '  "wine_type": "one of: Red, White, Rose, Sparkling, Dessert, Fortified, Orange",\n'
+    '  "drinking_window": "estimated window e.g. 2025-2035 or Now-2030",\n'
+    '  "confidence": 0.85,\n'
+    '  "needs_review_reason": null\n'
+    "}\n"
+    "confidence is 0.0-1.0 based on how clearly you can read the label. "
+    "needs_review_reason is a short string like 'label partially obscured' or null if confidence is high. "
+    "Return only the JSON array, no other text."
+)
+
+
+def _normalize_wine_match_text(value):
+    import re
+    value = (value or "").lower()
+    return re.sub(r"[^a-z0-9]+", " ", value).strip()
+
+
+def _looks_like_same_wine(scanned_name, existing_name):
+    scanned = _normalize_wine_match_text(scanned_name)
+    existing = _normalize_wine_match_text(existing_name)
+    if not scanned or not existing:
+        return False
+    if scanned in existing or existing in scanned:
+        return True
+    scanned_tokens = {t for t in scanned.split() if len(t) > 2 and not t.isdigit()}
+    existing_tokens = {t for t in existing.split() if len(t) > 2 and not t.isdigit()}
+    if not scanned_tokens or not existing_tokens:
+        return False
+    overlap = len(scanned_tokens & existing_tokens)
+    return overlap >= min(4, len(scanned_tokens), len(existing_tokens))
+
+
+@app.route("/wine/scan-batch-labels", methods=["POST"])
+@login_required
+def scan_batch_labels():
+    import anthropic, base64, json as json_lib
+    uploaded = request.files.get("image")
+    if not uploaded or not uploaded.filename:
+        return jsonify({"error": "No image provided"}), 400
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return jsonify({"error": "ANTHROPIC_API_KEY not configured"}), 500
+
+    image_data = base64.standard_b64encode(uploaded.read()).decode("utf-8")
+    media_type = uploaded.content_type or "image/jpeg"
+    client = anthropic.Anthropic(api_key=api_key)
+    message = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=2048,
+        messages=[{
+            "role": "user",
+            "content": [
+                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_data}},
+                {"type": "text", "text": BATCH_SCAN_PROMPT}
+            ]
+        }]
+    )
+
+    try:
+        raw = message.content[0].text.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        results = json_lib.loads(raw.strip())
+        if not isinstance(results, list):
+            raise ValueError("Expected JSON array")
+    except Exception as e:
+        print("scan-batch-labels parse error:", e)
+        print("raw response:", message.content[0].text)
+        return jsonify({"error": "Could not parse AI response"}), 500
+
+    p = ph()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(f"SELECT id, wine_name, vintage FROM wines WHERE user_id = {p}", (session["user_id"],))
+    existing_wines = cur.fetchall()
+    conn.close()
+
+    for item in results:
+        if not isinstance(item, dict):
+            continue
+        scanned_name = (item.get("wine_name") or "").strip()
+        try:
+            scanned_vintage = int(item["vintage"]) if item.get("vintage") else None
+        except Exception:
+            scanned_vintage = None
+        match = None
+        for existing in existing_wines:
+            existing_vintage = existing["vintage"]
+            if scanned_vintage and existing_vintage and scanned_vintage != existing_vintage:
+                continue
+            if _looks_like_same_wine(scanned_name, existing["wine_name"]):
+                match = existing
+                break
+        item["duplicate_warning"] = bool(match)
+        item["existing_id"] = match["id"] if match else None
+
+    return jsonify(results)
+
+
 @app.route("/wine/scan-receipt", methods=["POST"])
 @login_required
 def scan_receipt():
@@ -1241,6 +1357,90 @@ def add_bulk_wines():
              varietal, region, origin, wine_type, size_ml, retailer, order_date, drinking_window, dw_source, user_id))
     conn.commit()
     conn.close()
+    return redirect(url_for("cellar", username=session["username"]))
+
+
+@app.route("/wine/add-batch-scan", methods=["POST"])
+@login_required
+def add_batch_scan():
+    import json as json_lib
+    from enrich_wines import extract_varietal, extract_region, extract_location, infer_wine_type, infer_size
+
+    wines_json = request.form.get("wines_json", "[]")
+    try:
+        wines = json_lib.loads(wines_json)
+    except Exception:
+        return ("Bad request", 400)
+    if not isinstance(wines, list):
+        return ("Bad request", 400)
+
+    user_id = session["user_id"]
+    p = ph()
+    conn = get_db()
+    cur = conn.cursor()
+    added = 0
+
+    for w in wines:
+        if not isinstance(w, dict):
+            continue
+        wine_name = (w.get("wine_name") or "").strip()
+        if not wine_name:
+            continue
+
+        try:    vintage    = int(w["vintage"]) if w.get("vintage") else None
+        except Exception: vintage = None
+        try:    unit_price = float(w["unit_price"]) if w.get("unit_price") else None
+        except Exception: unit_price = None
+        try:    quantity   = max(1, int(w["quantity"])) if w.get("quantity") else 1
+        except Exception: quantity = 1
+
+        retailer   = (w.get("retailer") or "").strip() or None
+        order_date = (w.get("order_date") or "").strip() or date.today().isoformat()
+        color_code = (w.get("color_code") or "").strip() or None
+        if color_code not in ("Red", "Blue", "Orange", "Yellow", "Green", None):
+            color_code = None
+        status = (w.get("status") or "in_collection").strip()
+        if status not in ("in_collection", "not_shipped"):
+            status = "in_collection"
+        storage_location = (w.get("storage_location") or "").strip() or None
+        if status != "in_collection":
+            storage_location = None
+
+        total_price = round(unit_price * quantity, 2) if unit_price else None
+
+        varietal  = (w.get("varietal") or "").strip() or extract_varietal(wine_name)
+        region    = (w.get("region") or "").strip() or extract_region(wine_name, varietal)
+        origin    = (w.get("origin") or "").strip() or extract_location(region)
+        wine_type = (w.get("wine_type") or "").strip() or infer_wine_type(varietal)
+        if wine_type not in WINE_TYPES:
+            wine_type = infer_wine_type(varietal)
+        size_ml = infer_size(wine_name)
+
+        ai_window = validate_drinking_window((w.get("drinking_window") or "").strip(), vintage)
+        drinking_window = lookup_drinking_window(
+            wine_name, vintage, varietal, region,
+            retail_price=unit_price, size_ml=size_ml
+        ) or ai_window
+        dw_source = "auto" if drinking_window else None
+
+        cur.execute(
+            f"""INSERT INTO wines
+                (wine_name, vintage, unit_price, total_price, quantity,
+                 varietal, region, origin, wine_type, size_ml,
+                 retailer, order_date, status, storage_location, color_code,
+                 drinking_window, drinking_window_source, user_id)
+                VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},
+                        {p},{p},{p},{p},{p},{p},{p},{p})""",
+            (wine_name, vintage, unit_price, total_price, quantity,
+             varietal, region, origin, wine_type, size_ml,
+             retailer, order_date, status, storage_location, color_code,
+             drinking_window, dw_source, user_id)
+        )
+        added += 1
+
+    conn.commit()
+    conn.close()
+    flash(f"Added {added} wine{'s' if added != 1 else ''}.")
     return redirect(url_for("cellar", username=session["username"]))
 
 
