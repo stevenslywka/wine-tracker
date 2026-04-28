@@ -233,7 +233,9 @@
     .mobile-compact-content { display: none; }
     .mobile-compact-title { color: #f5e6d3; display: block; font-size: 0.95rem; line-height: 1.3; font-weight: 800; white-space: normal; overflow: visible; overflow-wrap: anywhere; text-align: left; }
     .mobile-compact-row { display: grid; grid-template-columns: 20px minmax(0, 1fr); gap: 6px; align-items: start; color: #c8aa88; font-size: 0.82rem; line-height: 1.3; min-height: 1.3em; text-align: left; }
-    .mobile-compact-meta { display: flex; align-items: center; gap: 12px; color: #f5e6d3; font-size: 0.82rem; line-height: 1.25; font-weight: 700; flex-wrap: wrap; row-gap: 4px; min-height: 1.25em; text-align: left; }
+    .mobile-compact-meta { display: flex; align-items: center; gap: 8px; color: #f5e6d3; font-size: 0.82rem; line-height: 1.25; font-weight: 700; flex-wrap: nowrap; min-height: 1.25em; text-align: left; overflow: hidden; }
+    .mobile-compact-meta .mobile-drinking-window { flex: 0 1 auto; min-width: 0; white-space: nowrap; }
+    .mobile-compact-location { flex: 0 1 auto; max-width: 66px; min-width: 0; padding: 2px 7px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.08); font-size: 0.68rem; line-height: 1.15; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .mobile-compact-label { color: #c8aa88; font-size: 0.9rem; line-height: 1.2; text-align: left; }
     .mobile-compact-value { color: #f5e6d3; display: block; min-width: 0; white-space: normal; overflow: visible; overflow-wrap: anywhere; }
     .mobile-card-body { min-width: 0; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
@@ -1224,6 +1226,10 @@
               <span class="color-dot color-dot-{{ wine.color_code }}" style="width:14px;height:14px;" title="Sticker color"></span>
               {% endif %}
               <span class="mobile-drinking-window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}">{{ wine.drinking_window or '—' }}</span>
+              {% if wine.storage_location %}
+              {% set compact_loc_idx = (user_locations.index(wine.storage_location) % 5) if wine.storage_location in user_locations else 0 %}
+              <span class="mobile-compact-location loc-color-{{ compact_loc_idx }}" title="{{ wine.storage_location }}">{{ wine.storage_location }}</span>
+              {% endif %}
             </div>
             <div class="mobile-compact-row">
               <div class="mobile-compact-label">{{ country_flag }}</div>
