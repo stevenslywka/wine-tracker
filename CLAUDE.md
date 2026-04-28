@@ -42,6 +42,26 @@ Recent mobile UI work pushed to GitHub:
   - `38f5dfc` (`Fix Order Date label wrapping and date input alignment`)
   - `89d778f` (`Color carousel chips by location and wine type`)
 
+Current mobile UI state as of Apr 28, 2026 (supersedes older mobile bullets below if they conflict):
+- Main Cellar mobile carousel order is Location, Type, Origin, Sticker, Status. Status is last, after Sticker.
+- Status carousel chips are Available, Not Shipped, Drank. Available is green, Not Shipped is beige, Drank is dark red/burgundy. Active carousel chips keep their normal color; active state only thickens the border/font. Do not restore the old red active background.
+- Origin carousel chips are USA, France, Italy, and Earth emoji `Other`. `Other` filters origins outside USA/France/Italy; USA also includes common stored US origins like California, Oregon, Washington, and New York.
+- Mobile search has an X clear button and uses 16px font to avoid iOS zoom sticking after focus.
+- The old tiny bottom-left result counter is removed. When no filters/search are active, the mobile summary says `Viewing - All Wines`; filtered states show the active view and counts.
+- Empty mobile results say `No wines yet - tap Add Wine to get started` in white.
+- Wine cards without images show a dark `No photo` bottle silhouette placeholder.
+- Bottom mobile cellar button says `Need a Wine Rec?`.
+- Mobile detail page has a sticky wine-cellar header matching the Main Cellar page: hamburger menu on the left, centered cellar title, and a square trash icon on the right. The trash icon opens the delete confirmation.
+- Detail hero shows the editable wine name first, then vintage/sticker. The type word and type sash were removed from the detail hero.
+- Detail page wines without images use the same dark `No photo` silhouette.
+- Detail page Qty uses a small minus/plus stepper. Drinking Window placeholder gives `e.g. 2024-2030` style guidance; expected format remains `YYYY-YYYY`.
+- Detail notes textarea starts short and auto-grows.
+- Detail bottom action bar is Back to Cellar, Previous Wine, Next Wine. Delete is only in the sticky header. Back uses `back_url`, not `history.back()`.
+- Previous/Next on detail preserve the filtered Main Cellar list: mobile card clicks pass `list=<filtered ids>` and `back=<current cellar URL>` query params to `GET /wine/<id>`.
+- `app.py -> wine_detail()` now passes `cellar_username`, `cellar_display_name`, `back_url`, `prev_wine_url`, and `next_wine_url` in addition to the detail picker lists.
+- Delete confirmation text is `Are you sure? This cannot be undone.` and posts to `/wine/<id>/delete` only after confirmation.
+- Recent relevant commits include `bd33cd2`, `e47502b`, `3317196`, `9c64bb2`, `5ccb08c`, `cfdf307`, `e50b04b`, and `d50c8d8`.
+
 Mobile detail page — current state (templates/detail.html):
 - Separate page at `GET /wine/<id>`; tapping a card in `templates/index.html` navigates here via `data-detail-url`.
 - Do not change the mobile card/list layout in `index.html` unless Steve explicitly asks.
