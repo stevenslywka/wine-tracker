@@ -2947,6 +2947,40 @@
     const mobileBulkSheet = document.getElementById('mobileBulkSheet');
     const mobileBulkBackdrop = document.getElementById('mobileBulkBackdrop');
     const mobileSelectTrigger = document.querySelector('[data-mobile-action="select"]');
+    const mobileScrollKey = 'wineMobileScroll:' + window.location.pathname + window.location.search;
+
+    function visibleMobileScroller() {
+      const scroller = document.querySelector('.mobile-card-list');
+      if (!scroller || getComputedStyle(scroller).display === 'none') return null;
+      return scroller;
+    }
+
+    function saveMobileScrollPosition() {
+      const scroller = visibleMobileScroller();
+      if (!scroller) return;
+      sessionStorage.setItem(mobileScrollKey, JSON.stringify({ top: scroller.scrollTop }));
+    }
+
+    function restoreMobileScrollPosition() {
+      const saved = sessionStorage.getItem(mobileScrollKey);
+      if (!saved) return;
+      sessionStorage.removeItem(mobileScrollKey);
+      let top = 0;
+      try {
+        top = Number(JSON.parse(saved).top || 0);
+      } catch {
+        top = 0;
+      }
+      if (top <= 0) return;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const scroller = visibleMobileScroller();
+          if (scroller) scroller.scrollTop = top;
+        });
+      });
+    }
+
+    restoreMobileScrollPosition();
 
     function isMobileSelectMode() {
       return document.body.classList.contains('mobile-selecting');
@@ -3050,6 +3084,7 @@
         const listIds = mobileWineCards.map(el => el.dataset.wineId).filter(Boolean);
         if (listIds.length) detailUrl.searchParams.set('list', listIds.join(','));
         detailUrl.searchParams.set('back', window.location.pathname + window.location.search);
+        saveMobileScrollPosition();
         window.location.href = detailUrl.toString();
       });
     });
