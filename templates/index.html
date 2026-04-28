@@ -269,7 +269,7 @@
     .mobile-info-value { color: #f5e6d3; font-size: 0.76rem; line-height: 1.15; overflow-wrap: anywhere; text-align: center; }
     .mobile-drink-line { color: #f5e6d3; font-size: 0.78rem; font-weight: 700; margin-top: 7px; }
     .mobile-notes-preview { color: #c8aa88; font-size: 0.78rem; margin-top: 8px; line-height: 1.3; }
-    .mobile-browse-tools, .mobile-bottom-bar, .mobile-filter-sheet, .mobile-filter-backdrop, .mobile-filter-carousel { display: none; }
+    .mobile-browse-tools, .mobile-bottom-bar, .mobile-filter-sheet, .mobile-filter-backdrop, .mobile-filter-carousel, .mobile-carousel-shell { display: none; }
     #bulk-status-bar { display: none; }
     #bulk-status-bar.visible { display: flex; }
 
@@ -369,8 +369,18 @@
         box-shadow: 0 8px 18px rgba(0,0,0,0.24);
       }
       .mobile-command-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
-      .mobile-search-form { min-width: 0; }
-      .mobile-search-form .form-control { width: 100%; min-width: 0; height: 32px; border-radius: 8px; font-size: 0.84rem; }
+      .mobile-search-form { min-width: 0; position: relative; }
+      .mobile-search-form .form-control {
+        width: 100%; min-width: 0; height: 34px; border-radius: 8px; font-size: 16px;
+        padding-right: 34px;
+      }
+      .mobile-search-clear {
+        position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+        width: 25px; height: 25px; border: 0; border-radius: 50%;
+        background: #e8ddd0; color: #3a1a00; font-size: 1rem; font-weight: 900;
+        line-height: 1; display: none; align-items: center; justify-content: center; padding: 0;
+      }
+      .mobile-search-form.has-query .mobile-search-clear { display: inline-flex; }
       .mobile-search-panel { display: none; margin-bottom: 6px; }
       .mobile-search-panel.visible { display: block; }
       .mobile-sort-select { height: 32px; border-radius: 8px; font-size: 0.78rem; padding-left: 8px; padding-right: 22px; }
@@ -400,15 +410,17 @@
       .mobile-filter-icon i:nth-child(1) { top: -1px; left: 6px; }
       .mobile-filter-icon i:nth-child(2) { top: 5px; right: 5px; }
       .mobile-filter-icon i:nth-child(3) { top: 11px; left: 13px; }
-      .mobile-product-count { color: #d9c4aa; font-size: 0.82rem; text-align: right; white-space: nowrap; }
       .mobile-view-row { display: flex; justify-content: flex-end; align-items: center; margin-top: 5px; }
       .mobile-view-summary-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 5px; }
       .mobile-filter-summary {
-        display: none; min-width: 0; color: #c9a96e; font-size: 0.74rem; line-height: 1.2;
+        display: none; min-width: 0; color: #c9a96e; font-size: 0.76rem; line-height: 1.2; font-weight: 900;
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       }
       .mobile-filter-summary.visible { display: block; }
-      .mobile-filter-summary a { color: #e08080; text-decoration: none; margin-left: 6px; }
+      .mobile-clear-link {
+        color: #f0a0a0; text-decoration: none; margin-left: auto; font-size: 0.76rem; font-weight: 900;
+        white-space: nowrap; flex: 0 0 auto;
+      }
       .mobile-view-toggle {
         display: grid; grid-template-columns: 1fr 1fr; background:#241000; border:1px solid #5a2d0c;
         border-radius:8px; overflow:hidden; width: 116px; height: 29px;
@@ -417,22 +429,30 @@
         border:0; background:transparent; color:#a07850; font-size:0.76rem; line-height:1; padding:0;
       }
       .mobile-view-btn.active { background:#8b1a1a; color:#fff1d8; font-weight:700; }
+      .mobile-carousel-shell {
+        display: block; position: relative; background: #160800; border-bottom: 1px solid rgba(58,26,0,0.7);
+      }
+      .mobile-carousel-shell::after {
+        content: ""; position: absolute; top: 0; right: 0; bottom: 0; width: 34px;
+        background: linear-gradient(90deg, rgba(22,8,0,0), #160800 76%);
+        pointer-events: none;
+      }
       .mobile-filter-carousel {
-        display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; padding: 8px 8px 9px;
-        background: #160800; border-bottom: 1px solid #3a1a00;
+        display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 5px 8px 6px;
+        background: transparent;
       }
       .mobile-filter-carousel::-webkit-scrollbar { display: none; }
       .mobile-filter-family {
-        flex: 0 0 148px; border: 1px solid #4a2208; background: #1f0d00; border-radius: 8px; overflow: hidden;
+        flex: 0 0 148px; border: 1px solid rgba(74,34,8,0.45); background: #1f0d00; border-radius: 8px; overflow: hidden;
       }
       .mobile-filter-family.wide {
         flex-basis: 184px;
       }
       .mobile-filter-family-title {
         color: #c9a96e; font-size: 0.66rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.08em;
-        border-bottom: 1px solid #4a2208; padding: 6px 8px; text-align: center;
+        border-bottom: 1px solid rgba(74,34,8,0.55); padding: 5px 8px; text-align: center;
       }
-      .mobile-filter-family-options { display: flex; gap: 5px; padding: 7px; justify-content: space-evenly; scrollbar-width: none; }
+      .mobile-filter-family-options { display: flex; gap: 5px; padding: 6px; justify-content: space-evenly; scrollbar-width: none; }
       .mobile-filter-family-options::-webkit-scrollbar { display: none; }
       .mobile-filter-chip {
         flex: 1 1 0; min-width: 0; height: 28px; padding: 0 7px; border: 1px solid #87423d; border-radius: 999px;
@@ -453,6 +473,17 @@
       .mobile-filter-chip.type-Rose:not(.active) { background: #ef8caf; color: #3b0b1a; border-color: #c05070; }
       .mobile-sticker-dot {
         width: 16px; height: 16px; border-radius: 50%; display: inline-block; border: 2px solid rgba(255,255,255,0.35);
+      }
+      .no-photo-thumb {
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        color: #8d735c; font-size: 0.68rem; font-weight: 900; text-transform: uppercase;
+        letter-spacing: 0.04em; gap: 8px;
+      }
+      .no-photo-thumb::before {
+        content: ""; width: 34px; height: 82px; display: block; border-radius: 9px 9px 13px 13px;
+        background: linear-gradient(180deg, #392719, #17100b);
+        box-shadow: inset 0 0 0 1px rgba(255,248,238,0.08), 0 8px 18px rgba(0,0,0,0.34);
+        clip-path: polygon(38% 0, 62% 0, 62% 16%, 76% 30%, 76% 100%, 24% 100%, 24% 30%, 38% 16%);
       }
       #tableScroll { display: none; }
       .mobile-card-list { display: block; overflow-y: auto; overscroll-behavior: none; flex: 1; min-height: 0; padding-bottom: 66px; }
@@ -648,38 +679,40 @@
           {% endif %}
         </div>
 
-        <div class="mobile-filter-carousel">
-          <div class="mobile-filter-family">
-            <div class="mobile-filter-family-title">Location</div>
-            <div class="mobile-filter-family-options">
-              {% for loc in user_locations %}
-              <a href="?status=in_collection{{ preserved_quick_params(loc) }}" class="mobile-filter-chip loc-color-{{ loop.index0 % 5 }} {% if storage_filter==loc %}active{% endif %}" title="{{ loc }}">{{ loc }}</a>
-              {% endfor %}
+        <div class="mobile-carousel-shell">
+          <div class="mobile-filter-carousel">
+            <div class="mobile-filter-family">
+              <div class="mobile-filter-family-title">Location</div>
+              <div class="mobile-filter-family-options">
+                {% for loc in user_locations %}
+                <a href="?status=in_collection{{ preserved_quick_params(loc) }}" class="mobile-filter-chip loc-color-{{ loop.index0 % 5 }} {% if storage_filter==loc %}active{% endif %}" title="{{ loc }}">{{ loc }}</a>
+                {% endfor %}
+              </div>
             </div>
-          </div>
-          <div class="mobile-filter-family">
-            <div class="mobile-filter-family-title">Type</div>
-            <div class="mobile-filter-family-options">
-              {% for t in ['Red', 'White', 'Rose'] %}
-              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(type_value=t) }}" class="mobile-filter-chip type-{{ t }} {% if type_filter==t %}active{% endif %}" title="{{ t }}">{{ t }}</a>
-              {% endfor %}
+            <div class="mobile-filter-family">
+              <div class="mobile-filter-family-title">Type</div>
+              <div class="mobile-filter-family-options">
+                {% for t in ['Red', 'White', 'Rose'] %}
+                <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(type_value=t) }}" class="mobile-filter-chip type-{{ t }} {% if type_filter==t %}active{% endif %}" title="{{ t }}">{{ t }}</a>
+                {% endfor %}
+              </div>
             </div>
-          </div>
-          <div class="mobile-filter-family">
-            <div class="mobile-filter-family-title">Origin</div>
-            <div class="mobile-filter-family-options">
-              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='United States') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='United States' %}active{% endif %}" title="United States">🇺🇸</a>
-              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='France') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='France' %}active{% endif %}" title="France">🇫🇷</a>
-              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Italy') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Italy' %}active{% endif %}" title="Italy">🇮🇹</a>
-              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Other') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Other' %}active{% endif %}" title="Other origins">🌎</a>
+            <div class="mobile-filter-family">
+              <div class="mobile-filter-family-title">Origin</div>
+              <div class="mobile-filter-family-options">
+                <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='United States') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='United States' %}active{% endif %}" title="United States">🇺🇸</a>
+                <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='France') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='France' %}active{% endif %}" title="France">🇫🇷</a>
+                <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Italy') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Italy' %}active{% endif %}" title="Italy">🇮🇹</a>
+                <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(origin_value='Other') }}" class="mobile-filter-chip flag-chip {% if origin_filter=='Other' %}active{% endif %}" title="Other origins">🌎</a>
+              </div>
             </div>
-          </div>
-          <div class="mobile-filter-family wide">
-            <div class="mobile-filter-family-title">Sticker</div>
-            <div class="mobile-filter-family-options">
-              {% for c in ['Green', 'Yellow', 'Orange', 'Red', 'Blue'] %}
-              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(color_value=c) }}" class="mobile-filter-chip {% if color_filter==c %}active{% endif %}" title="{{ c }}"><span class="mobile-sticker-dot color-dot-{{ c }}"></span></a>
-              {% endfor %}
+            <div class="mobile-filter-family wide">
+              <div class="mobile-filter-family-title">Sticker</div>
+              <div class="mobile-filter-family-options">
+                {% for c in ['Green', 'Yellow', 'Orange', 'Red', 'Blue'] %}
+                <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(color_value=c) }}" class="mobile-filter-chip {% if color_filter==c %}active{% endif %}" title="{{ c }}"><span class="mobile-sticker-dot color-dot-{{ c }}"></span></a>
+                {% endfor %}
+              </div>
             </div>
           </div>
         </div>
@@ -692,7 +725,7 @@
             <input type="text" name="q" class="form-control form-control-sm" placeholder="Search…" value="{{ search }}" style="width:160px;">
             <button type="submit" class="btn btn-wine btn-sm">Go</button>
           </form>
-          <button type="button" class="btn btn-sm" style="background:#2a1a2a;border:1px solid #7a3a7a;color:#e0b0e0;white-space:nowrap;padding-left:18px;padding-right:18px;" data-bs-toggle="modal" data-bs-target="#wineRecModal">🍷 Need a Rec?</button>
+          <button type="button" class="btn btn-sm" style="background:#2a1a2a;border:1px solid #7a3a7a;color:#e0b0e0;white-space:nowrap;padding-left:18px;padding-right:18px;" data-bs-toggle="modal" data-bs-target="#wineRecModal">🍷 Need a Wine Rec?</button>
         </div>
       </div>
 
@@ -764,7 +797,7 @@
 
     <div class="mobile-browse-tools" id="mobileBrowseTools">
       <div class="mobile-search-panel {% if search %}visible{% endif %}" id="mobileSearchPanel">
-        <form method="get" class="mobile-search-form" id="mobileSearchForm">
+        <form method="get" class="mobile-search-form {% if search %}has-query{% endif %}" id="mobileSearchForm">
           {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
           {% if storage_filter %}<input type="hidden" name="storage_location" value="{{ storage_filter }}">{% endif %}
           {% if varietal_filter %}<input type="hidden" name="varietal" value="{{ varietal_filter }}">{% endif %}
@@ -781,6 +814,7 @@
           {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
           {% if order %}<input type="hidden" name="order" value="{{ order }}">{% endif %}
           <input type="search" name="q" class="form-control form-control-sm" placeholder="Search wines" value="{{ search }}" id="mobileSearchInput">
+          <button type="button" class="mobile-search-clear" data-mobile-action="clear-search" aria-label="Clear search">&times;</button>
         </form>
       </div>
       <div class="mobile-command-row">
@@ -794,7 +828,6 @@
           <button type="button" class="mobile-view-btn" data-mobile-mode="compact">List</button>
         </div>
       </div>
-      {% if status_filter or storage_filter or search or mobile_filters_active %}
       {% set current_bottle_count = namespace(total=0) %}
       {% for wine in wines %}
         {% set current_bottle_count.total = current_bottle_count.total + (wine.quantity or 0) %}
@@ -802,22 +835,21 @@
       <div class="mobile-view-summary-row">
         <div class="mobile-filter-summary visible">
           Viewing:
+          {% if status_filter or storage_filter or search or mobile_filters_active %}
           {% if storage_filter %}{{ storage_filter }}
           {% elif status_filter == 'in_collection' %}Available
           {% elif status_filter == 'not_shipped' %}Not Shipped
           {% elif status_filter == 'drank' %}Drank
           {% elif search %}Search
           {% else %}Filtered{% endif %}
+          {% else %}Available{% endif %}
           {% if search %} &middot; "{{ search }}"{% endif %}
           &middot; {{ wines|length }} wine{% if wines|length != 1 %}s{% endif %}
           &middot; {{ current_bottle_count.total }} bottle{% if current_bottle_count.total != 1 %}s{% endif %}
-          <a href="{{ url_for('cellar', username=cellar_username) }}">Clear</a>
         </div>
-      {% else %}
-      <div class="mobile-view-summary-row">
-        <div class="mobile-filter-summary visible">Viewing: Available</div>
-      {% endif %}
-        <div class="mobile-product-count">{{ wines|length }} wine{% if wines|length != 1 %}s{% endif %}</div>
+        {% if status_filter or storage_filter or search or mobile_filters_active %}
+        <a class="mobile-clear-link" href="{{ url_for('cellar', username=cellar_username) }}">Clear</a>
+        {% endif %}
       </div>
     </div>
 
@@ -851,7 +883,6 @@
             <div class="mobile-filter-section-title">Status</div>
             <select name="status" class="form-select form-select-sm">
               <option value="">Any</option>
-              <option value="Other" {% if origin_filter=='Other' %}selected{% endif %}>Other</option>
               <option value="in_collection" {% if status_filter=='in_collection' %}selected{% endif %}>Available</option>
               <option value="not_shipped" {% if status_filter=='not_shipped' %}selected{% endif %}>Not Shipped</option>
               <option value="drank" {% if status_filter=='drank' %}selected{% endif %}>Drank</option>
@@ -1052,7 +1083,7 @@
               </td>
             </tr>
             {% else %}
-            <tr><td colspan="8" class="text-center text-muted py-4">No wines found. Run the import scripts to get started.</td></tr>
+            <tr><td colspan="8" class="text-center py-4" style="color:#fff;">No wines yet - tap Add Wine to get started</td></tr>
             {% endfor %}
           </tbody>
         </table>
@@ -1102,7 +1133,7 @@
             {% if wine.image_url %}
             <img src="{{ wine.image_url }}" class="mobile-thumb wine-thumb" data-src="{{ wine.image_url }}" data-name="{{ wine.wine_name or '' }}" alt="" onclick="event.stopPropagation();openImagePopup(this)">
             {% else %}
-            <div class="mobile-thumb"></div>
+            <div class="mobile-thumb no-photo-thumb">No photo</div>
             {% endif %}
             <div class="mobile-card-body">
               <div>
@@ -1162,7 +1193,7 @@
           {% endif %}
         </div>
         {% else %}
-        <div class="mobile-wine-card text-center text-muted py-4">No wines found. Run the import scripts to get started.</div>
+        <div class="mobile-wine-card text-center py-4" style="color:#fff;">No wines yet - tap Add Wine to get started</div>
         {% endfor %}
       </div>
       <div style="padding:4px 12px;font-size:0.78rem;color:#5a3a1a;flex-shrink:0;">{{ wines|length }} result(s){% if fuzzy_used %} <span style="color:#a07850;font-style:italic;">— approximate matches</span>{% endif %}</div>
@@ -1170,7 +1201,7 @@
   </div>
 
   <div class="mobile-bottom-bar" id="mobileBottomBar">
-    <button type="button" class="rec" data-bs-toggle="modal" data-bs-target="#wineRecModal">Need a Rec</button>
+    <button type="button" class="rec" data-bs-toggle="modal" data-bs-target="#wineRecModal">Need a Wine Rec?</button>
     {% if access_level == 'edit' %}
     <button type="button" class="primary" data-bs-toggle="modal" data-bs-target="#addWineModal">Add Wine</button>
     {% endif %}
@@ -2497,6 +2528,12 @@
       document.getElementById('mobileFilterSortOrder').value = sortOrder;
     });
 
+    const mobileSearchForm = document.getElementById('mobileSearchForm');
+    const mobileSearchInput = document.getElementById('mobileSearchInput');
+    mobileSearchInput?.addEventListener('input', () => {
+      mobileSearchForm?.classList.toggle('has-query', mobileSearchInput.value.trim().length > 0);
+    });
+
     const mobileViewButtons = [...document.querySelectorAll('[data-mobile-mode]')];
     function setMobileCardMode(mode) {
       const compact = mode === 'compact';
@@ -2544,6 +2581,10 @@
         openMobileFilters();
       } else if (action === 'close-filters') {
         closeMobileFilters();
+      } else if (action === 'clear-search') {
+        const params = new URLSearchParams(window.location.search);
+        params.delete('q');
+        window.location.search = params.toString();
       } else if (action === 'view') {
         setMobileCardMode(document.body.classList.contains('mobile-compact') ? 'comfort' : 'compact');
       } else if (action === 'top') {
