@@ -36,36 +36,35 @@ Recent mobile UI work pushed to GitHub:
 - Mobile Cards/List toggle is on the same row as Filter and sort; wine counter sits below.
 - "Add" renamed to "Add Wine"; "all in collection" renamed to "Available".
 - Latest pushed commits include:
-  - `8f80a27` (`Refine mobile carousel and filter controls`)
-  - `7556545` (`Remove duplicate mobile carousel groups`)
-  - `deaa4e9` (`Add other origin mobile filter`)
-  - `5c091ad` (`Support mobile wine detail editing`)
-  - `79384d1` (`Redesign mobile wine detail page`)
-  - `695f980` (`Refine mobile wine detail profile`)
-  - `8d004bb` (`Compact mobile wine detail layout`)
-  - `0c8103c` (`Polish mobile wine detail fields`)
+  - `c8b293e` (`Polish mobile wine detail page UI`)
+  - `512e758` (`Refine mobile wine detail bubbles and sticker layout`)
+  - `d85d691` (`Center select text in Status and Location quick tiles`)
+  - `38f5dfc` (`Fix Order Date label wrapping and date input alignment`)
+  - `89d778f` (`Color carousel chips by location and wine type`)
 
-Latest mobile detail page context:
-- Current focus is the separate wine detail page at `GET /wine/<id>`, rendered by `templates/detail.html`.
-- On mobile, tapping a card/list item in `templates/index.html` navigates to this separate page via `data-detail-url`; do not change the mobile card/list layout unless Steve explicitly asks.
-- `app.py -> wine_detail()` now passes `user_locations`, `wine_types`, `bottle_sizes`, and `sticker_colors` into `detail.html`.
-- Mobile `detail.html` now has a mobile-only layout; desktop detail view remains separate in the same template and should not be redesigned unless requested.
-- The mobile detail header uses the bottle image, wine type/vintage, current sticker dot, editable wine name, inferred flag, and grape/varietal row.
-- The top control row has three compact editable controls: Status, Location, and Drinking Window. Drinking Window uses the same color logic as the main cellar view: hold / ready / drink soon / overdue / drank.
-- The visible body combines Cellar, Rating, and Notes: Qty, Source, Sticker, Rating in a compact four-cell grid, with Notes below.
-- Lower-priority information is collapsed under `Wine details` and `Purchase`.
-- Bottom mobile action bar is: Back, Rate, Notes, Drank. Rate and Notes scroll to and focus their fields.
-- Current user sentiment: improved but still wants design feedback. Steve wants the mobile detail page to feel more like the creative mobile Cards layout: dense, visual, easy to scan, not a plain form, and not wasteful of vertical space.
-- Specific naming preference: use `Location`, not `Storage`; use `Source`, not `Retailer`.
-- User may ask Claude Code next for design critique only before further implementation.
+Mobile detail page — current state (templates/detail.html):
+- Separate page at `GET /wine/<id>`; tapping a card in `templates/index.html` navigates here via `data-detail-url`.
+- Do not change the mobile card/list layout in `index.html` unless Steve explicitly asks.
+- `app.py -> wine_detail()` passes `user_locations`, `wine_types`, `bottle_sizes`, and `sticker_colors` into `detail.html`.
+- Mobile-only layout in the same template; desktop view is separate and should not be changed unless requested.
+- **Hero**: bottle image wrapped in `.mobile-bottle-wrap` with diagonal type sash (same color scheme as card sash). Right side: type · vintage kicker with sticker dot, editable wine name textarea, flag+region row, grape+varietal row.
+- **Quick strip** (3 pill badges, `.quick-tile`): Status (green/amber/burgundy tint per status), Location (loc-color-* scheme matching cards), Drinking Window (color-coded hold/ready/soon/overdue). Status and Location tile colors update live via JS when the select changes. Select text is center-aligned via `text-align-last: center`.
+- **Main body** (2×2 priority grid): Qty, Source, Sticker, Rating — then full-width Notes. Sticker picker shows 6 dots in 2 rows of 3: Green/Yellow/Orange then Red/Blue/None. Rating shows as a large gold number (tap to edit); no star.
+- **Collapsed sections** (`<details>`): "Wine details" and "Purchase", each with a rotating ▾ chevron. All rows have emoji icon prefixes (🍷 🍇 📍 🌍 🍾 🗓️ 💳 🏷️ 💰). Label column is 100px wide so "🗓️ Order date" fits on one line. Date input is left-aligned with `padding-left: 4px`.
+- **Bottom action bar**: ← Back, ★ Rate, ✏️ Notes, ✓ Drank.
+- Naming: use `Location` (not `Storage`), `Source` (not `Retailer`).
+
+Mobile carousel (templates/index.html):
+- Location carousel chips use `loc-color-*` classes matching the card badge colors (Apt=loc-color-0 blue, House=loc-color-1 red per current sort_order). Inactive state only; active state keeps the standard gold highlight.
+- Wine type carousel chips (Red/White/Rose) use `.type-Red`, `.type-White`, `.type-Rose` classes with sash colors. Inactive state only.
 
 Local file note:
 - Earlier in this thread, local `templates/index.html` was accidentally 0 bytes. It was restored locally from GitHub `main` and is no longer blank.
 - Because local git history may lag GitHub `main`, `git status` may still show `templates/index.html`, `app.py`, `templates/detail.html`, or docs as modified after API pushes. Do not blindly revert these. Compare with GitHub `main` if unsure.
 
 Session preference:
-- Do not touch the mobile card layout or compact/list wine row layout unless Steve explicitly asks. Top controls, filters, and header are okay to adjust when requested.
-- For current design review work, focus only on the separate mobile wine detail page (`templates/detail.html`) unless Steve says otherwise.
+- Do not touch the mobile card layout or compact/list wine row layout in `index.html` unless Steve explicitly asks.
+- Desktop views in both `index.html` and `detail.html` should not be changed unless requested.
 
 ---
 
