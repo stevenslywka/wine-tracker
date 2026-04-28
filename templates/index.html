@@ -443,6 +443,14 @@
         background: #8b1a1a; border-color: #c9a96e; color: #fff; box-shadow: 0 0 0 2px rgba(201,169,110,0.24);
       }
       .mobile-filter-chip.flag-chip { font-size: 1.02rem; padding: 0 7px; }
+      .mobile-filter-chip.loc-color-0:not(.active) { background: #1a3a5c; color: #7eb8cb; border-color: #2a6a9c; }
+      .mobile-filter-chip.loc-color-1:not(.active) { background: #5c1a1a; color: #e08080; border-color: #8c2a2a; }
+      .mobile-filter-chip.loc-color-2:not(.active) { background: #1a3a2a; color: #7ecb9e; border-color: #2a6a3a; }
+      .mobile-filter-chip.loc-color-3:not(.active) { background: #3a1a5c; color: #c0a0e0; border-color: #5a2a8c; }
+      .mobile-filter-chip.loc-color-4:not(.active) { background: #5c3a1a; color: #e0a870; border-color: #8c5a2a; }
+      .mobile-filter-chip.type-Red:not(.active) { background: #8f1515; color: #fff4f4; border-color: #b02020; }
+      .mobile-filter-chip.type-White:not(.active) { background: #f4edc6; color: #3c3212; border-color: #a09050; }
+      .mobile-filter-chip.type-Rose:not(.active) { background: #ef8caf; color: #3b0b1a; border-color: #c05070; }
       .mobile-sticker-dot {
         width: 16px; height: 16px; border-radius: 50%; display: inline-block; border: 2px solid rgba(255,255,255,0.35);
       }
@@ -645,7 +653,7 @@
             <div class="mobile-filter-family-title">Location</div>
             <div class="mobile-filter-family-options">
               {% for loc in user_locations %}
-              <a href="?status=in_collection{{ preserved_quick_params(loc) }}" class="mobile-filter-chip {% if storage_filter==loc %}active{% endif %}" title="{{ loc }}">{{ loc }}</a>
+              <a href="?status=in_collection{{ preserved_quick_params(loc) }}" class="mobile-filter-chip loc-color-{{ loop.index0 % 5 }} {% if storage_filter==loc %}active{% endif %}" title="{{ loc }}">{{ loc }}</a>
               {% endfor %}
             </div>
           </div>
@@ -653,7 +661,7 @@
             <div class="mobile-filter-family-title">Type</div>
             <div class="mobile-filter-family-options">
               {% for t in ['Red', 'White', 'Rose'] %}
-              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(type_value=t) }}" class="mobile-filter-chip {% if type_filter==t %}active{% endif %}" title="{{ t }}">{{ t }}</a>
+              <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(type_value=t) }}" class="mobile-filter-chip type-{{ t }} {% if type_filter==t %}active{% endif %}" title="{{ t }}">{{ t }}</a>
               {% endfor %}
             </div>
           </div>
