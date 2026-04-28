@@ -1104,7 +1104,7 @@
       </div>
       <div class="mobile-card-list">
         {% for wine in wines %}
-        <div class="mobile-wine-card" data-detail-url="{{ url_for('wine_detail', wine_id=wine.id) }}">
+        <div class="mobile-wine-card" data-wine-id="{{ wine.id }}" data-detail-url="{{ url_for('wine_detail', wine_id=wine.id) }}">
           <div class="mobile-type-sash mobile-sash-{{ wine.wine_type or 'none' }}">{{ wine.wine_type or 'Wine' }}</div>
           {% set origin_key = (wine.origin or '')|lower|trim %}
           {% set flag_map = {
@@ -2564,7 +2564,11 @@
     document.querySelectorAll('.mobile-wine-card[data-detail-url]').forEach(card => {
       card.addEventListener('click', e => {
         if (e.target.closest('.status-badge, .storage-badge, .color-dot, .wine-thumb, button, a, input, select, textarea')) return;
-        window.location.href = card.dataset.detailUrl;
+        const detailUrl = new URL(card.dataset.detailUrl, window.location.origin);
+        const listIds = [...document.querySelectorAll('.mobile-wine-card[data-wine-id]')].map(el => el.dataset.wineId).filter(Boolean);
+        if (listIds.length) detailUrl.searchParams.set('list', listIds.join(','));
+        detailUrl.searchParams.set('back', window.location.pathname + window.location.search);
+        window.location.href = detailUrl.toString();
       });
     });
 
