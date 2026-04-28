@@ -463,7 +463,8 @@
         box-sizing: border-box; font-size: 0.73rem; font-weight: 800; white-space: nowrap;
       }
       .mobile-filter-chip.active {
-        border-width: 2px; font-weight: 900;
+        border-width: 3px; border-color: #c9a96e !important; font-weight: 900;
+        box-shadow: 0 0 0 1px rgba(201,169,110,0.18);
       }
       .mobile-filter-chip.flag-chip { font-size: 1.02rem; padding: 0 7px; }
       .mobile-filter-chip.loc-color-0 { background: #1a3a5c; color: #7eb8cb; border-color: #2a6a9c; }
@@ -491,6 +492,14 @@
         box-shadow: inset 0 0 0 1px rgba(255,248,238,0.08), 0 8px 18px rgba(0,0,0,0.34);
         clip-path: polygon(38% 0, 62% 0, 62% 16%, 76% 30%, 76% 100%, 24% 100%, 24% 30%, 38% 16%);
       }
+      .mobile-wine-card.card-type-Red { border-left: 3px solid #8f1515; }
+      .mobile-wine-card.card-type-White { border-left: 3px solid #b8a96a; }
+      .mobile-wine-card.card-type-Rose { border-left: 3px solid #c95e85; }
+      .mobile-wine-card.card-type-Sparkling { border-left: 3px solid #6bba6b; }
+      .mobile-wine-card.card-type-Dessert { border-left: 3px solid #7ab8e0; }
+      .mobile-wine-card.card-type-Fortified { border-left: 3px solid #4a70cc; }
+      .mobile-wine-card.card-type-Orange { border-left: 3px solid #d98040; }
+      .mobile-wine-card.card-type-none { border-left: 3px solid #5a3a1a; }
       #tableScroll { display: none; }
       .mobile-card-list { display: block; overflow-y: auto; overscroll-behavior: none; flex: 1; min-height: 0; padding-bottom: 66px; }
       .table-card { background: #1a0a00; order: 3; }
@@ -524,7 +533,7 @@
       }
       .mobile-bottom-bar .rec,
       .mobile-bottom-bar .primary { flex: 4 1 0; font-size: 0.82rem; padding: 9px 6px; }
-      .mobile-bottom-bar .top { flex: 2 1 0; }
+      .mobile-bottom-bar .top { flex: 0 0 auto; width: 38px; font-size: 1.15rem; border-radius: 50%; padding: 0; }
       .mobile-bottom-bar .rec { background: #2a1a2a; border-color: #7a3a7a; color:#e0b0e0; font-weight:800; }
       .mobile-bottom-bar .primary { background: #8b1a1a; border-color: #c23a2f; color:#fff; font-weight:800; }
       .mobile-filter-backdrop {
@@ -1104,7 +1113,7 @@
       </div>
       <div class="mobile-card-list">
         {% for wine in wines %}
-        <div class="mobile-wine-card" data-wine-id="{{ wine.id }}" data-detail-url="{{ url_for('wine_detail', wine_id=wine.id) }}">
+        <div class="mobile-wine-card card-type-{{ wine.wine_type or 'none' }}" data-wine-id="{{ wine.id }}" data-detail-url="{{ url_for('wine_detail', wine_id=wine.id) }}">
           <div class="mobile-type-sash mobile-sash-{{ wine.wine_type or 'none' }}">{{ wine.wine_type or 'Wine' }}</div>
           {% set origin_key = (wine.origin or '')|lower|trim %}
           {% set flag_map = {
@@ -1218,7 +1227,7 @@
     {% if access_level == 'edit' %}
     <button type="button" class="primary" data-bs-toggle="modal" data-bs-target="#addWineModal">Add Wine</button>
     {% endif %}
-    <button type="button" class="top" data-mobile-action="top">Top</button>
+    <button type="button" class="top" data-mobile-action="top" aria-label="Scroll to top">↑</button>
   </div>
 
   <footer style="position:fixed;bottom:0;left:0;right:0;text-align:center;padding:8px;color:#5a3a1a;font-size:0.8rem;background:#1a0a00;z-index:100;">
