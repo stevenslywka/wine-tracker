@@ -448,6 +448,9 @@
       .mobile-filter-family.wide {
         flex-basis: 184px;
       }
+      .mobile-filter-family.status-family {
+        flex-basis: 248px;
+      }
       .mobile-filter-family-title {
         color: #c9a96e; font-size: 0.66rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.08em;
         border-bottom: 1px solid rgba(74,34,8,0.55); padding: 5px 8px; text-align: center;
@@ -468,8 +471,8 @@
       .mobile-filter-chip.loc-color-2:not(.active) { background: #1a3a2a; color: #7ecb9e; border-color: #2a6a3a; }
       .mobile-filter-chip.loc-color-3:not(.active) { background: #3a1a5c; color: #c0a0e0; border-color: #5a2a8c; }
       .mobile-filter-chip.loc-color-4:not(.active) { background: #5c3a1a; color: #e0a870; border-color: #8c5a2a; }
-      .mobile-filter-chip.status-available:not(.active) { background: rgba(30,90,55,0.28); color: #8fd0a7; border-color: rgba(49,168,106,0.5); }
-      .mobile-filter-chip.status-shipping:not(.active) { background: rgba(90,70,15,0.35); color: #e7bd70; border-color: rgba(231,189,112,0.5); }
+      .mobile-filter-chip.status-available:not(.active) { background: #1a3a2a; color: #8fd0a7; border-color: #2a6a3a; }
+      .mobile-filter-chip.status-shipping:not(.active) { background: #f4edc6; color: #3c3212; border-color: #a09050; }
       .mobile-filter-chip.status-drank:not(.active) { background: rgba(80,20,20,0.35); color: #c08080; border-color: rgba(160,60,60,0.45); }
       .mobile-filter-chip.type-Red:not(.active) { background: #8f1515; color: #fff4f4; border-color: #b02020; }
       .mobile-filter-chip.type-White:not(.active) { background: #f4edc6; color: #3c3212; border-color: #a09050; }
@@ -684,14 +687,6 @@
 
         <div class="mobile-carousel-shell">
           <div class="mobile-filter-carousel">
-            <div class="mobile-filter-family wide">
-              <div class="mobile-filter-family-title">Status</div>
-              <div class="mobile-filter-family-options">
-                <a href="?status=in_collection{{ preserved_quick_params() }}" class="mobile-filter-chip status-available {% if status_filter=='in_collection' %}active{% endif %}" title="Available">Available</a>
-                <a href="?status=not_shipped{{ preserved_quick_params('__clear__') }}" class="mobile-filter-chip status-shipping {% if status_filter=='not_shipped' %}active{% endif %}" title="Not Shipped">Not Shipped</a>
-                <a href="?status=drank{{ preserved_quick_params('__clear__') }}" class="mobile-filter-chip status-drank {% if status_filter=='drank' %}active{% endif %}" title="Drank">Drank</a>
-              </div>
-            </div>
             <div class="mobile-filter-family">
               <div class="mobile-filter-family-title">Location</div>
               <div class="mobile-filter-family-options">
@@ -723,6 +718,14 @@
                 {% for c in ['Green', 'Yellow', 'Orange', 'Red', 'Blue'] %}
                 <a href="?status={{ status_filter or 'in_collection' }}{{ preserved_quick_params(color_value=c) }}" class="mobile-filter-chip {% if color_filter==c %}active{% endif %}" title="{{ c }}"><span class="mobile-sticker-dot color-dot-{{ c }}"></span></a>
                 {% endfor %}
+              </div>
+            </div>
+            <div class="mobile-filter-family status-family">
+              <div class="mobile-filter-family-title">Status</div>
+              <div class="mobile-filter-family-options">
+                <a href="?status=in_collection{{ preserved_quick_params() }}" class="mobile-filter-chip status-available {% if status_filter=='in_collection' %}active{% endif %}" title="Available">Available</a>
+                <a href="?status=not_shipped{{ preserved_quick_params('__clear__') }}" class="mobile-filter-chip status-shipping {% if status_filter=='not_shipped' %}active{% endif %}" title="Not Shipped">Not Shipped</a>
+                <a href="?status=drank{{ preserved_quick_params('__clear__') }}" class="mobile-filter-chip status-drank {% if status_filter=='drank' %}active{% endif %}" title="Drank">Drank</a>
               </div>
             </div>
           </div>
