@@ -238,11 +238,11 @@
       .hero-copy { min-width: 0; }
       .hero-kicker {
         color: var(--mobile-label);
-        font-size: 0.72rem;
+        font-size: 0.92rem;
         font-weight: 900;
         text-transform: uppercase;
-        letter-spacing: 0.04em;
-        margin-bottom: 5px;
+        letter-spacing: 0.03em;
+        margin-bottom: 6px;
       }
       .hero-name {
         width: 100%;
@@ -582,7 +582,7 @@
         text-align: left;
       }
       select.quick-control { appearance: none; text-align: center; text-align-last: center; }
-      input.quick-control { min-width: 0; }
+      input.quick-control { min-width: 0; border-bottom: 1px solid rgba(255,248,238,0.22); }
       .quick-control:focus {
         outline: 0;
         color: #fff;
@@ -655,6 +655,15 @@
         transition: transform 0.18s;
       }
       .mobile-details[open] summary::after { transform: rotate(180deg); }
+      .details-preview {
+        color: var(--mobile-muted);
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: none;
+        letter-spacing: 0;
+        margin-left: 8px;
+      }
+      .mobile-details[open] .details-preview { display: none; }
       .mobile-details .edit-row {
         grid-template-columns: 100px minmax(0, 1fr);
         min-height: 44px;
@@ -663,13 +672,13 @@
       .mobile-note-block .edit-label { display: none; }
       .mobile-bottom-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .hero-sticker {
-        width: 13px;
-        height: 13px;
+        width: 18px;
+        height: 18px;
         display: inline-block;
         border-radius: 50%;
         border: 2px solid rgba(255,255,255,0.28);
-        vertical-align: -2px;
-        margin-left: 6px;
+        vertical-align: -4px;
+        margin-left: 7px;
       }
       .quick-label,
       .quick-control,
@@ -699,6 +708,7 @@
       /* Rating display */
       .field-card .rating-input {
         border: 0;
+        border-bottom: 1px solid rgba(231,189,112,0.3);
         background: transparent;
         color: var(--mobile-accent);
         font-size: 1.6rem;
@@ -792,12 +802,12 @@
         justify-content: flex-start;
         gap: 6px;
         flex-wrap: wrap;
-        max-width: 78px;
+        max-width: 92px;
         margin: 0 auto;
       }
       .compact-color-picker .color-choice {
-        width: 22px;
-        height: 22px;
+        width: 26px;
+        height: 26px;
         border-width: 2px;
       }
       .mobile-details[open] summary::after { transform: rotate(180deg); }
@@ -872,6 +882,7 @@
 
     <section class="mobile-hero">
       <div class="mobile-bottle-wrap">
+        <span class="detail-type-sash mobile-sash-{{ wine.wine_type or 'none' }}">{{ wine.wine_type or '' }}</span>
         {% if wine.image_url %}
         <img class="mobile-bottle" src="{{ wine.image_url }}" alt="">
         {% else %}
@@ -906,7 +917,7 @@
           <input type="hidden" name="storage_location" value="{{ wine.storage_location or '' }}">
           <select class="quick-control" name="status" id="statusControl">
             <option value="in_collection" {% if wine.status == 'in_collection' or not wine.status %}selected{% endif %}>Available</option>
-            <option value="not_shipped" {% if wine.status == 'not_shipped' %}selected{% endif %}>Shipping</option>
+            <option value="not_shipped" {% if wine.status == 'not_shipped' %}selected{% endif %}>Not Shipped</option>
             <option value="drank" {% if wine.status == 'drank' %}selected{% endif %}>Drank</option>
           </select>
         </form>
@@ -976,7 +987,7 @@
           {% else %}<div class="read-only-value" style="text-align:left;">{{ wine.color_code or 'None' }}</div>{% endif %}
         </div>
         <div class="field-card">
-          <span class="edit-label">Rating</span>
+          <span class="edit-label">Rating 0–5</span>
           {% if can_edit %}
           <form data-detail-form action="/wine/{{ wine.id }}/rating" method="post"><input class="rating-input" id="ratingInput" name="my_rating" type="number" min="0" max="5" step="0.1" inputmode="decimal" value="{{ wine.my_rating if wine.my_rating is not none else '' }}" placeholder="—"></form>
           {% else %}
@@ -992,8 +1003,9 @@
       </div>
     </section>
 
+    {% set wine_det_varietal = 'Blend' if wine.varietal and ',' in wine.varietal else (wine.varietal or '') %}
     <details class="mobile-details" id="wineFields">
-      <summary>Wine details</summary>
+      <summary>Wine details<span class="details-preview">{{ wine.wine_type or '' }}{{ ' · ' + wine.region if wine.region else '' }}{{ ' · ' + wine_det_varietal if wine_det_varietal else '' }}</span></summary>
       <div class="edit-row"><div class="edit-label">🍷 Type</div>{% if can_edit %}<form data-detail-form action="/wine/{{ wine.id }}/type" method="post"><select class="mobile-select" name="wine_type"><option value="">Wine</option>{% for type in wine_types %}<option value="{{ type }}" {% if wine.wine_type == type %}selected{% endif %}>{{ type }}</option>{% endfor %}</select></form>{% else %}<div class="read-only-value">{{ wine.wine_type or 'Wine' }}</div>{% endif %}</div>
       {% for field, label, value, input_type, icon in [('vintage', 'Vintage', wine.vintage, 'number', '📅'), ('varietal', 'Varietal', wine.varietal, 'text', '🍇'), ('region', 'Region', wine.region, 'text', '📍'), ('origin', 'Origin', wine.origin, 'text', '🌍')] %}
       <div class="edit-row"><div class="edit-label">{{ icon }} {{ label }}</div>{% if can_edit %}<form data-detail-form action="/wine/{{ wine.id }}/{{ field }}" method="post"><input class="mobile-input" name="{{ field }}" type="{{ input_type }}" value="{{ value or '' }}" placeholder="Not set"></form>{% else %}<div class="read-only-value">{{ value or 'Not set' }}</div>{% endif %}</div>
@@ -1002,7 +1014,7 @@
     </details>
 
     <details class="mobile-details" id="purchaseFields">
-      <summary>Purchase</summary>
+      <summary>Purchase<span class="details-preview">{% if wine.unit_price %}${{ "%.0f"|format(wine.unit_price) }}{% endif %}{% if wine.retailer %}{{ ' · ' + wine.retailer if wine.unit_price else wine.retailer }}{% endif %}</span></summary>
       {% for field, label, value, input_type, icon in [('order_date', 'Order date', wine.order_date[:10] if wine.order_date else '', 'date', '🗓️'), ('unit_price', 'Paid each', wine.unit_price, 'number', '💳'), ('retail_price', 'Retail', wine.retail_price, 'number', '🏷️')] %}
       <div class="edit-row"><div class="edit-label">{{ icon }} {{ label }}</div>{% if can_edit %}<form data-detail-form action="/wine/{{ wine.id }}/{{ field }}" method="post"><input class="mobile-input" name="{{ field }}" type="{{ input_type }}" {% if input_type == 'number' %}step="0.01" inputmode="decimal"{% endif %} value="{{ value or '' }}" placeholder="Not set"></form>{% else %}<div class="read-only-value">{{ value or 'Not set' }}</div>{% endif %}</div>
       {% endfor %}
@@ -1010,9 +1022,9 @@
     </details>
 
     <nav class="mobile-bottom-actions" aria-label="Wine detail actions">
-      <a href="{{ back_url }}">Back to Cellar</a>
-      <a href="{{ prev_wine_url or '#' }}" class="{% if not prev_wine_url %}disabled-action{% endif %}">Previous Wine</a>
-      <a href="{{ next_wine_url or '#' }}" class="{% if not next_wine_url %}disabled-action{% endif %}">Next Wine</a>
+      <a href="{{ back_url }}">← Back to Cellar</a>
+      <a href="{{ prev_wine_url or '#' }}" class="{% if not prev_wine_url %}disabled-action{% endif %}">‹ Prev</a>
+      <a href="{{ next_wine_url or '#' }}" class="{% if not next_wine_url %}disabled-action{% endif %}">Next ›</a>
     </nav>
 
     <div class="delete-confirm-backdrop" id="deleteConfirmDialog" aria-hidden="true">
