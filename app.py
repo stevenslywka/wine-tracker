@@ -495,12 +495,14 @@ def wine_detail(wine_id):
     wine = cur.fetchone()
     user_locations = []
     cellar_username = ""
+    cellar_display_name = ""
     if wine:
         cur.execute(f"SELECT name FROM user_locations WHERE user_id = {p} ORDER BY sort_order", (wine["user_id"],))
         user_locations = [r["name"] for r in cur.fetchall()]
-        cur.execute(f"SELECT username FROM users WHERE id = {p}", (wine["user_id"],))
+        cur.execute(f"SELECT username, display_name FROM users WHERE id = {p}", (wine["user_id"],))
         user_row = cur.fetchone()
         cellar_username = user_row["username"] if user_row else session.get("username", "")
+        cellar_display_name = user_row["display_name"] if user_row and "display_name" in user_row.keys() else cellar_username
     conn.close()
     if not wine:
         return "Wine not found", 404
@@ -532,6 +534,7 @@ def wine_detail(wine_id):
                            bottle_sizes=BOTTLE_SIZES,
                            sticker_colors=("Red", "Blue", "Orange", "Yellow", "Green"),
                            cellar_username=cellar_username,
+                           cellar_display_name=cellar_display_name,
                            back_url=back_url,
                            prev_wine_url=prev_wine_url,
                            next_wine_url=next_wine_url,
