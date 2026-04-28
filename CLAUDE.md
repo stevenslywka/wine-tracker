@@ -34,7 +34,7 @@ Recent mobile UI work pushed to GitHub:
 - Mobile quick carousel added: Location, Type, Origin, Sticker. It should appear once only, ending with Sticker.
 - Origin carousel chips are: USA, France, Italy, and Earth emoji `Other`. `Other` filters origins outside USA/France/Italy; USA also includes common stored US origins like California, Oregon, Washington, and New York.
 - Mobile Cards/List toggle is on the same row as Filter and sort; wine counter sits below.
-- Mobile Select mode includes bulk Edit: tap `Select`, tap cards or `All`, tap `Edit`, then choose Location, Status, Sticker, Source, or Order Date. These actions post selected IDs to `/wines/bulk-edit`. Location marks selected wines Available and assigns the chosen location. It intentionally does not implement bottle history or quantity-drinking behavior.
+- Mobile Select mode includes bulk Edit: tap `Select`, tap cards or `All`, tap `Edit`, then use inline carousel-style chips/fields for Location, Status, Sticker, Source, or Order Date. These actions post selected IDs to `/wines/bulk-edit`. Location marks selected wines Available and assigns the chosen location. It intentionally does not implement bottle history or quantity-drinking behavior.
 - Mobile Batch Scan added in Add Wine: one multi-bottle photo, client-side compression, `/wine/scan-batch-labels` extraction, editable review cards, and `/wine/add-batch-scan` insert. It uses `origin` (not `location`), leaves `image_url` null for group photos, flags likely duplicates, and intentionally does not reuse receipt `/wine/add-bulk`.
 - "Add" renamed to "Add Wine"; "all in collection" renamed to "Available".
 - Latest pushed commits include:
