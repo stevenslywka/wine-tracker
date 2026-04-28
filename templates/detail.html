@@ -107,12 +107,27 @@
       }
       .mobile-bottle.placeholder {
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         color: #826f5c;
-        font-size: 0.8rem;
+        font-size: 0.68rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
         text-align: center;
+        gap: 8px;
         padding: 10px;
+      }
+      .mobile-bottle.placeholder::before {
+        content: "";
+        width: 38px;
+        height: 92px;
+        display: block;
+        border-radius: 9px 9px 13px 13px;
+        background: linear-gradient(180deg, #392719, #17100b);
+        box-shadow: inset 0 0 0 1px rgba(255,248,238,0.08), 0 8px 18px rgba(0,0,0,0.34);
+        clip-path: polygon(38% 0, 62% 0, 62% 16%, 76% 30%, 76% 100%, 24% 100%, 24% 30%, 38% 16%);
       }
       .mobile-bottle-wrap {
         position: relative;
@@ -272,11 +287,12 @@
       }
       .mobile-textarea {
         display: block;
-        min-height: 120px;
+        min-height: 58px;
+        overflow: hidden;
         text-align: left;
         line-height: 1.35;
         font-weight: 700;
-        resize: vertical;
+        resize: none;
         background: var(--mobile-panel);
         border-color: rgba(255,248,238,0.12);
         padding: 11px;
@@ -381,6 +397,15 @@
       .mobile-bottom-actions .primary-action {
         background: var(--mobile-burgundy);
         border-color: #a64b4c;
+      }
+      .mobile-bottom-actions .delete-action {
+        background: #3a1010;
+        border-color: #8b2a2a;
+        color: #ffd4d4;
+      }
+      .mobile-bottom-actions .disabled-action {
+        opacity: 0.42;
+        pointer-events: none;
       }
       .mobile-topbar { justify-content: flex-end; min-height: 22px; margin-bottom: 6px; }
       .mobile-back { display: none; }
@@ -610,6 +635,77 @@
       .field-card .mobile-textarea {
         font-size: 0.88rem;
       }
+      .qty-stepper {
+        display: grid;
+        grid-template-columns: 30px minmax(34px, 1fr) 30px;
+        gap: 7px;
+        align-items: center;
+      }
+      .qty-stepper button {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: 1px solid rgba(231,189,112,0.5);
+        background: #211a13;
+        color: var(--mobile-accent);
+        font-size: 1.15rem;
+        font-weight: 900;
+        line-height: 1;
+        padding: 0;
+      }
+      .qty-stepper .mobile-input {
+        pointer-events: none;
+      }
+      .delete-confirm-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        background: rgba(0,0,0,0.64);
+        align-items: center;
+        justify-content: center;
+        padding: 18px;
+      }
+      .delete-confirm-backdrop.visible { display: flex; }
+      .delete-confirm-dialog {
+        width: min(330px, 100%);
+        border: 1px solid rgba(255,248,238,0.14);
+        border-radius: 12px;
+        background: #18130f;
+        color: var(--mobile-text);
+        padding: 18px;
+        box-shadow: 0 18px 44px rgba(0,0,0,0.52);
+      }
+      .delete-confirm-title {
+        color: #ffd4d4;
+        font-size: 1.05rem;
+        font-weight: 900;
+        margin-bottom: 6px;
+      }
+      .delete-confirm-copy {
+        color: var(--mobile-muted);
+        font-size: 0.9rem;
+        line-height: 1.35;
+        margin-bottom: 16px;
+      }
+      .delete-confirm-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+      .delete-confirm-actions button {
+        border-radius: 999px;
+        border: 1px solid rgba(255,248,238,0.14);
+        background: #211a13;
+        color: var(--mobile-text);
+        font-size: 0.86rem;
+        font-weight: 900;
+        padding: 10px 8px;
+      }
+      .delete-confirm-actions .danger {
+        background: #7f2022;
+        border-color: #a64b4c;
+      }
       .compact-color-picker {
         justify-content: flex-start;
         gap: 6px;
@@ -668,18 +764,13 @@
 
     <section class="mobile-hero">
       <div class="mobile-bottle-wrap">
-        <div class="detail-type-sash mobile-sash-{{ wine.wine_type or 'none' }}">{{ wine.wine_type or 'Wine' }}</div>
         {% if wine.image_url %}
         <img class="mobile-bottle" src="{{ wine.image_url }}" alt="">
         {% else %}
-        <div class="mobile-bottle placeholder">No image</div>
+        <div class="mobile-bottle placeholder">No photo</div>
         {% endif %}
       </div>
       <div class="hero-copy">
-        <div class="hero-kicker">
-          {{ wine.wine_type or 'Wine' }}{% if wine.vintage %} &middot; {{ wine.vintage }}{% endif %}
-          <span id="heroSticker" class="hero-sticker {% if wine.color_code %}color-{{ wine.color_code }}{% endif %}" title="{{ wine.color_code or 'No sticker' }}" {% if not wine.color_code %}style="display:none;"{% endif %}></span>
-        </div>
         {% if can_edit %}
         <form data-detail-form action="/wine/{{ wine.id }}/wine_name" method="post">
           <textarea class="hero-name" name="wine_name" rows="3" spellcheck="false">{{ wine.wine_name or '' }}</textarea>
@@ -687,6 +778,10 @@
         {% else %}
         <div class="hero-name">{{ wine.wine_name or 'Unknown Wine' }}</div>
         {% endif %}
+        <div class="hero-kicker">
+          {{ wine.vintage or 'NV' }}
+          <span id="heroSticker" class="hero-sticker {% if wine.color_code %}color-{{ wine.color_code }}{% endif %}" title="{{ wine.color_code or 'No sticker' }}" {% if not wine.color_code %}style="display:none;"{% endif %}></span>
+        </div>
         <div class="hero-meta">
           <div class="hero-icons"><span class="hero-icon">{{ country_flag }}</span><span class="hero-icon-text">{{ wine.region or wine.origin or 'Region unknown' }}</span></div>
           <div class="hero-icons"><span class="hero-icon">🍇</span><span class="hero-icon-text">{{ wine.varietal or 'Varietal unknown' }}</span></div>
@@ -733,7 +828,7 @@
         <div class="quick-label">Drinking Window</div>
         {% if can_edit %}
         <form data-detail-form action="/wine/{{ wine.id }}/drinking_window" method="post">
-          <input class="quick-control mobile-drinking-window" name="drinking_window" id="drinkControl" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}" value="{{ wine.drinking_window or '' }}" placeholder="Not set">
+          <input class="quick-control mobile-drinking-window" name="drinking_window" id="drinkControl" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}" value="{{ wine.drinking_window or '' }}" placeholder="e.g. 2024–2030">
         </form>
         {% else %}
         <div class="quick-value mobile-drinking-window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}">{{ wine.drinking_window or 'Not set' }}</div>
@@ -747,7 +842,13 @@
         <div class="field-card">
           <span class="edit-label">Qty</span>
           {% if can_edit %}
-          <form data-detail-form action="/wine/{{ wine.id }}/quantity" method="post"><input class="mobile-input" name="quantity" type="number" min="1" inputmode="numeric" value="{{ wine.quantity or '' }}" placeholder="-"></form>
+          <form data-detail-form data-qty-form action="/wine/{{ wine.id }}/quantity" method="post">
+            <div class="qty-stepper">
+              <button type="button" data-qty-step="-1" aria-label="Decrease quantity">-</button>
+              <input class="mobile-input" id="quantityInput" name="quantity" type="number" min="1" inputmode="numeric" value="{{ wine.quantity or 1 }}" placeholder="-">
+              <button type="button" data-qty-step="1" aria-label="Increase quantity">+</button>
+            </div>
+          </form>
           {% else %}<div class="read-only-value" style="text-align:left;">{{ wine.quantity or '-' }}</div>{% endif %}
         </div>
         <div class="field-card">
@@ -777,7 +878,7 @@
         <div class="field-card wide" id="notesFields">
           <span class="edit-label">Notes</span>
           {% if can_edit %}
-          <form data-detail-form action="/wine/{{ wine.id }}/notes" method="post"><textarea class="mobile-textarea" id="notesInput" name="notes" rows="4" placeholder="Tasting notes, food pairings, when to drink...">{{ wine.notes or '' }}</textarea><div class="field-hint">Saved automatically</div></form>
+          <form data-detail-form action="/wine/{{ wine.id }}/notes" method="post"><textarea class="mobile-textarea" id="notesInput" name="notes" rows="2" placeholder="Tasting notes, food pairings, when to drink...">{{ wine.notes or '' }}</textarea><div class="field-hint">Saved automatically</div></form>
           {% else %}<div class="read-only-value" style="text-align:left;">{{ wine.notes or 'No notes yet.' }}</div>{% endif %}
         </div>
       </div>
@@ -801,11 +902,22 @@
     </details>
 
     <nav class="mobile-bottom-actions" aria-label="Wine detail actions">
-      <button type="button" onclick="history.back()">← Back</button>
-      <button type="button" id="rateAction">★ Rate</button>
-      <button type="button" id="notesAction">✏️ Notes</button>
-      {% if can_edit %}<button type="button" class="primary-action" id="markDrankAction">✓ Drank</button>{% else %}<a class="primary-action" href="#wineFields">Wine</a>{% endif %}
+      <a href="{{ back_url }}">Back to Cellar</a>
+      <a href="{{ prev_wine_url or '#' }}" class="{% if not prev_wine_url %}disabled-action{% endif %}">Previous Wine</a>
+      <a href="{{ next_wine_url or '#' }}" class="{% if not next_wine_url %}disabled-action{% endif %}">Next Wine</a>
+      {% if can_edit %}<button type="button" class="delete-action" id="deleteWineAction">🗑 Delete</button>{% else %}<a class="disabled-action" href="#">Delete</a>{% endif %}
     </nav>
+
+    <div class="delete-confirm-backdrop" id="deleteConfirmDialog" aria-hidden="true">
+      <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmTitle">
+        <div class="delete-confirm-title" id="deleteConfirmTitle">Are you sure?</div>
+        <div class="delete-confirm-copy">This cannot be undone.</div>
+        <div class="delete-confirm-actions">
+          <button type="button" id="cancelDeleteAction">Cancel</button>
+          <button type="button" class="danger" id="confirmDeleteAction">Yes, delete</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="container desktop-detail-page" style="max-width: 720px;">
@@ -991,6 +1103,17 @@
       setTimeout(() => el.focus({ preventScroll: true }), 350);
     }
 
+    function autosizeTextarea(textarea) {
+      if (!textarea) return;
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.max(58, textarea.scrollHeight) + 'px';
+    }
+
+    document.querySelectorAll('.mobile-textarea').forEach(textarea => {
+      autosizeTextarea(textarea);
+      textarea.addEventListener('input', () => autosizeTextarea(textarea));
+    });
+
     if (canEditMobile) {
       document.querySelectorAll('[data-detail-form]').forEach(form => {
         let blurTimer;
@@ -1027,15 +1150,6 @@
         if (statusTile) {
           statusTile.className = statusTile.className.replace(/quick-tile-status-\S+/g, '').trim();
           statusTile.classList.add(`quick-tile-status-${event.target.value}`);
-        }
-      });
-
-      document.getElementById('markDrankAction')?.addEventListener('click', () => {
-        const statusControl = statusForm?.querySelector('[name="status"]');
-        if (statusControl) {
-          statusControl.value = 'drank';
-          statusControl.dispatchEvent(new Event('change', { bubbles: true }));
-          document.getElementById('cellarFields')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       });
 
@@ -1083,8 +1197,45 @@
         });
       });
 
-      document.getElementById('rateAction')?.addEventListener('click', () => focusMobileField('#ratingInput'));
-      document.getElementById('notesAction')?.addEventListener('click', () => focusMobileField('#notesInput'));
+      const qtyForm = document.querySelector('[data-qty-form]');
+      const qtyInput = document.getElementById('quantityInput');
+      qtyForm?.querySelectorAll('[data-qty-step]').forEach(button => {
+        button.addEventListener('click', () => {
+          const current = parseInt(qtyInput.value || '1', 10) || 1;
+          const step = parseInt(button.dataset.qtyStep || '0', 10);
+          qtyInput.value = Math.max(1, current + step);
+          submitDetailForm(qtyForm);
+        });
+      });
+
+      const deleteDialog = document.getElementById('deleteConfirmDialog');
+      const deleteButton = document.getElementById('deleteWineAction');
+      const cancelDelete = document.getElementById('cancelDeleteAction');
+      const confirmDelete = document.getElementById('confirmDeleteAction');
+      function closeDeleteDialog() {
+        deleteDialog?.classList.remove('visible');
+        deleteDialog?.setAttribute('aria-hidden', 'true');
+      }
+      deleteButton?.addEventListener('click', () => {
+        deleteDialog?.classList.add('visible');
+        deleteDialog?.setAttribute('aria-hidden', 'false');
+      });
+      cancelDelete?.addEventListener('click', closeDeleteDialog);
+      deleteDialog?.addEventListener('click', event => {
+        if (event.target === deleteDialog) closeDeleteDialog();
+      });
+      confirmDelete?.addEventListener('click', async () => {
+        confirmDelete.disabled = true;
+        try {
+          const response = await fetch('/wine/{{ wine.id }}/delete', { method: 'POST' });
+          if (!response.ok) throw new Error('Delete failed');
+          window.location.href = {{ back_url|tojson }};
+        } catch (error) {
+          confirmDelete.disabled = false;
+          setSaveState('Could not delete', 'error');
+          closeDeleteDialog();
+        }
+      });
     }
   </script>
 </body>
