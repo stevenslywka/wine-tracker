@@ -566,6 +566,59 @@ def bulk_update_status():
     return ("", 204)
 
 
+@app.route("/wines/bulk-edit", methods=["POST"])
+@login_required
+def bulk_edit_wines():
+    ids = request.form.getlist("ids")
+    field = request.form.get("field", "").strip()
+    value = request.form.get("value", "").strip()
+    allowed_fields = {"status", "storage_location", "color_code", "retailer", "order_date"}
+    if field not in allowed_fields:
+        return ("", 400)
+
+    p = ph()
+    conn = get_db()
+    cur = conn.cursor()
+    uid = session["user_id"]
+
+    if field == "status":
+        if value not in ("in_collection", "not_shipped", "drank"):
+            conn.close()
+            return ("", 400)
+        storage_loc = request.form.get("storage_location", "").strip() or None
+        for id_ in ids:
+            if value == "in_collection" and storage_loc:
+                cur.execute(f"UPDATE wines SET status = {p}, storage_location = {p} WHERE id = {p} AND user_id = {p}", (value, storage_loc, id_, uid))
+            elif value in ("not_shipped", "drank"):
+                cur.execute(f"UPDATE wines SET status = {p}, storage_location = NULL WHERE id = {p} AND user_id = {p}", (value, id_, uid))
+            else:
+                cur.execute(f"UPDATE wines SET status = {p} WHERE id = {p} AND user_id = {p}", (value, id_, uid))
+    elif field == "storage_location":
+        storage_loc = value or None
+        for id_ in ids:
+            cur.execute(f"UPDATE wines SET status = 'in_collection', storage_location = {p} WHERE id = {p} AND user_id = {p}", (storage_loc, id_, uid))
+    elif field == "color_code":
+        color = value or None
+        if color not in ("Red", "Blue", "Orange", "Yellow", "Green", None):
+            conn.close()
+            return ("", 400)
+        for id_ in ids:
+            cur.execute(f"UPDATE wines SET color_code = {p} WHERE id = {p} AND user_id = {p}", (color, id_, uid))
+    elif field == "retailer":
+        retailer = value or None
+        for id_ in ids:
+            cur.execute(f"UPDATE wines SET retailer = {p} WHERE id = {p} AND user_id = {p}", (retailer, id_, uid))
+    elif field == "order_date":
+        import re as _re
+        order_date = value if _re.match(r'^\d{4}-\d{2}-\d{2}$', value) else None
+        for id_ in ids:
+            cur.execute(f"UPDATE wines SET order_date = {p} WHERE id = {p} AND user_id = {p}", (order_date, id_, uid))
+
+    conn.commit()
+    conn.close()
+    return ("", 204)
+
+
 @app.route("/wine/<int:wine_id>/status", methods=["POST"])
 @login_required
 def update_status(wine_id):

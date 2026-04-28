@@ -1295,19 +1295,51 @@
   <div class="mobile-select-bar" id="mobileSelectBar">
     <button type="button" class="mobile-select-count" disabled><span id="mobileSelectedCount">0</span> selected</button>
     <button type="button" data-mobile-action="select-all">All</button>
-    <button type="button" class="mobile-bulk-primary" data-mobile-action="bulk-move" id="mobileBulkMoveBtn" disabled>Move</button>
+    <button type="button" class="mobile-bulk-primary" data-mobile-action="bulk-edit" id="mobileBulkEditBtn" disabled>Edit</button>
     <button type="button" data-mobile-action="cancel-select">Done</button>
   </div>
   <div class="mobile-filter-backdrop" id="mobileBulkBackdrop"></div>
-  <div class="mobile-bulk-sheet" id="mobileBulkSheet" aria-label="Move selected wines">
-    <div class="mobile-bulk-title">Move selected wines</div>
-    <div class="mobile-bulk-copy">This marks the selected wines as Available and puts them in the location you choose.</div>
-    <div class="mobile-bulk-locations">
+  <div class="mobile-bulk-sheet" id="mobileBulkSheet" aria-label="Edit selected wines">
+    <div class="mobile-bulk-title">Edit selected wines</div>
+    <div class="mobile-bulk-copy" id="mobileBulkCopy">Choose what to update for the selected wines.</div>
+    <div class="mobile-bulk-menu" data-bulk-panel="menu">
+      <button type="button" class="mobile-bulk-location" data-bulk-open="location">Location</button>
+      <button type="button" class="mobile-bulk-location" data-bulk-open="status">Status</button>
+      <button type="button" class="mobile-bulk-location" data-bulk-open="sticker">Sticker</button>
+      <button type="button" class="mobile-bulk-location" data-bulk-open="source">Source</button>
+      <button type="button" class="mobile-bulk-location" data-bulk-open="date">Order Date</button>
+    </div>
+    <div class="mobile-bulk-locations" data-bulk-panel="location" style="display:none;">
       {% for loc in user_locations %}
-      <button type="button" class="mobile-bulk-location loc-color-{{ loop.index0 % 5 }}" data-bulk-location="{{ loc }}">{{ loc }}</button>
+      <button type="button" class="mobile-bulk-location loc-color-{{ loop.index0 % 5 }}" data-bulk-field="storage_location" data-bulk-value="{{ loc }}">{{ loc }}</button>
       {% endfor %}
     </div>
+    <div class="mobile-bulk-locations" data-bulk-panel="status" style="display:none;">
+      <button type="button" class="mobile-bulk-location" data-bulk-field="status" data-bulk-value="in_collection">Available</button>
+      <button type="button" class="mobile-bulk-location" data-bulk-field="status" data-bulk-value="not_shipped">Not Shipped</button>
+      <button type="button" class="mobile-bulk-location" data-bulk-field="status" data-bulk-value="drank">Drank</button>
+    </div>
+    <div class="mobile-bulk-locations" data-bulk-panel="status-location" style="display:none;">
+      {% for loc in user_locations %}
+      <button type="button" class="mobile-bulk-location loc-color-{{ loop.index0 % 5 }}" data-bulk-field="status" data-bulk-value="in_collection" data-bulk-storage="{{ loc }}">{{ loc }}</button>
+      {% endfor %}
+    </div>
+    <div class="mobile-bulk-locations" data-bulk-panel="sticker" style="display:none;">
+      {% for c in ['Green', 'Yellow', 'Orange', 'Red', 'Blue'] %}
+      <button type="button" class="mobile-bulk-location" data-bulk-field="color_code" data-bulk-value="{{ c }}"><span class="mobile-sticker-dot color-dot-{{ c }}"></span> {{ c }}</button>
+      {% endfor %}
+      <button type="button" class="mobile-bulk-location" data-bulk-field="color_code" data-bulk-value="">None</button>
+    </div>
+    <div class="mobile-bulk-locations" data-bulk-panel="source" style="display:none;">
+      <input type="text" id="mobileBulkSourceInput" class="form-control" placeholder="Source">
+      <button type="button" class="mobile-bulk-location" data-bulk-field="retailer" data-bulk-input="mobileBulkSourceInput">Apply Source</button>
+    </div>
+    <div class="mobile-bulk-locations" data-bulk-panel="date" style="display:none;">
+      <input type="date" id="mobileBulkDateInput" class="form-control">
+      <button type="button" class="mobile-bulk-location" data-bulk-field="order_date" data-bulk-input="mobileBulkDateInput">Apply Date</button>
+    </div>
     <div class="mobile-bulk-actions">
+      <button type="button" data-mobile-action="bulk-back" id="mobileBulkBackBtn" style="display:none;">Back</button>
       <button type="button" data-mobile-action="close-bulk">Cancel</button>
     </div>
   </div>
@@ -2881,10 +2913,12 @@
     const mobileWineCards = [...document.querySelectorAll('.mobile-wine-card[data-detail-url]')];
     const mobileSelectedIds = new Set();
     const mobileSelectedCount = document.getElementById('mobileSelectedCount');
-    const mobileBulkMoveBtn = document.getElementById('mobileBulkMoveBtn');
+    const mobileBulkEditBtn = document.getElementById('mobileBulkEditBtn');
     const mobileBulkSheet = document.getElementById('mobileBulkSheet');
     const mobileBulkBackdrop = document.getElementById('mobileBulkBackdrop');
     const mobileSelectTrigger = document.querySelector('[data-mobile-action="select"]');
+    const mobileBulkCopy = document.getElementById('mobileBulkCopy');
+    const mobileBulkBackBtn = document.getElementById('mobileBulkBackBtn');
 
     function isMobileSelectMode() {
       return document.body.classList.contains('mobile-selecting');
@@ -2904,7 +2938,7 @@
     function updateMobileSelectCount() {
       const count = mobileSelectedIds.size;
       if (mobileSelectedCount) mobileSelectedCount.textContent = count;
-      if (mobileBulkMoveBtn) mobileBulkMoveBtn.disabled = count === 0;
+      if (mobileBulkEditBtn) mobileBulkEditBtn.disabled = count === 0;
     }
 
     function toggleMobileWineSelection(card, force) {
@@ -2919,6 +2953,7 @@
 
     function openMobileBulkSheet() {
       if (!mobileSelectedIds.size) return;
+      showMobileBulkPanel('menu');
       mobileBulkSheet?.classList.add('visible');
       mobileBulkBackdrop?.classList.add('visible');
     }
@@ -2928,17 +2963,43 @@
       mobileBulkBackdrop?.classList.remove('visible');
     }
 
-    function applyMobileBulkLocation(storageLocation) {
+    function showMobileBulkPanel(panelName) {
+      document.querySelectorAll('[data-bulk-panel]').forEach(panel => {
+        panel.style.display = panel.dataset.bulkPanel === panelName ? 'grid' : 'none';
+      });
+      if (mobileBulkBackBtn) mobileBulkBackBtn.style.display = panelName === 'menu' ? 'none' : 'block';
+      if (mobileBulkCopy) {
+        mobileBulkCopy.textContent = {
+          menu: 'Choose what to update for the selected wines.',
+          location: 'Move selected wines and mark them Available.',
+          status: 'Choose a new status for selected wines.',
+          'status-location': 'Choose where these Available wines are located.',
+          sticker: 'Set one sticker for selected wines.',
+          source: 'Set one source for selected wines.',
+          date: 'Set one order date for selected wines.'
+        }[panelName] || 'Choose what to update for the selected wines.';
+      }
+      document.querySelectorAll('[data-bulk-panel="source"] input, [data-bulk-panel="date"] input').forEach(input => {
+        if (panelName === 'source' && input.id === 'mobileBulkSourceInput') setTimeout(() => input.focus(), 80);
+        if (panelName === 'date' && input.id === 'mobileBulkDateInput') setTimeout(() => input.focus(), 80);
+      });
+    }
+
+    function applyMobileBulkEdit(field, value, extra = {}) {
       const ids = [...mobileSelectedIds];
-      if (!ids.length || !storageLocation) return;
-      if (mobileBulkMoveBtn) {
-        mobileBulkMoveBtn.disabled = true;
-        mobileBulkMoveBtn.textContent = 'Moving...';
+      if (!ids.length || !field) return;
+      if (field === 'status' && value === 'drank') {
+        if (!confirm(`Mark ${ids.length} selected wine${ids.length === 1 ? '' : 's'} as drank? Ratings and notes can be added later.`)) return;
       }
       const body = ids.map(id => `ids=${encodeURIComponent(id)}`).join('&')
-        + `&status=${encodeURIComponent('in_collection')}`
-        + `&storage_location=${encodeURIComponent(storageLocation)}`;
-      fetch('/wines/bulk-status', {
+        + `&field=${encodeURIComponent(field)}`
+        + `&value=${encodeURIComponent(value || '')}`
+        + (extra.storage_location ? `&storage_location=${encodeURIComponent(extra.storage_location)}` : '');
+      if (mobileBulkEditBtn) {
+        mobileBulkEditBtn.disabled = true;
+        mobileBulkEditBtn.textContent = 'Saving...';
+      }
+      fetch('/wines/bulk-edit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body
@@ -2946,10 +3007,10 @@
         if (!r.ok) throw new Error('Bulk update failed');
         window.location.reload();
       }).catch(() => {
-        alert('Could not move the selected wines. Please try again.');
-        if (mobileBulkMoveBtn) {
-          mobileBulkMoveBtn.disabled = mobileSelectedIds.size === 0;
-          mobileBulkMoveBtn.textContent = 'Move';
+        alert('Could not update the selected wines. Please try again.');
+        if (mobileBulkEditBtn) {
+          mobileBulkEditBtn.disabled = mobileSelectedIds.size === 0;
+          mobileBulkEditBtn.textContent = 'Edit';
         }
       });
     }
@@ -2963,8 +3024,21 @@
       });
     });
 
-    document.querySelectorAll('[data-bulk-location]').forEach(button => {
-      button.addEventListener('click', () => applyMobileBulkLocation(button.dataset.bulkLocation));
+    document.querySelectorAll('[data-bulk-open]').forEach(button => {
+      button.addEventListener('click', () => showMobileBulkPanel(button.dataset.bulkOpen));
+    });
+
+    document.querySelectorAll('[data-bulk-field]').forEach(button => {
+      button.addEventListener('click', () => {
+        const field = button.dataset.bulkField;
+        let value = button.dataset.bulkValue || '';
+        if (button.dataset.bulkInput) value = document.getElementById(button.dataset.bulkInput)?.value || '';
+        if (field === 'status' && value === 'in_collection' && !button.dataset.bulkStorage) {
+          showMobileBulkPanel('status-location');
+          return;
+        }
+        applyMobileBulkEdit(field, value, { storage_location: button.dataset.bulkStorage || '' });
+      });
     });
 
     mobileWineCards.forEach(card => {
@@ -3019,10 +3093,12 @@
         if (!isMobileSelectMode()) setMobileSelectMode(true);
         const allSelected = mobileWineCards.length > 0 && mobileWineCards.every(card => mobileSelectedIds.has(card.dataset.wineId));
         mobileWineCards.forEach(card => toggleMobileWineSelection(card, !allSelected));
-      } else if (action === 'bulk-move') {
+      } else if (action === 'bulk-edit') {
         openMobileBulkSheet();
       } else if (action === 'close-bulk') {
         closeMobileBulkSheet();
+      } else if (action === 'bulk-back') {
+        showMobileBulkPanel('menu');
       } else if (action === 'cancel-select') {
         setMobileSelectMode(false);
       } else if (action === 'view') {

@@ -34,7 +34,7 @@ Recent mobile UI work pushed to GitHub:
 - Mobile quick carousel added: Location, Type, Origin, Sticker. It should appear once only, ending with Sticker.
 - Origin carousel chips are: USA, France, Italy, and Earth emoji `Other`. `Other` filters origins outside USA/France/Italy; USA also includes common stored US origins like California, Oregon, Washington, and New York.
 - Mobile Cards/List toggle is on the same row as Filter and sort; wine counter sits below.
-- Mobile Select mode added for shipment arrivals/location moves: tap `Select`, tap cards or `All`, tap `Move`, then choose a location. This posts selected IDs to `/wines/bulk-status` with `status=in_collection` and `storage_location=<chosen location>`. It intentionally does not implement bottle history or quantity-drinking behavior.
+- Mobile Select mode includes bulk Edit: tap `Select`, tap cards or `All`, tap `Edit`, then choose Location, Status, Sticker, Source, or Order Date. These actions post selected IDs to `/wines/bulk-edit`. Location marks selected wines Available and assigns the chosen location. It intentionally does not implement bottle history or quantity-drinking behavior.
 - Mobile Batch Scan added in Add Wine: one multi-bottle photo, client-side compression, `/wine/scan-batch-labels` extraction, editable review cards, and `/wine/add-batch-scan` insert. It uses `origin` (not `location`), leaves `image_url` null for group photos, flags likely duplicates, and intentionally does not reuse receipt `/wine/add-bulk`.
 - "Add" renamed to "Add Wine"; "all in collection" renamed to "Available".
 - Latest pushed commits include:
@@ -50,7 +50,7 @@ Current mobile UI state as of Apr 28, 2026 (supersedes older mobile bullets belo
 - Origin carousel chips are USA, France, Italy, and Earth emoji `Other`. `Other` filters origins outside USA/France/Italy; USA also includes common stored US origins like California, Oregon, Washington, and New York.
 - Mobile search has an X clear button and uses 16px font to avoid iOS zoom sticking after focus.
 - The old tiny bottom-left result counter is removed. When no filters/search are active, the mobile summary says `Viewing - All Wines`; filtered states show the active view and counts.
-- Mobile Select mode is available to edit users from the main cellar mobile toolbar. It is meant for shipment arrivals and moving bottles between locations. It should not change inventory-history semantics; bulk `Move` marks selected wines Available and assigns the chosen location.
+- Mobile Select mode is available to edit users from the main cellar mobile toolbar. It is meant for shipment arrivals and batch metadata cleanup. It should not change inventory-history semantics; bulk Edit supports Location, Status, Sticker, Source, and Order Date only.
 - Empty mobile results say `No wines yet - tap Add Wine to get started` in white.
 - Wine cards without images show a dark `No photo` bottle silhouette placeholder.
 - Bottom mobile cellar button says `Need a Wine Rec?`.
@@ -223,6 +223,7 @@ else:
 
 ### Bulk / Other
 - `POST /wines/bulk-status` — multi-select status change
+- `POST /wines/bulk-edit` — mobile Select mode bulk updates for status, location, sticker, source, and order date
 - `POST /wine/add` — add single wine
 - `POST /wine/add-bulk` — add from receipt scan
 - `POST /wine/scan-batch-labels` — AI scan of one multi-bottle photo, returns editable batch candidates
