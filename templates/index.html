@@ -599,9 +599,16 @@
         color: #f5e6d3; padding: 0 10px; font-size: 0.78rem; font-weight: 900; white-space: nowrap;
         display: inline-flex; align-items: center; justify-content: center; gap: 5px;
       }
+      .mobile-bulk-chip.loc-color-0 { background: #1a3a5c; color: #7eb8cb; border-color: #2a6a9c; }
+      .mobile-bulk-chip.loc-color-1 { background: #5c1a1a; color: #e08080; border-color: #8c2a2a; }
+      .mobile-bulk-chip.loc-color-2 { background: #1a3a2a; color: #7ecb9e; border-color: #2a6a3a; }
+      .mobile-bulk-chip.loc-color-3 { background: #3a1a5c; color: #c0a0e0; border-color: #5a2a8c; }
+      .mobile-bulk-chip.loc-color-4 { background: #5c3a1a; color: #e0a870; border-color: #8c5a2a; }
       .mobile-bulk-chip.status-available { background: #1a3a2a; color: #8fd0a7; border-color: #2a6a3a; }
       .mobile-bulk-chip.status-shipping { background: #f4edc6; color: #3c3212; border-color: #a09050; }
       .mobile-bulk-chip.status-drank { background: rgba(80,20,20,0.35); color: #c08080; border-color: rgba(160,60,60,0.45); }
+      .mobile-bulk-chip.sticker-chip { width: 36px; padding: 0; }
+      .mobile-bulk-chip.sticker-blank { color: #7b6a5a; font-size: 1.1rem; }
       .mobile-bulk-field-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 8px; }
       .mobile-bulk-field-row input { min-width: 0; border-color: #d4cdc4; border-radius: 8px; background: #fff; color: #1d1a16; }
       .mobile-bulk-actions { display: flex; gap: 8px; margin-top: 14px; }
@@ -1336,9 +1343,9 @@
         <div class="mobile-bulk-family-title">Sticker</div>
         <div class="mobile-bulk-chip-row">
           {% for c in ['Green', 'Yellow', 'Orange', 'Red', 'Blue'] %}
-          <button type="button" class="mobile-bulk-chip" data-bulk-field="color_code" data-bulk-value="{{ c }}"><span class="mobile-sticker-dot color-dot-{{ c }}"></span>{{ c }}</button>
+          <button type="button" class="mobile-bulk-chip sticker-chip" data-bulk-field="color_code" data-bulk-value="{{ c }}" aria-label="{{ c }} sticker" title="{{ c }}"><span class="mobile-sticker-dot color-dot-{{ c }}"></span></button>
           {% endfor %}
-          <button type="button" class="mobile-bulk-chip" data-bulk-field="color_code" data-bulk-value="">Blank</button>
+          <button type="button" class="mobile-bulk-chip sticker-chip sticker-blank" data-bulk-field="color_code" data-bulk-value="" aria-label="No sticker" title="No sticker">○</button>
         </div>
       </div>
       <div class="mobile-bulk-family">
