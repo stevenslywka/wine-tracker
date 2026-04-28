@@ -420,7 +420,13 @@
         width: auto;
         border-radius: 999px;
         padding: 8px 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
       }
+      .quick-tile form { width: 100%; text-align: center; }
       /* Status tile tints */
       .quick-tile-status-in_collection { background: rgba(30,90,55,0.28); border-color: rgba(49,168,106,0.5); }
       .quick-tile-status-in_collection .quick-label { color: rgba(143,208,167,0.85); }
@@ -600,14 +606,16 @@
       .field-card .rating-input:focus { outline: 0; }
       .field-card .rating-input::placeholder { color: var(--mobile-muted); font-size: 1.1rem; }
       .field-card .rating-value-display { color: var(--mobile-accent); font-size: 1.6rem; font-weight: 900; text-align: center; line-height: 1; }
-      .rating-star-row { font-size: 0.9rem; text-align: center; margin-top: 3px; }
+      .mobile-details input[type="date"] { text-align: left !important; direction: ltr; }
       .field-card .mobile-textarea {
         font-size: 0.88rem;
       }
       .compact-color-picker {
-        justify-content: center;
+        justify-content: flex-start;
         gap: 6px;
         flex-wrap: wrap;
+        max-width: 78px;
+        margin: 0 auto;
       }
       .compact-color-picker .color-choice {
         width: 22px;
@@ -710,7 +718,7 @@
           <select class="quick-control" name="storage_location" id="locationControl">
             <option value="">Unassigned</option>
             {% for location in user_locations %}
-            <option value="{{ location }}" {% if wine.storage_location == location %}selected{% endif %}>{{ location }}</option>
+            <option value="{{ location }}" data-loc-idx="{{ loop.index0 % 5 }}" {% if wine.storage_location == location %}selected{% endif %}>{{ location }}</option>
             {% endfor %}
             {% if wine.storage_location and wine.storage_location not in user_locations %}
             <option value="{{ wine.storage_location }}" selected>{{ wine.storage_location }}</option>
@@ -753,8 +761,8 @@
           {% if can_edit %}
           <form class="color-picker compact-color-picker" data-detail-form data-color-form action="/wine/{{ wine.id }}/color" method="post">
             <input type="hidden" name="color_code" value="{{ wine.color_code or '' }}">
+            {% for color in ['Green','Yellow','Orange','Red','Blue'] %}<button type="button" class="color-choice color-{{ color }} {% if wine.color_code == color %}active{% endif %}" data-color-choice="{{ color }}" aria-label="{{ color }} sticker"></button>{% endfor %}
             <button type="button" class="color-choice color-clear {% if not wine.color_code %}active{% endif %}" data-color-choice="" aria-label="No sticker"></button>
-            {% for color in sticker_colors %}<button type="button" class="color-choice color-{{ color }} {% if wine.color_code == color %}active{% endif %}" data-color-choice="{{ color }}" aria-label="{{ color }} sticker"></button>{% endfor %}
           </form>
           {% else %}<div class="read-only-value" style="text-align:left;">{{ wine.color_code or 'None' }}</div>{% endif %}
         </div>
@@ -762,10 +770,8 @@
           <span class="edit-label">Rating</span>
           {% if can_edit %}
           <form data-detail-form action="/wine/{{ wine.id }}/rating" method="post"><input class="rating-input" id="ratingInput" name="my_rating" type="number" min="0" max="5" step="0.1" inputmode="decimal" value="{{ wine.my_rating if wine.my_rating is not none else '' }}" placeholder="—"></form>
-          <div class="rating-star-row">⭐</div>
           {% else %}
           <div class="rating-value-display">{{ "%.1f"|format(wine.my_rating) if wine.my_rating is not none else '—' }}</div>
-          <div class="rating-star-row">⭐</div>
           {% endif %}
         </div>
         <div class="field-card wide" id="notesFields">
@@ -1012,11 +1018,16 @@
       });
 
       const statusForm = document.querySelector('[data-status-form]');
+      const statusTile = statusForm?.closest('.quick-tile');
       statusForm?.querySelector('[name="status"]')?.addEventListener('change', event => {
         document.querySelectorAll('.mobile-drinking-window').forEach(cell => {
           cell.dataset.status = event.target.value;
           applyDetailDrinkingWindowColor(cell, cell.dataset.value || cell.value || cell.textContent.trim());
         });
+        if (statusTile) {
+          statusTile.className = statusTile.className.replace(/quick-tile-status-\S+/g, '').trim();
+          statusTile.classList.add(`quick-tile-status-${event.target.value}`);
+        }
       });
 
       document.getElementById('markDrankAction')?.addEventListener('click', () => {
@@ -1029,11 +1040,22 @@
       });
 
       const storageForm = document.querySelector('[data-storage-form]');
+      const locTile = storageForm?.closest('.quick-tile');
       storageForm?.querySelector('select')?.addEventListener('change', event => {
         const storageSummary = document.getElementById('storageSummary');
         if (storageSummary) storageSummary.textContent = event.target.value || 'Unassigned';
         const statusStorageInput = document.querySelector('[data-status-form] [name="storage_location"]');
         if (statusStorageInput) statusStorageInput.value = event.target.value;
+        if (locTile) {
+          locTile.className = locTile.className.replace(/\bloc-color-\d\b|\bloc-unassigned\b/g, '').trim();
+          const selectedOpt = event.target.options[event.target.selectedIndex];
+          const locIdx = selectedOpt?.dataset?.locIdx;
+          if (locIdx !== undefined && event.target.value) {
+            locTile.classList.add(`loc-color-${locIdx}`);
+          } else {
+            locTile.classList.add('loc-unassigned');
+          }
+        }
       });
 
       document.getElementById('drinkControl')?.addEventListener('input', event => {
