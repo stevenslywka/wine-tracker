@@ -34,39 +34,35 @@ Recent UI work already pushed:
 - Origin carousel options are USA, France, Italy, and Earth emoji `Other`. `Other` means anything outside USA/France/Italy, while USA includes common stored US origins like California, Oregon, Washington, and New York.
 - "Add" is now "Add Wine"; "all in collection" is now "Available".
 - Latest relevant GitHub commits:
-  - 6506d12, `Polish mobile cellar UI`
-  - 8f80a27, `Refine mobile carousel and filter controls`
-  - 7556545, `Remove duplicate mobile carousel groups`
-  - deaa4e9, `Add other origin mobile filter`
-  - 5c091ad, `Support mobile wine detail editing`
-  - 79384d1, `Redesign mobile wine detail page`
-  - 695f980, `Refine mobile wine detail profile`
-  - 8d004bb, `Compact mobile wine detail layout`
-  - 0c8103c, `Polish mobile wine detail fields`
+  - c8b293e, `Polish mobile wine detail page UI`
+  - 512e758, `Refine mobile wine detail bubbles and sticker layout`
+  - d85d691, `Center select text in Status and Location quick tiles`
+  - 38f5dfc, `Fix Order Date label wrapping and date input alignment`
+  - 89d778f, `Color carousel chips by location and wine type`
 
 Current mobile detail page context:
-- We are now iterating on the separate wine detail page only: `GET /wine/<id>` rendered by `templates/detail.html`.
-- Mobile card/list items in `templates/index.html` navigate to this page through `data-detail-url`. Do not change the mobile Cards/List layout unless I explicitly ask.
-- `app.py -> wine_detail()` now passes detail-page option data: `user_locations`, `wine_types`, `bottle_sizes`, and `sticker_colors`.
-- The mobile detail page has a mobile-only layout while desktop detail remains separate in the same template.
+- Separate page at `GET /wine/<id>`, rendered by `templates/detail.html`. Tapping a card in `index.html` navigates here via `data-detail-url`. Do not change the mobile Cards/List layout unless I explicitly ask.
+- `app.py -> wine_detail()` passes `user_locations`, `wine_types`, `bottle_sizes`, and `sticker_colors`.
+- Mobile-only layout in the same template; desktop detail view is separate and should not be changed unless requested.
 - Current mobile detail layout:
-  - Hero with bottle image, type/vintage, current sticker dot, editable wine name, inferred flag, region/origin, grape emoji, and varietal.
-  - One compact editable top row: Status, Location, Drinking Window.
-  - Drinking Window uses the same color logic as the main cellar view: hold, ready/prime, drink soon, overdue, and drank.
-  - Main visible body combines Cellar + Rating/Notes: Qty, Source, Sticker, Rating in a compact four-cell grid, with Notes below.
-  - Lower priority info is collapsed under `Wine details` and `Purchase`.
-  - Bottom action bar: Back, Rate, Notes, Drank. Rate/Notes jump to and focus those fields.
-- Naming preference: use `Location`, not `Storage`; use `Source`, not `Retailer`.
-- Current design-feedback goal: critique this mobile detail page and suggest how to make it feel more like the redesigned mobile Cards layout: visual, dense, easy to scan, creative with icons/buttons/graphics, and not like a clunky form.
-- Unless I ask for implementation, give design feedback first. If implementing, touch only `templates/detail.html` unless route data in `app.py` is truly required.
+  - Hero: bottle image in `.mobile-bottle-wrap` with diagonal type sash (same color scheme as card). Right: type · vintage kicker with sticker dot, editable wine name, flag+region row, grape+varietal row.
+  - Quick strip (3 pill badges): Status (green/amber/burgundy tint), Location (loc-color-* matching cards), Drinking Window (color-coded). Colors update live via JS on select change. Select text is center-aligned.
+  - Main body (2×2 grid): Qty, Source, Sticker, Rating — then full-width Notes. Sticker is 2 rows of 3: Green/Yellow/Orange then Red/Blue/None. Rating shows as large gold number (no star).
+  - Collapsed sections with rotating ▾ chevron: "Wine details" (🍷 🍇 📍 🌍 🍾) and "Purchase" (🗓️ 💳 🏷️ 💰). Label column 100px; date input left-aligned.
+  - Bottom bar: ← Back, ★ Rate, ✏️ Notes, ✓ Drank.
+- Naming: use `Location` (not `Storage`), `Source` (not `Retailer`).
+
+Mobile carousel (index.html) — current state:
+- Location chips use `loc-color-*` classes (Apt=blue loc-color-0, House=red loc-color-1). Active state uses standard gold highlight.
+- Wine type chips (Red/White/Rose) use `.type-Red/.type-White/.type-Rose` with sash colors.
 
 Local file note:
 - Local `templates/index.html` was accidentally blank earlier and was restored from GitHub `main`; it is no longer blank.
 - Because Codex sometimes updates GitHub through the Contents API, local `git status` may show files as modified even after changes are already pushed. Compare against GitHub `main` before reverting anything.
 
-Current design preference:
-- Do not touch the mobile card layout or compact/list wine row layout unless I explicitly ask. It is okay to work on the mobile header, top controls, filters, and carousel when requested.
-- Current active focus is the separate mobile wine detail page (`templates/detail.html`), not the mobile card/list layout.
+Design preferences:
+- Do not touch the mobile card layout or compact/list wine row layout in `index.html` unless I explicitly ask.
+- Desktop views in both `index.html` and `detail.html` should not be changed unless requested.
 
 Important workflow notes:
 - Local Git writes to `.git` sometimes fail in Codex with `index.lock` permission errors.
