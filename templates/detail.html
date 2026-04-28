@@ -55,13 +55,17 @@
       }
       .mobile-detail-nav {
         display: grid;
+        position: sticky;
+        top: 0;
+        z-index: 30;
         grid-template-columns: 44px minmax(0, 1fr) 44px;
         align-items: center;
         min-height: 54px;
-        margin: 0 -12px 8px;
+        margin: 0 -12px 3px;
         padding: 0 10px;
         background: #3d0f0f;
         border-bottom: 1px solid #5a2d0c;
+        box-shadow: 0 6px 16px rgba(0,0,0,0.22);
       }
       .mobile-detail-title {
         color: #f5e6d3;
@@ -485,7 +489,7 @@
         opacity: 0.42;
         pointer-events: none;
       }
-      .mobile-topbar { justify-content: flex-end; min-height: 22px; margin-bottom: 6px; }
+      .mobile-topbar { justify-content: flex-end; min-height: 14px; margin-bottom: 3px; }
       .mobile-back { display: none; }
       .hero-icons {
         display: flex;
