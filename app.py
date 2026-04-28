@@ -494,18 +494,47 @@ def wine_detail(wine_id):
     cur.execute(f"SELECT * FROM wines WHERE id = {p}", (wine_id,))
     wine = cur.fetchone()
     user_locations = []
+    cellar_username = ""
     if wine:
         cur.execute(f"SELECT name FROM user_locations WHERE user_id = {p} ORDER BY sort_order", (wine["user_id"],))
         user_locations = [r["name"] for r in cur.fetchall()]
+        cur.execute(f"SELECT username FROM users WHERE id = {p}", (wine["user_id"],))
+        user_row = cur.fetchone()
+        cellar_username = user_row["username"] if user_row else session.get("username", "")
     conn.close()
     if not wine:
         return "Wine not found", 404
     can_edit = (wine["user_id"] == session["user_id"])
+    fallback_url = url_for("cellar", username=cellar_username or session.get("username", ""))
+    back_url = request.args.get("back") or fallback_url
+    if not back_url.startswith("/"):
+        back_url = fallback_url
+    raw_nav_ids = request.args.get("list", "")
+    nav_ids = []
+    for raw_id in raw_nav_ids.split(","):
+        try:
+            nav_id = int(raw_id)
+        except ValueError:
+            continue
+        if nav_id not in nav_ids:
+            nav_ids.append(nav_id)
+    prev_wine_url = next_wine_url = None
+    if wine_id in nav_ids:
+        current_idx = nav_ids.index(wine_id)
+        nav_query = {"list": ",".join(str(id_) for id_ in nav_ids), "back": back_url}
+        if current_idx > 0:
+            prev_wine_url = url_for("wine_detail", wine_id=nav_ids[current_idx - 1], **nav_query)
+        if current_idx < len(nav_ids) - 1:
+            next_wine_url = url_for("wine_detail", wine_id=nav_ids[current_idx + 1], **nav_query)
     return render_template("detail.html", wine=wine,
                            user_locations=user_locations,
                            wine_types=WINE_TYPES,
                            bottle_sizes=BOTTLE_SIZES,
                            sticker_colors=("Red", "Blue", "Orange", "Yellow", "Green"),
+                           cellar_username=cellar_username,
+                           back_url=back_url,
+                           prev_wine_url=prev_wine_url,
+                           next_wine_url=next_wine_url,
                            access_level="edit" if can_edit else "view",
                            auth_enabled=True)
 
