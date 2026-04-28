@@ -848,15 +848,15 @@
       {% endfor %}
       <div class="mobile-view-summary-row">
         <div class="mobile-filter-summary visible">
-          Viewing:
           {% if status_filter or storage_filter or search or mobile_filters_active %}
+          Viewing:
           {% if storage_filter %}{{ storage_filter }}
           {% elif status_filter == 'in_collection' %}Available
           {% elif status_filter == 'not_shipped' %}Not Shipped
           {% elif status_filter == 'drank' %}Drank
           {% elif search %}Search
           {% else %}Filtered{% endif %}
-          {% else %}Available{% endif %}
+          {% else %}Viewing - All Wines{% endif %}
           {% if search %} &middot; "{{ search }}"{% endif %}
           &middot; {{ wines|length }} wine{% if wines|length != 1 %}s{% endif %}
           &middot; {{ current_bottle_count.total }} bottle{% if current_bottle_count.total != 1 %}s{% endif %}
