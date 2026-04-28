@@ -5,5 +5,7 @@ raw_emails.json
 parsed_wines.json
 __pycache__/
 *.pyc
+.venv/
+.pip-tmp/
 .env
 static/uploads/

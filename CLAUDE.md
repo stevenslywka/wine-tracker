@@ -34,6 +34,7 @@ Recent mobile UI work pushed to GitHub:
 - Mobile quick carousel added: Location, Type, Origin, Sticker. It should appear once only, ending with Sticker.
 - Origin carousel chips are: USA, France, Italy, and Earth emoji `Other`. `Other` filters origins outside USA/France/Italy; USA also includes common stored US origins like California, Oregon, Washington, and New York.
 - Mobile Cards/List toggle is on the same row as Filter and sort; wine counter sits below.
+- Mobile Select mode added for shipment arrivals/location moves: tap `Select`, tap cards or `All`, tap `Move`, then choose a location. This posts selected IDs to `/wines/bulk-status` with `status=in_collection` and `storage_location=<chosen location>`. It intentionally does not implement bottle history or quantity-drinking behavior.
 - "Add" renamed to "Add Wine"; "all in collection" renamed to "Available".
 - Latest pushed commits include:
   - `c8b293e` (`Polish mobile wine detail page UI`)
@@ -48,6 +49,7 @@ Current mobile UI state as of Apr 28, 2026 (supersedes older mobile bullets belo
 - Origin carousel chips are USA, France, Italy, and Earth emoji `Other`. `Other` filters origins outside USA/France/Italy; USA also includes common stored US origins like California, Oregon, Washington, and New York.
 - Mobile search has an X clear button and uses 16px font to avoid iOS zoom sticking after focus.
 - The old tiny bottom-left result counter is removed. When no filters/search are active, the mobile summary says `Viewing - All Wines`; filtered states show the active view and counts.
+- Mobile Select mode is available to edit users from the main cellar mobile toolbar. It is meant for shipment arrivals and moving bottles between locations. It should not change inventory-history semantics; bulk `Move` marks selected wines Available and assigns the chosen location.
 - Empty mobile results say `No wines yet - tap Add Wine to get started` in white.
 - Wine cards without images show a dark `No photo` bottle silhouette placeholder.
 - Bottom mobile cellar button says `Need a Wine Rec?`.
@@ -81,6 +83,8 @@ Mobile carousel (templates/index.html):
 Local file note:
 - Earlier in this thread, local `templates/index.html` was accidentally 0 bytes. It was restored locally from GitHub `main` and is no longer blank.
 - Because local git history may lag GitHub `main`, `git status` may still show `templates/index.html`, `app.py`, `templates/detail.html`, or docs as modified after API pushes. Do not blindly revert these. Compare with GitHub `main` if unsure.
+- As of Apr 28, 2026, `templates/index.html`, `templates/detail.html`, and `NEW_CHAT_PROMPT.md` matched GitHub `main` exactly when checked by SHA. `CLAUDE.md` and `app.py` had the same line-by-line content as GitHub but differed by line endings. Local `origin/main` may be stale because Codex cannot write `.git/FETCH_HEAD`.
+- Steve created a local virtual environment at `.venv` from normal PowerShell and installed `requirements.txt`; `.\.venv\Scripts\python.exe app.py` successfully starts the Flask dev server at `http://127.0.0.1:5000`.
 
 Session preference:
 - Do not touch the mobile card layout or compact/list wine row layout in `index.html` unless Steve explicitly asks.
@@ -285,9 +289,21 @@ Body is a CSS flexbox column (`flex: 1; min-height: 0` chain). Only `#tableScrol
 
 ```bash
 cd C:\Users\steve\wine-tracker
-python app.py         # runs on localhost:5000
+.\.venv\Scripts\python.exe app.py
+# runs on http://127.0.0.1:5000
 ```
 SQLite DB: `wines.db` (local only, not committed)
+
+If `.venv` ever needs to be recreated, run from normal Windows PowerShell (not inside Codex sandbox if pip temp permissions fail):
+```powershell
+cd C:\Users\steve\wine-tracker
+Remove-Item -Recurse -Force .venv,.pip-tmp -ErrorAction SilentlyContinue
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe app.py
+```
+`.venv/` and `.pip-tmp/` are ignored in `.gitignore`.
 
 ## Deploy
 
@@ -300,7 +316,7 @@ git push
 
 ### Codex GitHub Push Workaround
 
-Normal local Git writes may fail in Codex with `.git/index.lock` permission errors. If that happens, do not keep fighting local `.git`; use the GitHub Contents API to update GitHub `main` directly.
+Normal local Git writes may fail in Codex with `.git/index.lock` or `.git/FETCH_HEAD` permission errors. If that happens, do not keep fighting local `.git`; use the GitHub Contents API to update GitHub `main` directly. Local Git may report misleading `ahead/behind` state when `origin/main` is stale; verify against GitHub `main` before reverting or overwriting files.
 
 Auth token location from the prior-chat `GH_CONFIG_DIR`:
 ```text

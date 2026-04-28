@@ -46,6 +46,7 @@ Current mobile UI state as of Apr 28, 2026 (supersedes older mobile bullets belo
 - Origin carousel chips are USA, France, Italy, and Earth emoji `Other`. `Other` filters origins outside USA/France/Italy; USA also includes common stored US origins like California, Oregon, Washington, and New York.
 - Mobile search has an X clear button and uses 16px font to avoid iOS zoom sticking after focus.
 - The old tiny bottom-left result counter is removed. When no filters/search are active, the mobile summary says `Viewing - All Wines`; filtered states show the active view and counts.
+- Mobile Select mode is live for shipment arrivals/location moves: tap `Select`, tap cards or `All`, tap `Move`, then choose a location. This posts to `/wines/bulk-status` with `status=in_collection` plus the chosen location. Do not treat this as inventory-history or quantity-drinking behavior.
 - Empty mobile results say `No wines yet - tap Add Wine to get started` in white.
 - Wine cards without images show a dark `No photo` bottle silhouette placeholder.
 - Bottom mobile cellar button says `Need a Wine Rec?`.
@@ -79,21 +80,39 @@ Mobile carousel (index.html) — current state:
 Local file note:
 - Local `templates/index.html` was accidentally blank earlier and was restored from GitHub `main`; it is no longer blank.
 - Because Codex sometimes updates GitHub through the Contents API, local `git status` may show files as modified even after changes are already pushed. Compare against GitHub `main` before reverting anything.
+- As of Apr 28, 2026, local `templates/index.html`, `templates/detail.html`, and `NEW_CHAT_PROMPT.md` matched GitHub `main` exactly by SHA. `CLAUDE.md` and `app.py` had the same line-by-line content as GitHub but differed by line endings.
+- A local virtual environment exists at `.venv`; Steve created it from normal PowerShell and installed `requirements.txt`. Use `.\.venv\Scripts\python.exe app.py` to run the Flask dev server at `http://127.0.0.1:5000`. `.venv/` and `.pip-tmp/` are ignored.
 
 Design preferences:
 - Do not touch the mobile card layout or compact/list wine row layout in `index.html` unless I explicitly ask.
 - Desktop views in both `index.html` and `detail.html` should not be changed unless requested.
 
 Important workflow notes:
-- Local Git writes to `.git` sometimes fail in Codex with `index.lock` permission errors.
+- Local Git writes to `.git` sometimes fail in Codex with `index.lock` or `FETCH_HEAD` permission errors.
 - If normal `git add/commit/push` fails, use the GitHub Contents API instead of fighting local `.git`.
 - A GitHub auth token is available from the prior-chat `GH_CONFIG_DIR`:
   C:\Users\steve\Documents\Codex\codex-auth\gh\hosts.yml
 - Do not print or expose the token.
 - Use the token to call the GitHub API and update files on branch `main`.
 - After GitHub `main` updates, Railway auto-deploys.
-- Because of the local `.git` issue, local `git status` may still show `templates/index.html` as modified even when GitHub is already up to date. Treat GitHub `main` as the source of truth if this happens.
+- Because of the local `.git` issue, local `git status` or `ahead/behind` may be misleading when `origin/main` is stale. Treat GitHub `main` as the source of truth if this happens.
 - If PowerShell `Invoke-RestMethod` or Git HTTPS fails, use Node/fetch with the same token; that worked in the prior chat.
+
+Local dev command:
+```powershell
+cd C:\Users\steve\wine-tracker
+.\.venv\Scripts\python.exe app.py
+```
+
+If `.venv` ever needs to be recreated, Steve can run from normal Windows PowerShell:
+```powershell
+cd C:\Users\steve\wine-tracker
+Remove-Item -Recurse -Force .venv,.pip-tmp -ErrorAction SilentlyContinue
+py -3 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe app.py
+```
 
 When pushing with the GitHub API:
 1. Read the current file SHA from:
