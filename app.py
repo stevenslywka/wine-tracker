@@ -63,6 +63,26 @@ def is_postgres():
     return _db_module.is_postgres()
 
 
+def sync_wine_summary(conn, wine_id):
+    _db_module.sync_wine_summary(conn, wine_id)
+
+
+def upsert_inventory_lot(conn, wine_id, quantity, status="in_collection",
+                         storage_location=None, retailer=None, order_date=None,
+                         unit_price=None, notes=None):
+    return _db_module.upsert_inventory_lot(
+        conn, wine_id, quantity, status, storage_location, retailer, order_date, unit_price, notes
+    )
+
+
+def replace_wine_inventory_lot(conn, wine_id, quantity=None, status=None,
+                               storage_location=None, retailer=None,
+                               order_date=None, unit_price=None):
+    _db_module.replace_wine_inventory_lot(
+        conn, wine_id, quantity, status, storage_location, retailer, order_date, unit_price
+    )
+
+
 def lastrowid(conn, cursor):
     import db as db_module
     if db_module.is_postgres():
@@ -331,7 +351,13 @@ def cellar(username):
         base_query += f" AND origin = {p}"
         base_params.append(origin_filter)
     if storage_filter:
-        base_query += f" AND storage_location = {p}"
+        base_query += f""" AND id IN (
+            SELECT l.wine_id
+            FROM wine_inventory_lots l
+            WHERE l.storage_location = {p}
+              AND l.status = 'in_collection'
+              AND l.quantity > 0
+        )"""
         base_params.append(storage_filter)
     if vintage_min:
         base_query += f" AND vintage >= {p}"
@@ -421,10 +447,15 @@ def cellar(username):
 
     cur.execute(f"""
         SELECT
-            SUM(quantity) as total_bottles,
-            COUNT(DISTINCT wine_name) as unique_wines,
-            SUM(total_price) as total_spent
-        FROM wines WHERE user_id = {p}
+            COALESCE(SUM(l.quantity), 0) as total_bottles,
+            COUNT(DISTINCT w.wine_name) as unique_wines,
+            COALESCE(SUM(l.quantity * COALESCE(l.unit_price, 0)), 0) as total_spent
+        FROM wines w
+        LEFT JOIN wine_inventory_lots l
+          ON l.wine_id = w.id
+         AND l.status = 'in_collection'
+         AND l.quantity > 0
+        WHERE w.user_id = {p}
     """, (cellar_user["id"],))
     stats = cur.fetchone()
 
@@ -437,12 +468,24 @@ def cellar(username):
     cur.execute(f"SELECT name FROM user_locations WHERE user_id = {p} ORDER BY sort_order", (cellar_user["id"],))
     user_locations = [r["name"] for r in cur.fetchall()]
     cur.execute(f"""
-        SELECT storage_location, SUM(quantity) as cnt
-        FROM wines WHERE user_id = {p} AND status = 'in_collection' AND storage_location IS NOT NULL
-        GROUP BY storage_location ORDER BY storage_location
+        SELECT l.storage_location, SUM(l.quantity) as cnt
+        FROM wine_inventory_lots l
+        JOIN wines w ON w.id = l.wine_id
+        WHERE w.user_id = {p}
+          AND l.status = 'in_collection'
+          AND l.quantity > 0
+          AND l.storage_location IS NOT NULL
+        GROUP BY l.storage_location ORDER BY l.storage_location
     """, (cellar_user["id"],))
     location_counts = {r["storage_location"]: r["cnt"] for r in cur.fetchall()}
-    cur.execute(f"SELECT SUM(quantity) as cnt FROM wines WHERE user_id = {p} AND status = 'not_shipped'", (cellar_user["id"],))
+    cur.execute(f"""
+        SELECT SUM(l.quantity) as cnt
+        FROM wine_inventory_lots l
+        JOIN wines w ON w.id = l.wine_id
+        WHERE w.user_id = {p}
+          AND l.status = 'not_shipped'
+          AND l.quantity > 0
+    """, (cellar_user["id"],))
     not_shipped_count = cur.fetchone()["cnt"] or 0
     cur.execute(f"SELECT COUNT(*) as cnt FROM wines WHERE user_id = {p} AND status = 'drank'", (cellar_user["id"],))
     drank_count = cur.fetchone()["cnt"] or 0
@@ -555,12 +598,19 @@ def bulk_update_status():
     cur = conn.cursor()
     uid = session["user_id"]
     for id_ in ids:
-        if new_status == "in_collection" and storage_loc:
-            cur.execute(f"UPDATE wines SET status = {p}, storage_location = {p} WHERE id = {p} AND user_id = {p}", (new_status, storage_loc, id_, uid))
-        elif new_status in ("not_shipped", "drank"):
-            cur.execute(f"UPDATE wines SET status = {p}, storage_location = NULL WHERE id = {p} AND user_id = {p}", (new_status, id_, uid))
-        else:
-            cur.execute(f"UPDATE wines SET status = {p} WHERE id = {p} AND user_id = {p}", (new_status, id_, uid))
+        cur.execute(f"SELECT id, quantity, storage_location, retailer, order_date, unit_price FROM wines WHERE id = {p} AND user_id = {p}", (id_, uid))
+        wine = cur.fetchone()
+        if not wine:
+            continue
+        quantity = wine["quantity"] or 0
+        target_storage = storage_loc if new_status == "in_collection" else None
+        if new_status == "in_collection" and not target_storage:
+            target_storage = wine["storage_location"]
+        replace_wine_inventory_lot(
+            conn, id_, quantity=quantity, status=new_status,
+            storage_location=target_storage, retailer=wine["retailer"],
+            order_date=wine["order_date"], unit_price=wine["unit_price"]
+        )
     conn.commit()
     conn.close()
     return ("", 204)
@@ -587,16 +637,30 @@ def bulk_edit_wines():
             return ("", 400)
         storage_loc = request.form.get("storage_location", "").strip() or None
         for id_ in ids:
-            if value == "in_collection" and storage_loc:
-                cur.execute(f"UPDATE wines SET status = {p}, storage_location = {p} WHERE id = {p} AND user_id = {p}", (value, storage_loc, id_, uid))
-            elif value in ("not_shipped", "drank"):
-                cur.execute(f"UPDATE wines SET status = {p}, storage_location = NULL WHERE id = {p} AND user_id = {p}", (value, id_, uid))
-            else:
-                cur.execute(f"UPDATE wines SET status = {p} WHERE id = {p} AND user_id = {p}", (value, id_, uid))
+            cur.execute(f"SELECT id, quantity, storage_location, retailer, order_date, unit_price FROM wines WHERE id = {p} AND user_id = {p}", (id_, uid))
+            wine = cur.fetchone()
+            if not wine:
+                continue
+            target_storage = storage_loc if value == "in_collection" else None
+            if value == "in_collection" and not target_storage:
+                target_storage = wine["storage_location"]
+            replace_wine_inventory_lot(
+                conn, id_, quantity=wine["quantity"] or 0, status=value,
+                storage_location=target_storage, retailer=wine["retailer"],
+                order_date=wine["order_date"], unit_price=wine["unit_price"]
+            )
     elif field == "storage_location":
         storage_loc = value or None
         for id_ in ids:
-            cur.execute(f"UPDATE wines SET status = 'in_collection', storage_location = {p} WHERE id = {p} AND user_id = {p}", (storage_loc, id_, uid))
+            cur.execute(f"SELECT id, quantity, retailer, order_date, unit_price FROM wines WHERE id = {p} AND user_id = {p}", (id_, uid))
+            wine = cur.fetchone()
+            if not wine:
+                continue
+            replace_wine_inventory_lot(
+                conn, id_, quantity=wine["quantity"] or 0, status="in_collection",
+                storage_location=storage_loc, retailer=wine["retailer"],
+                order_date=wine["order_date"], unit_price=wine["unit_price"]
+            )
     elif field == "color_code":
         color = value or None
         if color not in ("Red", "Blue", "Orange", "Yellow", "Green", None):
@@ -608,11 +672,15 @@ def bulk_edit_wines():
         retailer = value or None
         for id_ in ids:
             cur.execute(f"UPDATE wines SET retailer = {p} WHERE id = {p} AND user_id = {p}", (retailer, id_, uid))
+            cur.execute(f"UPDATE wine_inventory_lots SET retailer = {p}, updated_at = CURRENT_TIMESTAMP WHERE wine_id = {p}", (retailer, id_))
+            sync_wine_summary(conn, id_)
     elif field == "order_date":
         import re as _re
         order_date = value if _re.match(r'^\d{4}-\d{2}-\d{2}$', value) else None
         for id_ in ids:
             cur.execute(f"UPDATE wines SET order_date = {p} WHERE id = {p} AND user_id = {p}", (order_date, id_, uid))
+            cur.execute(f"UPDATE wine_inventory_lots SET order_date = {p}, updated_at = CURRENT_TIMESTAMP WHERE wine_id = {p}", (order_date, id_))
+            sync_wine_summary(conn, id_)
 
     conn.commit()
     conn.close()
@@ -630,12 +698,17 @@ def update_status(wine_id):
         p = ph()
         conn = get_db()
         cur = conn.cursor()
-        if new_status == "in_collection" and storage_loc:
-            cur.execute(f"UPDATE wines SET status = {p}, storage_location = {p} WHERE id = {p}", (new_status, storage_loc, wine_id))
-        elif new_status in ("not_shipped", "drank"):
-            cur.execute(f"UPDATE wines SET status = {p}, storage_location = NULL WHERE id = {p}", (new_status, wine_id))
-        else:
-            cur.execute(f"UPDATE wines SET status = {p} WHERE id = {p}", (new_status, wine_id))
+        cur.execute(f"SELECT quantity, storage_location, retailer, order_date, unit_price FROM wines WHERE id = {p}", (wine_id,))
+        wine = cur.fetchone()
+        if wine:
+            target_storage = storage_loc if new_status == "in_collection" else None
+            if new_status == "in_collection" and not target_storage:
+                target_storage = wine["storage_location"]
+            replace_wine_inventory_lot(
+                conn, wine_id, quantity=wine["quantity"] or 0, status=new_status,
+                storage_location=target_storage, retailer=wine["retailer"],
+                order_date=wine["order_date"], unit_price=wine["unit_price"]
+            )
         conn.commit()
         conn.close()
     return redirect(request.referrer or url_for("home"))
@@ -749,6 +822,8 @@ def update_retailer(wine_id):
     conn = get_db()
     cur = conn.cursor()
     cur.execute(f"UPDATE wines SET retailer = {p} WHERE id = {p}", (retailer, wine_id))
+    cur.execute(f"UPDATE wine_inventory_lots SET retailer = {p}, updated_at = CURRENT_TIMESTAMP WHERE wine_id = {p}", (retailer, wine_id))
+    sync_wine_summary(conn, wine_id)
     conn.commit()
     conn.close()
     return ("", 204)
@@ -785,7 +860,15 @@ def update_storage_location(wine_id):
         return ("", 403)
     value = request.form.get("storage_location", "").strip() or None
     p = ph(); conn = get_db(); cur = conn.cursor()
-    cur.execute(f"UPDATE wines SET storage_location = {p} WHERE id = {p}", (value, wine_id))
+    cur.execute(f"UPDATE wine_inventory_lots SET storage_location = {p}, status = 'in_collection', updated_at = CURRENT_TIMESTAMP WHERE wine_id = {p} AND status = 'in_collection'", (value, wine_id))
+    cur.execute(f"SELECT COUNT(*) AS cnt FROM wine_inventory_lots WHERE wine_id = {p} AND status = 'in_collection' AND quantity > 0", (wine_id,))
+    if (cur.fetchone()["cnt"] or 0) == 0:
+        cur.execute(f"SELECT quantity, retailer, order_date, unit_price FROM wines WHERE id = {p}", (wine_id,))
+        wine = cur.fetchone()
+        if wine:
+            upsert_inventory_lot(conn, wine_id, wine["quantity"] or 0, "in_collection", value, wine["retailer"], wine["order_date"], wine["unit_price"])
+    else:
+        sync_wine_summary(conn, wine_id)
     conn.commit(); conn.close()
     return ("", 204)
 
@@ -829,6 +912,8 @@ def update_unit_price(wine_id):
     quantity = row["quantity"] if row else 1
     total_price = round(unit_price * quantity, 2) if unit_price else None
     cur.execute(f"UPDATE wines SET unit_price = {p}, total_price = {p} WHERE id = {p}", (unit_price, total_price, wine_id))
+    cur.execute(f"UPDATE wine_inventory_lots SET unit_price = {p}, updated_at = CURRENT_TIMESTAMP WHERE wine_id = {p}", (unit_price, wine_id))
+    sync_wine_summary(conn, wine_id)
     conn.commit(); conn.close()
     return ("", 204)
 
@@ -897,7 +982,14 @@ def update_quantity(wine_id):
     raw = request.form.get("quantity", "").strip()
     value = int(raw) if raw.isdigit() and int(raw) > 0 else None
     p = ph(); conn = get_db(); cur = conn.cursor()
-    cur.execute(f"UPDATE wines SET quantity = {p} WHERE id = {p}", (value, wine_id))
+    cur.execute(f"SELECT status, storage_location, retailer, order_date, unit_price FROM wines WHERE id = {p}", (wine_id,))
+    wine = cur.fetchone()
+    if wine:
+        replace_wine_inventory_lot(
+            conn, wine_id, quantity=value or 0, status=wine["status"] or "in_collection",
+            storage_location=wine["storage_location"], retailer=wine["retailer"],
+            order_date=wine["order_date"], unit_price=wine["unit_price"]
+        )
     conn.commit(); conn.close()
     return ("", 204)
 
@@ -913,6 +1005,8 @@ def update_order_date(wine_id):
         value = None
     p = ph(); conn = get_db(); cur = conn.cursor()
     cur.execute(f"UPDATE wines SET order_date = {p} WHERE id = {p}", (value, wine_id))
+    cur.execute(f"UPDATE wine_inventory_lots SET order_date = {p}, updated_at = CURRENT_TIMESTAMP WHERE wine_id = {p}", (value, wine_id))
+    sync_wine_summary(conn, wine_id)
     conn.commit(); conn.close()
     return ("", 204)
 
@@ -993,6 +1087,12 @@ def add_wine():
         """, (wine_name, vintage, unit_price, total_price, quantity, notes,
               varietal, region, origin, wine_type, size_ml, retailer, order_date, status, storage_location, color_code, drinking_window, dw_source, user_id))
         wine_id = cur.lastrowid
+
+    if wine_id:
+        upsert_inventory_lot(
+            conn, wine_id, quantity, status, storage_location,
+            retailer, order_date, unit_price
+        )
 
     conn.commit()
     conn.close()
@@ -1403,11 +1503,24 @@ def add_bulk_wines():
         size_ml   = infer_size(wine_name)
         drinking_window = lookup_drinking_window(wine_name, vintage, varietal, region, retail_price=unit_price, size_ml=size_ml)
         dw_source = "auto" if drinking_window else None
-        cur.execute(f"""INSERT INTO wines (wine_name, vintage, unit_price, total_price, quantity,
-            varietal, region, origin, wine_type, size_ml, retailer, order_date, status, storage_location, drinking_window, drinking_window_source, user_id)
-            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'in_collection','Cellar',{p},{p},{p})""",
-            (wine_name, vintage, unit_price, total_price, quantity,
-             varietal, region, origin, wine_type, size_ml, retailer, order_date, drinking_window, dw_source, user_id))
+        if is_postgres():
+            cur.execute(f"""INSERT INTO wines (wine_name, vintage, unit_price, total_price, quantity,
+                varietal, region, origin, wine_type, size_ml, retailer, order_date, status, storage_location, drinking_window, drinking_window_source, user_id)
+                VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'in_collection','Cellar',{p},{p},{p})
+                RETURNING id""",
+                (wine_name, vintage, unit_price, total_price, quantity,
+                 varietal, region, origin, wine_type, size_ml, retailer, order_date, drinking_window, dw_source, user_id))
+            row = cur.fetchone()
+            wine_id = row["id"] if row else None
+        else:
+            cur.execute(f"""INSERT INTO wines (wine_name, vintage, unit_price, total_price, quantity,
+                varietal, region, origin, wine_type, size_ml, retailer, order_date, status, storage_location, drinking_window, drinking_window_source, user_id)
+                VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'in_collection','Cellar',{p},{p},{p})""",
+                (wine_name, vintage, unit_price, total_price, quantity,
+                 varietal, region, origin, wine_type, size_ml, retailer, order_date, drinking_window, dw_source, user_id))
+            wine_id = cur.lastrowid
+        if wine_id:
+            upsert_inventory_lot(conn, wine_id, quantity, "in_collection", "Cellar", retailer, order_date, unit_price)
     conn.commit()
     conn.close()
     return redirect(url_for("cellar", username=session["username"]))
@@ -1476,19 +1589,40 @@ def add_batch_scan():
         ) or ai_window
         dw_source = "auto" if drinking_window else None
 
-        cur.execute(
-            f"""INSERT INTO wines
+        if is_postgres():
+            cur.execute(
+                f"""INSERT INTO wines
+                    (wine_name, vintage, unit_price, total_price, quantity,
+                     varietal, region, origin, wine_type, size_ml,
+                     retailer, order_date, status, storage_location, color_code,
+                     drinking_window, drinking_window_source, user_id)
+                    VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},
+                            {p},{p},{p},{p},{p},{p},{p},{p})
+                    RETURNING id""",
                 (wine_name, vintage, unit_price, total_price, quantity,
                  varietal, region, origin, wine_type, size_ml,
                  retailer, order_date, status, storage_location, color_code,
-                 drinking_window, drinking_window_source, user_id)
-                VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},
-                        {p},{p},{p},{p},{p},{p},{p},{p})""",
-            (wine_name, vintage, unit_price, total_price, quantity,
-             varietal, region, origin, wine_type, size_ml,
-             retailer, order_date, status, storage_location, color_code,
-             drinking_window, dw_source, user_id)
-        )
+                 drinking_window, dw_source, user_id)
+            )
+            row = cur.fetchone()
+            wine_id = row["id"] if row else None
+        else:
+            cur.execute(
+                f"""INSERT INTO wines
+                    (wine_name, vintage, unit_price, total_price, quantity,
+                     varietal, region, origin, wine_type, size_ml,
+                     retailer, order_date, status, storage_location, color_code,
+                     drinking_window, drinking_window_source, user_id)
+                    VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},
+                            {p},{p},{p},{p},{p},{p},{p},{p})""",
+                (wine_name, vintage, unit_price, total_price, quantity,
+                 varietal, region, origin, wine_type, size_ml,
+                 retailer, order_date, status, storage_location, color_code,
+                 drinking_window, dw_source, user_id)
+            )
+            wine_id = cur.lastrowid
+        if wine_id:
+            upsert_inventory_lot(conn, wine_id, quantity, status, storage_location, retailer, order_date, unit_price)
         added += 1
 
     conn.commit()
@@ -1531,7 +1665,13 @@ def recommend_wine():
     params = [user_id]
 
     if storage_loc:
-        query += f" AND storage_location = {p}"
+        query += f""" AND id IN (
+            SELECT l.wine_id
+            FROM wine_inventory_lots l
+            WHERE l.storage_location = {p}
+              AND l.status = 'in_collection'
+              AND l.quantity > 0
+        )"""
         params.append(storage_loc)
     if wine_type:
         query += f" AND wine_type = {p}"
@@ -1723,9 +1863,25 @@ def user_analytics(username):
     cur.execute(f"SELECT varietal, COUNT(*) as count FROM wines WHERE user_id = {p} AND varietal IS NOT NULL GROUP BY varietal ORDER BY count DESC LIMIT 10", (uid,))
     by_varietal = cur.fetchall()
     if is_postgres():
-        cur.execute(f"SELECT EXTRACT(YEAR FROM order_date::date)::text as year, SUM(total_price) as spent FROM wines WHERE user_id = {p} AND order_date IS NOT NULL GROUP BY year ORDER BY year", (uid,))
+        cur.execute(f"""
+            SELECT EXTRACT(YEAR FROM l.order_date::date)::text as year,
+                   SUM(l.quantity * COALESCE(l.unit_price, 0)) as spent
+            FROM wine_inventory_lots l
+            JOIN wines w ON w.id = l.wine_id
+            WHERE w.user_id = {p}
+              AND l.order_date IS NOT NULL
+            GROUP BY year ORDER BY year
+        """, (uid,))
     else:
-        cur.execute(f"SELECT strftime('%Y', order_date) as year, SUM(total_price) as spent FROM wines WHERE user_id = {p} AND order_date IS NOT NULL GROUP BY year ORDER BY year", (uid,))
+        cur.execute(f"""
+            SELECT strftime('%Y', l.order_date) as year,
+                   SUM(l.quantity * COALESCE(l.unit_price, 0)) as spent
+            FROM wine_inventory_lots l
+            JOIN wines w ON w.id = l.wine_id
+            WHERE w.user_id = {p}
+              AND l.order_date IS NOT NULL
+            GROUP BY year ORDER BY year
+        """, (uid,))
     by_year = cur.fetchall()
     cur.execute(f"SELECT status, COUNT(*) as count FROM wines WHERE user_id = {p} GROUP BY status", (uid,))
     by_status = cur.fetchall()
