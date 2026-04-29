@@ -794,9 +794,67 @@ def add_inventory_location(wine_id):
         conn.close()
         return ("", 400)
 
+    raw_quantity = request.form.get("quantity", "1").strip()
+    try:
+        quantity = max(1, int(raw_quantity))
+    except ValueError:
+        quantity = 1
     upsert_inventory_lot(
-        conn, wine_id, 1, "in_collection", location,
+        conn, wine_id, quantity, "in_collection", location,
         wine["retailer"], wine["order_date"], wine["unit_price"]
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/wine/<int:wine_id>/add-lot", methods=["POST"])
+@login_required
+def add_inventory_lot(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
+
+    raw_quantity = request.form.get("quantity", "1").strip()
+    try:
+        quantity = max(1, int(raw_quantity))
+    except ValueError:
+        quantity = 1
+    status = request.form.get("status", "in_collection").strip()
+    if status not in ("in_collection", "not_shipped"):
+        return ("", 400)
+    storage_location = request.form.get("storage_location", "").strip() or None
+    if status != "in_collection":
+        storage_location = None
+    retailer = request.form.get("retailer", "").strip() or None
+    order_date = request.form.get("order_date", "").strip() or None
+    raw_unit_price = request.form.get("unit_price", "").strip()
+    try:
+        unit_price = float(raw_unit_price) if raw_unit_price else None
+    except ValueError:
+        unit_price = None
+
+    p = ph()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(f"SELECT user_id, retailer, order_date, unit_price FROM wines WHERE id = {p}", (wine_id,))
+    wine = cur.fetchone()
+    if not wine:
+        conn.close()
+        return ("", 404)
+    if storage_location:
+        cur.execute(
+            f"SELECT 1 FROM user_locations WHERE user_id = {p} AND name = {p}",
+            (wine["user_id"], storage_location)
+        )
+        if not cur.fetchone():
+            conn.close()
+            return ("", 400)
+
+    upsert_inventory_lot(
+        conn, wine_id, quantity, status, storage_location,
+        retailer if retailer is not None else wine["retailer"],
+        order_date if order_date is not None else wine["order_date"],
+        unit_price if unit_price is not None else wine["unit_price"]
     )
     conn.commit()
     conn.close()
