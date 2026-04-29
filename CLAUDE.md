@@ -15,7 +15,9 @@ Project root:
 C:\Users\steve\wine-tracker
 ```
 
-At the start of a new chat, inspect the current files and run `git status --short` before editing. Do not overwrite existing local changes. As of the mobile UI push, this local folder may still show `templates/index.html` as modified because Codex sometimes cannot write to `.git`; GitHub `main` is the source of truth if local status disagrees.
+At the start of a new chat, inspect the current files and run `git status --short` before editing. Do not overwrite existing local changes.
+
+Codex local Git metadata is unreliable for this repo. `.git/index`, `.git/FETCH_HEAD`, and related files are often locked or stale after GitHub API pushes. Do not spend time trying to make local `git status` clean from inside Codex. Use it only as a rough signal for possible user-created local files, then compare against GitHub `main` when needed. GitHub `main` is the source of truth if local Git disagrees.
 
 Reusable new-chat prompt:
 ```text
@@ -377,7 +379,7 @@ git push
 
 ### Codex GitHub Push Workaround
 
-Normal local Git writes may fail in Codex with `.git/index.lock` or `.git/FETCH_HEAD` permission errors. If that happens, do not keep fighting local `.git`; use the GitHub Contents API to update GitHub `main` directly. Local Git may report misleading `ahead/behind` state when `origin/main` is stale; verify against GitHub `main` before reverting or overwriting files.
+Normal local Git writes may fail in Codex with `.git/index.lock` or `.git/FETCH_HEAD` permission errors. If that happens, do not keep fighting local `.git`; use the GitHub Contents API to update GitHub `main` directly. Local Git may report misleading `ahead/behind` state when `origin/main` is stale; verify against GitHub `main` before reverting or overwriting files. Do not try repeated local Git cleanup/reset attempts unless Steve explicitly asks for local Git repair.
 
 Auth token location from the prior-chat `GH_CONFIG_DIR`:
 ```text
