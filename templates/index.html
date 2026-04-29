@@ -1331,6 +1331,7 @@
     <div class="mobile-bulk-body">
       <div class="mobile-bulk-family">
         <div class="mobile-bulk-family-title">Location</div>
+        <div style="color:#6b5d4f;font-size:0.76rem;font-weight:700;padding:7px 8px 0;">Also marks selected wines as Available.</div>
         <div class="mobile-bulk-chip-row">
           {% for loc in user_locations %}
           <button type="button" class="mobile-bulk-chip loc-color-{{ loop.index0 % 5 }}" data-bulk-field="storage_location" data-bulk-value="{{ loc }}">{{ loc }}</button>
@@ -1711,6 +1712,7 @@
             <div id="batchScanStatus" style="display:none;text-align:center;font-size:0.9rem;color:#c9a96e;"></div>
             <div id="batchDefaults" style="background:#1a0a00;border:1px solid #4a2208;border-radius:8px;padding:10px;">
               <div style="font-weight:800;color:#c9a96e;margin-bottom:8px;">Defaults for this batch</div>
+              <div style="color:#aaa;font-size:0.78rem;line-height:1.3;margin:-3px 0 9px;">Set quantity on each wine if you have multiples.</div>
               <div class="row g-2">
                 <div class="col-6">
                   <label style="font-size:0.78rem;color:#aaa;">Status</label>
@@ -1738,6 +1740,7 @@
             <div id="batchReviewTray" style="display:none;"></div>
             <form method="POST" action="/wine/add-batch-scan" id="batchAddForm" style="display:none;">
               <input type="hidden" name="wines_json" id="batchWinesJson">
+              <button type="button" class="btn btn-sm w-100 mb-2" style="background:#2a1a3a;border:1px solid #6a3a9a;color:#d8b0f5;" onclick="triggerBatchRescan()">Try new photo</button>
               <button type="button" class="btn btn-wine w-100" id="batchSubmitBtn" onclick="submitBatchWines()" disabled>Add Selected</button>
             </form>
           </div>
@@ -2265,6 +2268,40 @@
       };
     }
 
+    function setBatchLocationDisabled(card) {
+      const status = card?.querySelector('.batch-status')?.value || 'in_collection';
+      const location = card?.querySelector('.batch-location');
+      if (location) location.disabled = status !== 'in_collection';
+    }
+
+    function applyBatchDefaultsToCards() {
+      const defaults = batchDefaults();
+      document.querySelectorAll('.batch-card').forEach(card => {
+        const status = card.querySelector('.batch-status');
+        const location = card.querySelector('.batch-location');
+        const retailer = card.querySelector('.batch-retailer');
+        const orderDate = card.querySelector('.batch-order-date');
+        if (status) status.value = defaults.status;
+        if (location) location.value = defaults.storage_location;
+        if (retailer) retailer.value = defaults.retailer;
+        if (orderDate) orderDate.value = defaults.order_date;
+        setBatchLocationDisabled(card);
+      });
+    }
+
+    function syncBatchDefaultControls() {
+      const defaultStatus = document.getElementById('batchDefaultStatus');
+      const defaultLocation = document.getElementById('batchDefaultLocation');
+      if (defaultLocation) defaultLocation.disabled = defaultStatus?.value === 'not_shipped';
+    }
+
+    function triggerBatchRescan() {
+      const input = document.getElementById('batchScanInput');
+      if (!input) return;
+      input.value = '';
+      input.click();
+    }
+
     async function handleBatchScan(input) {
       if (!input.files || !input.files[0]) return;
       const preview = document.getElementById('batchScanPreview');
@@ -2316,23 +2353,29 @@
         const checked = !wine.duplicate_warning;
         const status = defaults.status;
         const location = defaults.storage_location;
+        const confidence = Number(wine.confidence || 0);
+        const startsOpen = wine.duplicate_warning || wine.needs_review_reason || (confidence && confidence < 0.8);
         const warning = wine.needs_review_reason ? `<div style="color:#e0a870;font-size:0.78rem;margin-top:5px;">${escapeHtml(wine.needs_review_reason)}</div>` : '';
         const duplicate = wine.duplicate_warning ? '<div style="background:#3d2a00;border:1px solid #8a6a22;color:#f4d895;border-radius:6px;padding:6px 8px;font-size:0.8rem;margin:7px 0;">Already in your cellar - unchecked by default.</div>' : '';
         return `
           <div class="batch-card" data-batch-card="${i}" style="background:#1a0a00;border:1px solid #4a2208;border-radius:8px;padding:10px;margin-bottom:10px;">
-            <div style="display:flex;align-items:flex-start;gap:8px;">
-              <input type="checkbox" class="batch-card-check" ${checked ? 'checked' : ''} style="width:20px;height:20px;margin-top:2px;">
-              <div style="min-width:0;flex:1;">
-                <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
-                  <div style="color:#f5e6d3;font-weight:900;line-height:1.2;">${escapeHtml(wine.wine_name || 'Unknown Wine')}</div>
-                  <div>${confidenceLabel(wine)}</div>
-                </div>
+            <details class="batch-card-details" ${startsOpen ? 'open' : ''}>
+              <summary style="list-style:none;cursor:pointer;">
+                <div style="display:flex;align-items:flex-start;gap:8px;">
+                  <input type="checkbox" class="batch-card-check" ${checked ? 'checked' : ''} style="width:20px;height:20px;margin-top:2px;">
+                  <div style="min-width:0;flex:1;">
+                    <div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start;">
+                      <div style="color:#f5e6d3;font-weight:900;line-height:1.2;">${escapeHtml(wine.wine_name || 'Unknown Wine')}</div>
+                      <div>${confidenceLabel(wine)}</div>
+                    </div>
                 <div style="color:#c8aa88;font-size:0.78rem;margin-top:3px;">${escapeHtml(wine.vintage || 'NV')} · ${escapeHtml(wine.wine_type || 'Wine')} · ${escapeHtml(wine.region || wine.origin || 'Region unknown')}</div>
                 ${warning}
-              </div>
-            </div>
-            ${duplicate}
-            <div class="row g-2 mt-1">
+                  </div>
+                  <span style="color:#c9a96e;font-size:0.78rem;font-weight:900;white-space:nowrap;margin-top:2px;">Edit</span>
+                </div>
+              </summary>
+              ${duplicate}
+              <div class="row g-2 mt-1">
               <div class="col-12"><label style="font-size:0.78rem;color:#aaa;">Wine name</label><input class="form-control form-control-sm batch-wine-name" value="${escapeHtml(wine.wine_name || '')}"></div>
               <div class="col-4"><label style="font-size:0.78rem;color:#aaa;">Vintage</label><input type="number" class="form-control form-control-sm batch-vintage" min="1900" max="2100" value="${escapeHtml(wine.vintage || '')}"></div>
               <div class="col-4"><label style="font-size:0.78rem;color:#aaa;">Qty</label><input type="number" class="form-control form-control-sm batch-quantity" min="1" value="1"></div>
@@ -2347,18 +2390,20 @@
               <div class="col-12"><label style="font-size:0.78rem;color:#aaa;">Drinking window</label><input class="form-control form-control-sm batch-window" placeholder="e.g. 2025-2035" value="${escapeHtml(wine.drinking_window || '')}"></div>
               <input type="hidden" class="batch-retailer" value="${escapeHtml(defaults.retailer)}">
               <input type="hidden" class="batch-order-date" value="${escapeHtml(defaults.order_date)}">
-            </div>
+              </div>
+            </details>
           </div>`;
       }).join('');
       document.getElementById('batchAddForm').style.display = 'block';
-      tray.querySelectorAll('.batch-card-check').forEach(cb => cb.addEventListener('change', updateBatchSubmitCount));
+      tray.querySelectorAll('.batch-card-check').forEach(cb => {
+        cb.addEventListener('click', e => e.stopPropagation());
+        cb.addEventListener('change', updateBatchSubmitCount);
+      });
       tray.querySelectorAll('.batch-status').forEach(select => {
         select.addEventListener('change', () => {
-          const card = select.closest('.batch-card');
-          const location = card.querySelector('.batch-location');
-          location.disabled = select.value !== 'in_collection';
+          setBatchLocationDisabled(select.closest('.batch-card'));
         });
-        select.dispatchEvent(new Event('change'));
+        setBatchLocationDisabled(select.closest('.batch-card'));
       });
       updateBatchSubmitCount();
     }
@@ -2403,6 +2448,18 @@
       btn.textContent = 'Adding...';
       document.getElementById('batchAddForm').submit();
     }
+
+    ['batchDefaultStatus', 'batchDefaultLocation', 'batchDefaultRetailer', 'batchDefaultDate'].forEach(id => {
+      const control = document.getElementById(id);
+      control?.addEventListener('change', () => {
+        syncBatchDefaultControls();
+        applyBatchDefaultsToCards();
+      });
+      control?.addEventListener('input', () => {
+        if (id === 'batchDefaultRetailer' || id === 'batchDefaultDate') applyBatchDefaultsToCards();
+      });
+    });
+    syncBatchDefaultControls();
 
     function submitDrank(saveDetails) {
       const wineId = document.getElementById('drankWineId').value;
@@ -2948,6 +3005,7 @@
     const mobileBulkBackdrop = document.getElementById('mobileBulkBackdrop');
     const mobileSelectTrigger = document.querySelector('[data-mobile-action="select"]');
     const mobileScrollKey = 'wineMobileScroll:' + window.location.pathname + window.location.search;
+    let mobileBulkSaving = false;
 
     function visibleMobileScroller() {
       const scroller = document.querySelector('.mobile-card-list');
@@ -3025,11 +3083,15 @@
     }
 
     function applyMobileBulkEdit(field, value, extra = {}) {
+      if (mobileBulkSaving) return;
       const ids = [...mobileSelectedIds];
       if (!ids.length || !field) return;
       if (field === 'status' && value === 'drank') {
         if (!confirm(`Mark ${ids.length} selected wine${ids.length === 1 ? '' : 's'} as drank? Ratings and notes can be added later.`)) return;
       }
+      mobileBulkSaving = true;
+      closeMobileBulkSheet();
+      document.querySelectorAll('[data-bulk-field]').forEach(button => { button.disabled = true; });
       const body = ids.map(id => `ids=${encodeURIComponent(id)}`).join('&')
         + `&field=${encodeURIComponent(field)}`
         + `&value=${encodeURIComponent(value || '')}`
@@ -3047,6 +3109,8 @@
         window.location.reload();
       }).catch(() => {
         alert('Could not update the selected wines. Please try again.');
+        mobileBulkSaving = false;
+        document.querySelectorAll('[data-bulk-field]').forEach(button => { button.disabled = false; });
         if (mobileBulkEditBtn) {
           mobileBulkEditBtn.disabled = mobileSelectedIds.size === 0;
           mobileBulkEditBtn.textContent = 'Edit';
