@@ -21,6 +21,21 @@ Project context:
 - Image storage uses Cloudinary.
 - AI features use Anthropic Claude API for receipt scan, label scan, recommendations, and drinking windows.
 
+Inventory-lots work now live:
+- The app now uses `wine_inventory_lots` for current inventory and `wine_drink_history` for consumption history.
+- `wines.quantity/status/storage_location/location_summary` are cached summaries synced from lots by `db.sync_wine_summary()`.
+- Lots are not individual bottles. A lot is current inventory for one wine at one location/status/source/date/price.
+- Lot statuses are only `in_collection` and `not_shipped`; `drank` is a derived wine summary state and drink history record.
+- Existing/current imported wines create lots through migration, manual Add Wine, receipt/bulk add, batch scan add, and email parsing.
+- Mobile detail page has an Inventory section with per-location lots, `Drank one`, `Add location`, and per-lot `[-]/[+]` Adjust count controls.
+- `Drank one` writes `wine_drink_history`, decrements one available lot, asks for location when multiple lots exist, and defaults drink date to today.
+- `[-]/[+]` controls are inventory corrections only and do not write drink history.
+- The old mobile Qty card is read-only and points users to Inventory for count changes.
+- New inventory routes: `POST /wine/<id>/drink-one`, `POST /wine/<id>/lot/<lot_id>/adjust`, `POST /wine/<id>/lot/add-location`, and `POST /wine/<id>/add-lot`.
+- Re-buy detection / "Add bottles to existing wine" UI is not implemented yet. `/wine/<id>/add-lot` exists for that future flow.
+- Shipment receiving flow and wine family/vertical grouping are also not implemented yet.
+- Latest inventory commits on GitHub main include `233b7be`, `2fe0b17`, `142a59e`, and `76c1de4`.
+
 Recent UI work already pushed:
 - Mobile Cards view redesigned.
 - Compact/List view redesigned.
@@ -54,7 +69,7 @@ Current mobile UI state as of Apr 28, 2026 (supersedes older mobile bullets belo
 - Mobile detail page has a sticky wine-cellar header matching the Main Cellar page: hamburger menu on the left, centered cellar title, and a square trash icon on the right. The trash icon opens the delete confirmation.
 - Detail hero shows the editable wine name first, then vintage/sticker. The type word and type sash were removed from the detail hero.
 - Detail page wines without images use the same dark `No photo` silhouette.
-- Detail page Qty uses a small minus/plus stepper. Drinking Window placeholder gives `e.g. 2024-2030` style guidance; expected format remains `YYYY-YYYY`.
+- Detail page has a mobile Inventory section for bottle counts. The old Qty card is read-only and points users to Inventory. Drinking Window placeholder gives `e.g. 2024-2030` style guidance; expected format remains `YYYY-YYYY`.
 - Detail notes textarea starts short and auto-grows.
 - Detail bottom action bar is Back to Cellar, Previous Wine, Next Wine. Delete is only in the sticky header. Back uses `back_url`, not `history.back()`.
 - Previous/Next on detail preserve the filtered Main Cellar list: mobile card clicks pass `list=<filtered ids>` and `back=<current cellar URL>` query params to `GET /wine/<id>`.
@@ -64,12 +79,13 @@ Current mobile UI state as of Apr 28, 2026 (supersedes older mobile bullets belo
 
 Current mobile detail page context:
 - Separate page at `GET /wine/<id>`, rendered by `templates/detail.html`. Tapping a card in `index.html` navigates here via `data-detail-url`. Do not change the mobile Cards/List layout unless I explicitly ask.
-- `app.py -> wine_detail()` passes `user_locations`, `wine_types`, `bottle_sizes`, and `sticker_colors`.
+- `app.py -> wine_detail()` passes `user_locations`, `wine_types`, `bottle_sizes`, `sticker_colors`, `inventory_lots`, `drink_history`, `drank_total`, and `not_shipped_count`.
 - Mobile-only layout in the same template; desktop detail view is separate and should not be changed unless requested.
 - Current mobile detail layout:
   - Hero: bottle image in `.mobile-bottle-wrap` with diagonal type sash (same color scheme as card). Right: type · vintage kicker with sticker dot, editable wine name, flag+region row, grape+varietal row.
   - Quick strip (3 pill badges): Status (green/amber/burgundy tint), Location (loc-color-* matching cards), Drinking Window (color-coded). Colors update live via JS on select change. Select text is center-aligned.
-  - Main body (2×2 grid): Qty, Source, Sticker, Rating — then full-width Notes. Sticker is 2 rows of 3: Green/Yellow/Orange then Red/Blue/None. Rating shows as large gold number (no star).
+  - Inventory section: available quantity, `location_summary`, per-location lots, `Drank one`, `Add location`, per-lot `[-]/[+]` Adjust count controls, and recent drink history.
+  - Main body (2×2 grid): Qty is read-only and points to Inventory for count changes. Source, Sticker, Rating follow, then full-width Notes. Sticker is 2 rows of 3: Green/Yellow/Orange then Red/Blue/None. Rating shows as large gold number (no star).
   - Collapsed sections with rotating ▾ chevron: "Wine details" (🍷 🍇 📍 🌍 🍾) and "Purchase" (🗓️ 💳 🏷️ 💰). Label column 100px; date input left-aligned.
   - Bottom bar: ← Back, ★ Rate, ✏️ Notes, ✓ Drank.
 - Naming: use `Location` (not `Storage`), `Source` (not `Retailer`).
