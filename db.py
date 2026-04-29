@@ -133,6 +133,31 @@ def sync_wine_summary(conn, wine_id):
     retailer = _row_get(latest, "retailer")
     order_date = _row_get(latest, "order_date")
     unit_price = _row_get(latest, "unit_price")
+    if latest is None:
+        cur.execute(
+            f"""SELECT retailer, order_date, unit_price
+                FROM wine_inventory_lots
+                WHERE wine_id = {p}
+                  AND status = 'not_shipped'
+                  AND quantity > 0
+                ORDER BY order_date DESC, created_at DESC, id DESC""",
+            (wine_id,)
+        )
+        latest = cur.fetchone()
+        retailer = _row_get(latest, "retailer")
+        order_date = _row_get(latest, "order_date")
+        unit_price = _row_get(latest, "unit_price")
+    if latest is None:
+        cur.execute(
+            f"""SELECT retailer, order_date, unit_price
+                FROM wines
+                WHERE id = {p}""",
+            (wine_id,)
+        )
+        current_wine = cur.fetchone()
+        retailer = _row_get(current_wine, "retailer")
+        order_date = _row_get(current_wine, "order_date")
+        unit_price = _row_get(current_wine, "unit_price")
     total_price = round(float(unit_price) * int(available_qty), 2) if unit_price is not None and available_qty else None
 
     cur.execute(
