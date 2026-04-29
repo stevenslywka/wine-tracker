@@ -1,8 +1,31 @@
 # Stage 2 and 3 Inventory Plan
 
+## Current Status
+
+Stages 2 and 3 have now been implemented on GitHub `main`.
+
+Implemented:
+- `POST /wine/<id>/drink-one`
+- `POST /wine/<id>/lot/<lot_id>/adjust`
+- `POST /wine/<id>/lot/add-location`
+- `POST /wine/<id>/add-lot` as a backend endpoint for the future re-buy flow
+- mobile detail Inventory section
+- per-location current inventory controls
+- drink history capture and recent drink history display
+- old mobile Qty card changed to read-only so it no longer competes with lot controls
+
+Remaining follow-up work:
+- re-buy detection in Add Wine
+- polished "Add bottles to existing wine" UI
+- "Receive shipment" flow for not-shipped lots
+- optional "show all drink history" view when more than the recent rows exist
+- future wine family / vertical grouping for same wine across different vintages
+
+The original plan below is retained as background context, but it should no longer be treated as unbuilt work.
+
 This file is a continuation note for the inventory-lots migration. Stage 1 is the data foundation: inventory lots, drink history table, cached wine summaries, migration, and updated add/import paths.
 
-Do not treat this file as implemented behavior. It is a handoff plan for the next session.
+Do not treat the remaining roadmap items as implemented behavior unless CLAUDE.md or the app code says they are live.
 
 ## Stage 2: Quantity-Aware Drink Flow
 
@@ -156,4 +179,3 @@ The cached `wines.location_summary` exists for this, but adding it to cards shou
 - Keep desktop views unchanged unless explicitly requested.
 - If a wine has no available lots but has not-shipped lots, `wines.status` should be `not_shipped`.
 - If a wine has no current lots, `wines.status` should be `drank`.
-
