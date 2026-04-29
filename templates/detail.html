@@ -654,6 +654,15 @@
         line-height: 1.25;
         margin-top: 2px;
       }
+      .inventory-adjust-label {
+        color: #8f7d6c;
+        font-size: 0.62rem;
+        font-weight: 900;
+        text-align: center;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        margin-top: 2px;
+      }
       .lot-controls {
         display: grid;
         grid-template-columns: 30px 34px 30px;
@@ -684,11 +693,12 @@
       }
       .inventory-add {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: minmax(0, 1fr) 62px auto;
         gap: 7px;
         margin-top: 8px;
       }
-      .inventory-add select {
+      .inventory-add select,
+      .inventory-add input {
         min-width: 0;
         border: 1px solid rgba(255,248,238,0.12);
         border-radius: 999px;
@@ -698,6 +708,7 @@
         font-weight: 800;
         padding: 8px 10px;
       }
+      .inventory-add input { text-align: center; }
       .inventory-add button {
         border-radius: 999px;
         padding: 8px 12px;
@@ -1094,10 +1105,13 @@
             <div class="inventory-meta">{% if lot.retailer %}{{ lot.retailer }}{% else %}Available{% endif %}{% if lot.order_date %} · {{ lot.order_date[:10] }}{% endif %}</div>
           </div>
           {% if can_edit %}
-          <div class="lot-controls">
-            <button type="button" class="lot-step" data-lot-adjust="-1" data-lot-id="{{ lot.id }}" data-lot-qty="{{ lot.quantity }}" aria-label="Decrease {{ lot.storage_location or 'location' }}">-</button>
-            <div class="lot-count">{{ lot.quantity }}</div>
-            <button type="button" class="lot-step" data-lot-adjust="1" data-lot-id="{{ lot.id }}" aria-label="Increase {{ lot.storage_location or 'location' }}">+</button>
+          <div>
+            <div class="lot-controls">
+              <button type="button" class="lot-step" data-lot-adjust="-1" data-lot-id="{{ lot.id }}" data-lot-qty="{{ lot.quantity }}" aria-label="Decrease {{ lot.storage_location or 'location' }}">-</button>
+              <div class="lot-count">{{ lot.quantity }}</div>
+              <button type="button" class="lot-step" data-lot-adjust="1" data-lot-id="{{ lot.id }}" aria-label="Increase {{ lot.storage_location or 'location' }}">+</button>
+            </div>
+            <div class="inventory-adjust-label">Adjust count</div>
           </div>
           {% else %}
           <div class="lot-count">{{ lot.quantity }}</div>
@@ -1112,7 +1126,11 @@
         <div class="inventory-muted-row"><span>Drank total</span><span id="drankTotalValue">{{ drank_total or 0 }}</span></div>
         {% if can_edit %}
         <div class="inventory-actions">
+          {% if wine.quantity and wine.quantity > 0 %}
           <button type="button" class="inventory-action primary" id="drinkOneAction">Drank one</button>
+          {% else %}
+          <button type="button" class="inventory-action primary" disabled>No bottles available</button>
+          {% endif %}
           <button type="button" class="inventory-action" id="toggleAddLocationAction">Add location</button>
         </div>
         <div class="inventory-add" id="addLocationRow" style="display:none;">
@@ -1121,7 +1139,8 @@
             <option value="{{ location }}">{{ location }}</option>
             {% endfor %}
           </select>
-          <button type="button" id="addLocationConfirm">Add 1</button>
+          <input id="addLocationQty" type="number" min="1" inputmode="numeric" value="1" aria-label="Quantity to add">
+          <button type="button" id="addLocationConfirm">Add</button>
         </div>
         {% endif %}
       </div>
@@ -1146,15 +1165,8 @@
       <div class="priority-grid">
         <div class="field-card">
           <span class="edit-label">Qty</span>
-          {% if can_edit %}
-          <form data-detail-form data-qty-form action="/wine/{{ wine.id }}/quantity" method="post">
-            <div class="qty-stepper">
-              <button type="button" data-qty-step="-1" aria-label="Decrease quantity">-</button>
-              <input class="mobile-input" id="quantityInput" name="quantity" type="number" min="1" inputmode="numeric" value="{{ wine.quantity or 1 }}" placeholder="-">
-              <button type="button" data-qty-step="1" aria-label="Increase quantity">+</button>
-            </div>
-          </form>
-          {% else %}<div class="read-only-value" style="text-align:left;">{{ wine.quantity or '-' }}</div>{% endif %}
+          <div class="rating-value-display" style="font-size:1.45rem;">{{ wine.quantity or 0 }}</div>
+          <div class="field-hint" style="text-align:center;">Use Inventory to change counts</div>
         </div>
         <div class="field-card">
           <span class="edit-label">Source</span>
@@ -1607,8 +1619,10 @@
       document.getElementById('addLocationConfirm')?.addEventListener('click', async () => {
         const select = document.getElementById('addLocationSelect');
         const location = select?.value || '';
+        const qtyInput = document.getElementById('addLocationQty');
+        const quantity = Math.max(1, parseInt(qtyInput?.value || '1', 10) || 1);
         if (!location) return;
-        const body = new URLSearchParams({ storage_location: location });
+        const body = new URLSearchParams({ storage_location: location, quantity: String(quantity) });
         const data = await postInventory('/wine/{{ wine.id }}/lot/add-location', body);
         if (data?.ok) window.location.reload();
       });
