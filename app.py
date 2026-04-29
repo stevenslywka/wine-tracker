@@ -537,6 +537,10 @@ def wine_detail(wine_id):
     cur.execute(f"SELECT * FROM wines WHERE id = {p}", (wine_id,))
     wine = cur.fetchone()
     user_locations = []
+    inventory_lots = []
+    drink_history = []
+    drank_total = 0
+    not_shipped_count = 0
     cellar_username = ""
     cellar_display_name = ""
     if wine:
@@ -546,6 +550,44 @@ def wine_detail(wine_id):
         user_row = cur.fetchone()
         cellar_username = user_row["username"] if user_row else session.get("username", "")
         cellar_display_name = user_row["display_name"] if user_row and "display_name" in user_row.keys() else cellar_username
+        cur.execute(
+            f"""SELECT *
+                FROM wine_inventory_lots
+                WHERE wine_id = {p}
+                  AND quantity > 0
+                ORDER BY
+                  CASE WHEN status = 'in_collection' THEN 0 ELSE 1 END,
+                  storage_location,
+                  order_date DESC,
+                  id DESC""",
+            (wine_id,)
+        )
+        inventory_lots = cur.fetchall()
+        cur.execute(
+            f"""SELECT COALESCE(SUM(quantity), 0) AS cnt
+                FROM wine_inventory_lots
+                WHERE wine_id = {p}
+                  AND status = 'not_shipped'
+                  AND quantity > 0""",
+            (wine_id,)
+        )
+        not_shipped_count = cur.fetchone()["cnt"] or 0
+        cur.execute(
+            f"""SELECT COALESCE(SUM(quantity), 0) AS cnt
+                FROM wine_drink_history
+                WHERE wine_id = {p}""",
+            (wine_id,)
+        )
+        drank_total = cur.fetchone()["cnt"] or 0
+        cur.execute(
+            f"""SELECT *
+                FROM wine_drink_history
+                WHERE wine_id = {p}
+                ORDER BY drank_date DESC, created_at DESC, id DESC
+                LIMIT 8""",
+            (wine_id,)
+        )
+        drink_history = cur.fetchall()
     conn.close()
     if not wine:
         return "Wine not found", 404
@@ -576,6 +618,10 @@ def wine_detail(wine_id):
                            wine_types=WINE_TYPES,
                            bottle_sizes=BOTTLE_SIZES,
                            sticker_colors=("Red", "Blue", "Orange", "Yellow", "Green"),
+                           inventory_lots=inventory_lots,
+                           drink_history=drink_history,
+                           drank_total=drank_total,
+                           not_shipped_count=not_shipped_count,
                            cellar_username=cellar_username,
                            cellar_display_name=cellar_display_name,
                            back_url=back_url,
@@ -583,6 +629,178 @@ def wine_detail(wine_id):
                            next_wine_url=next_wine_url,
                            access_level="edit" if can_edit else "view",
                            auth_enabled=True)
+
+
+@app.route("/wine/<int:wine_id>/drink-one", methods=["POST"])
+@login_required
+def drink_one(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
+
+    p = ph()
+    conn = get_db()
+    cur = conn.cursor()
+    raw_lot_id = request.form.get("lot_id", "").strip()
+    lot_id = int(raw_lot_id) if raw_lot_id.isdigit() else None
+
+    if lot_id:
+        cur.execute(
+            f"""SELECT *
+                FROM wine_inventory_lots
+                WHERE id = {p}
+                  AND wine_id = {p}
+                  AND status = 'in_collection'
+                  AND quantity > 0""",
+            (lot_id, wine_id)
+        )
+        lot = cur.fetchone()
+        if not lot:
+            conn.close()
+            return jsonify({"error": "Lot not found"}), 404
+    else:
+        cur.execute(
+            f"""SELECT *
+                FROM wine_inventory_lots
+                WHERE wine_id = {p}
+                  AND status = 'in_collection'
+                  AND quantity > 0
+                ORDER BY quantity DESC, storage_location ASC, id ASC""",
+            (wine_id,)
+        )
+        lots = cur.fetchall()
+        if not lots:
+            conn.close()
+            return jsonify({"error": "No available bottles"}), 400
+        if len(lots) > 1:
+            locations = [
+                {
+                    "lot_id": lot["id"],
+                    "name": lot["storage_location"] or "Unassigned",
+                    "qty": lot["quantity"],
+                }
+                for lot in lots
+            ]
+            conn.close()
+            return jsonify({"needs_location": True, "locations": locations})
+        lot = lots[0]
+        lot_id = lot["id"]
+
+    drank_date = request.form.get("drank_date", "").strip() or date.today().isoformat()
+    raw_rating = request.form.get("rating", "").strip()
+    rating = None
+    if raw_rating:
+        try:
+            rating = round(float(raw_rating), 1)
+            if not (0 <= rating <= 5):
+                rating = None
+        except ValueError:
+            rating = None
+    notes = request.form.get("notes", "").strip() or None
+
+    quantity = lot["quantity"] or 0
+    if quantity <= 1:
+        cur.execute(f"DELETE FROM wine_inventory_lots WHERE id = {p} AND wine_id = {p}", (lot_id, wine_id))
+    else:
+        cur.execute(
+            f"""UPDATE wine_inventory_lots
+                SET quantity = quantity - 1,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = {p}
+                  AND wine_id = {p}""",
+            (lot_id, wine_id)
+        )
+    cur.execute(
+        f"""INSERT INTO wine_drink_history
+            (wine_id, lot_id, quantity, drank_date, rating, notes)
+            VALUES ({p},{p},{p},{p},{p},{p})""",
+        (wine_id, lot_id, 1, drank_date, rating, notes)
+    )
+    if rating is not None:
+        cur.execute(f"UPDATE wines SET my_rating = {p} WHERE id = {p}", (rating, wine_id))
+    sync_wine_summary(conn, wine_id)
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/wine/<int:wine_id>/lot/<int:lot_id>/adjust", methods=["POST"])
+@login_required
+def adjust_inventory_lot(wine_id, lot_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
+
+    try:
+        delta = int(request.form.get("delta", "0"))
+    except ValueError:
+        return ("", 400)
+    if delta not in (-1, 1):
+        return ("", 400)
+
+    p = ph()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        f"""SELECT *
+            FROM wine_inventory_lots
+            WHERE id = {p}
+              AND wine_id = {p}
+              AND quantity > 0""",
+        (lot_id, wine_id)
+    )
+    lot = cur.fetchone()
+    if not lot:
+        conn.close()
+        return jsonify({"error": "Lot not found"}), 404
+
+    if delta < 0 and (lot["quantity"] or 0) <= 1:
+        cur.execute(f"DELETE FROM wine_inventory_lots WHERE id = {p} AND wine_id = {p}", (lot_id, wine_id))
+    else:
+        cur.execute(
+            f"""UPDATE wine_inventory_lots
+                SET quantity = quantity + {p},
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = {p}
+                  AND wine_id = {p}""",
+            (delta, lot_id, wine_id)
+        )
+    sync_wine_summary(conn, wine_id)
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/wine/<int:wine_id>/lot/add-location", methods=["POST"])
+@login_required
+def add_inventory_location(wine_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
+    location = request.form.get("storage_location", "").strip()
+    if not location:
+        return ("", 400)
+
+    p = ph()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(f"SELECT user_id, retailer, order_date, unit_price FROM wines WHERE id = {p}", (wine_id,))
+    wine = cur.fetchone()
+    if not wine:
+        conn.close()
+        return ("", 404)
+    cur.execute(
+        f"SELECT 1 FROM user_locations WHERE user_id = {p} AND name = {p}",
+        (wine["user_id"], location)
+    )
+    if not cur.fetchone():
+        conn.close()
+        return ("", 400)
+
+    upsert_inventory_lot(
+        conn, wine_id, 1, "in_collection", location,
+        wine["retailer"], wine["order_date"], wine["unit_price"]
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
 
 
 @app.route("/wines/bulk-status", methods=["POST"])
