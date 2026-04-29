@@ -57,7 +57,9 @@ def init_db():
             )
         """)
     conn.commit()
-    return conn
+    conn.close()
+    db_module.migrate()
+    return db_module.get_connection()
 
 
 def extract_vintage(name):
@@ -265,6 +267,10 @@ def parse_all_emails():
 
     conn = init_db()
     ph = db_module.get_placeholder()
+    cur = conn.cursor()
+    cur.execute(f"SELECT id FROM users WHERE username = {ph}", ("steven",))
+    user_row = cur.fetchone()
+    default_user_id = user_row["id"] if user_row else None
     all_wines = []
     errors = 0
 
@@ -282,30 +288,41 @@ def parse_all_emails():
                             INSERT INTO wines
                             (email_id, order_date, retailer, wine_name, vintage, varietal,
                              region, quantity, unit_price, total_price, order_number,
-                             retail_price, product_url)
-                            VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
+                             retail_price, product_url, status, storage_location, user_id)
+                            VALUES ({ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph}, {ph})
                             ON CONFLICT (email_id) DO NOTHING
+                            RETURNING id
                         """, (
                             wine['email_id'], wine['order_date'], wine['retailer'],
                             wine['wine_name'], wine['vintage'], wine['varietal'],
                             wine['region'], wine['quantity'], wine['unit_price'],
                             wine['total_price'], wine['order_number'],
                             wine.get('retail_price'), wine.get('product_url'),
+                            'in_collection', 'Cellar', default_user_id,
                         ))
+                        row = cur.fetchone()
+                        wine_id = row["id"] if row else None
                     else:
                         cur.execute("""
                             INSERT OR IGNORE INTO wines
                             (email_id, order_date, retailer, wine_name, vintage, varietal,
                              region, quantity, unit_price, total_price, order_number,
-                             retail_price, product_url)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                             retail_price, product_url, status, storage_location, user_id)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """, (
                             wine['email_id'], wine['order_date'], wine['retailer'],
                             wine['wine_name'], wine['vintage'], wine['varietal'],
                             wine['region'], wine['quantity'], wine['unit_price'],
                             wine['total_price'], wine['order_number'],
                             wine.get('retail_price'), wine.get('product_url'),
+                            'in_collection', 'Cellar', default_user_id,
                         ))
+                        wine_id = cur.lastrowid if cur.rowcount else None
+                    if wine_id:
+                        db_module.upsert_inventory_lot(
+                            conn, wine_id, wine['quantity'], 'in_collection', 'Cellar',
+                            wine['retailer'], wine['order_date'], wine['unit_price']
+                        )
                     conn.commit()
                 except Exception as e:
                     print(f"  DB error: {e}")
