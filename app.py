@@ -697,6 +697,12 @@ def drink_one(wine_id):
             rating = None
     notes = request.form.get("notes", "").strip() or None
 
+    cur.execute(
+        f"""INSERT INTO wine_drink_history
+            (wine_id, lot_id, quantity, drank_date, rating, notes)
+            VALUES ({p},{p},{p},{p},{p},{p})""",
+        (wine_id, lot_id, 1, drank_date, rating, notes)
+    )
     quantity = lot["quantity"] or 0
     if quantity <= 1:
         cur.execute(f"DELETE FROM wine_inventory_lots WHERE id = {p} AND wine_id = {p}", (lot_id, wine_id))
@@ -709,12 +715,6 @@ def drink_one(wine_id):
                   AND wine_id = {p}""",
             (lot_id, wine_id)
         )
-    cur.execute(
-        f"""INSERT INTO wine_drink_history
-            (wine_id, lot_id, quantity, drank_date, rating, notes)
-            VALUES ({p},{p},{p},{p},{p},{p})""",
-        (wine_id, lot_id, 1, drank_date, rating, notes)
-    )
     if rating is not None:
         cur.execute(f"UPDATE wines SET my_rating = {p} WHERE id = {p}", (rating, wine_id))
     sync_wine_summary(conn, wine_id)
@@ -890,6 +890,9 @@ def move_inventory_lot(wine_id, lot_id):
     if not lot:
         conn.close()
         return jsonify({"error": "Lot not found"}), 404
+    if to_location == (lot["storage_location"] or ""):
+        conn.close()
+        return ("", 400)
 
     cur.execute(
         f"SELECT 1 FROM user_locations WHERE user_id = {p} AND name = {p}",
@@ -957,14 +960,13 @@ def receive_inventory_lot(wine_id, lot_id):
         return ("", 400)
 
     cur.execute(
-        f"""UPDATE wine_inventory_lots
-            SET status = 'in_collection',
-                storage_location = {p},
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = {p} AND wine_id = {p}""",
-        (storage_location, lot_id, wine_id)
+        f"DELETE FROM wine_inventory_lots WHERE id = {p} AND wine_id = {p}",
+        (lot_id, wine_id)
     )
-    sync_wine_summary(conn, wine_id)
+    upsert_inventory_lot(
+        conn, wine_id, lot["quantity"], "in_collection", storage_location,
+        lot["retailer"], lot["order_date"], lot["unit_price"], lot["notes"]
+    )
     conn.commit()
     conn.close()
     return jsonify({"ok": True})

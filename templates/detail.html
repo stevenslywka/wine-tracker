@@ -1825,9 +1825,10 @@
         if (!pendingAdjustLotId) return;
         const btn = document.getElementById('confirmLastBottle');
         btn.disabled = true;
+        const lotId = pendingAdjustLotId;
         const body = new URLSearchParams({ delta: '-1' });
         closeLastBottleModal();
-        const data = await postInventory(`/wine/{{ wine.id }}/lot/${pendingAdjustLotId}/adjust`, body);
+        const data = await postInventory(`/wine/{{ wine.id }}/lot/${lotId}/adjust`, body);
         btn.disabled = false;
         if (data?.ok) window.location.reload();
       });
@@ -1849,7 +1850,16 @@
             opt.style.display = opt.value === loc ? 'none' : '';
           });
           const first = Array.from(select.options).find(o => !o.disabled);
-          if (first) select.value = first.value;
+          const confirm = document.getElementById('confirmMove');
+          if (first) {
+            select.value = first.value;
+            select.disabled = false;
+            if (confirm) confirm.disabled = false;
+          } else {
+            select.disabled = true;
+            if (confirm) confirm.disabled = true;
+            if (subtitle) subtitle.textContent = 'Add another location before moving bottles from here.';
+          }
         }
         const modal = document.getElementById('moveModal');
         modal.classList.add('visible');

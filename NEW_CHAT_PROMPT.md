@@ -24,13 +24,18 @@ Project context:
 Inventory-lots work now live:
 - The app now uses `wine_inventory_lots` for current inventory and `wine_drink_history` for consumption history.
 - `wines.quantity/status/storage_location/location_summary` are cached summaries synced from lots by `db.sync_wine_summary()`.
+- `wines.total_price` is cached from available lots by summing `quantity * unit_price` per lot, so mixed-price lots are handled correctly.
 - Lots are not individual bottles. A lot is current inventory for one wine at one location/status/source/date/price.
 - Lot statuses are only `in_collection` and `not_shipped`; `drank` is a derived wine summary state and drink history record.
 - Existing/current imported wines create lots through migration, manual Add Wine, receipt/bulk add, batch scan add, and email parsing.
 - Mobile detail Inventory section uses per-location lot cards. Each in_collection lot card shows: location name, bottle count, `Drink one` button (opens modal for optional rating/notes before confirming), `Move` button (qty stepper + destination selector), and `Adjust` (inline −/count/+/Done; last-bottle removal uses a custom confirm modal).
 - Not-shipped lots appear as amber cards with a `Receive` button (location selector modal, converts lot to in_collection).
 - `Drink one` writes `wine_drink_history` with optional rating and notes; always requires a specific lot_id from the per-lot button.
+- `Drink one` records history before deleting a final-bottle lot, so the last bottle works with PostgreSQL foreign keys.
 - `Adjust` controls are inventory corrections only and do not write drink history.
+- Last-bottle `Adjust` uses the custom confirmation modal and preserves the lot id before closing the modal.
+- `Move` requires a destination different from the source; if no other saved location exists, the mobile modal disables the action and says to add another location first.
+- `Receive` consolidates incoming bottles through `upsert_inventory_lot()` so receiving into an existing available location does not create duplicate same-location cards.
 - The old mobile Qty card is read-only and points users to Inventory for count changes.
 - Inventory routes: `POST /wine/<id>/drink-one`, `POST /wine/<id>/lot/<lot_id>/adjust`, `POST /wine/<id>/lot/add-location`, `POST /wine/<id>/add-lot`, `POST /wine/<id>/lot/<lot_id>/move`, `POST /wine/<id>/lot/<lot_id>/receive`.
 - Re-buy detection / "Add bottles to existing wine" UI is not implemented yet. `/wine/<id>/add-lot` exists for that future flow.

@@ -158,7 +158,18 @@ def sync_wine_summary(conn, wine_id):
         retailer = _row_get(current_wine, "retailer")
         order_date = _row_get(current_wine, "order_date")
         unit_price = _row_get(current_wine, "unit_price")
-    total_price = round(float(unit_price) * int(available_qty), 2) if unit_price is not None and available_qty else None
+    cur.execute(
+        f"""SELECT SUM(quantity * unit_price) AS total
+            FROM wine_inventory_lots
+            WHERE wine_id = {p}
+              AND status = 'in_collection'
+              AND quantity > 0
+              AND unit_price IS NOT NULL""",
+        (wine_id,)
+    )
+    total_row = cur.fetchone()
+    total_value = _row_get(total_row, "total")
+    total_price = round(float(total_value), 2) if total_value is not None else None
 
     cur.execute(
         f"""UPDATE wines

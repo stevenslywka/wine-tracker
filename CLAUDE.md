@@ -28,11 +28,16 @@ Latest inventory-lots work pushed to GitHub:
 - Stage 1 foundation added `wine_inventory_lots`, `wine_drink_history`, and `wines.location_summary`.
 - Existing wines migrate into one current inventory lot each; drank wines have no current lots and keep source/date/price metadata.
 - `wines.quantity`, `wines.status`, `wines.storage_location`, `wines.location_summary`, and price/source fields are now cached summaries synced from lots by `db.sync_wine_summary()`.
+- `wines.total_price` is cached from available lots by summing `quantity * unit_price` per lot, so mixed-price re-buys do not use one latest price for every bottle.
 - New/imported wines create lots through manual Add Wine, receipt/bulk add, batch scan add, and email parsing.
 - Location filters/counts and recommendation location filters now query lots.
 - Mobile detail page now has an Inventory section with per-location lots, `Drank one`, `Add location`, and per-lot `[-]/[+]` Adjust count controls.
 - `Drank one` creates `wine_drink_history`, decrements one available lot, asks for location when multiple lots exist, and defaults drink date to today.
+- `Drank one` inserts drink history before deleting a final-bottle lot so PostgreSQL foreign keys do not block last-bottle consumption.
 - `[-]/[+]` controls are inventory corrections only; they do not create drink history.
+- Last-bottle `Adjust` uses the custom confirmation modal and preserves the lot id before closing the modal.
+- `Move` requires a real destination different from the source location; if there is no other saved location, the mobile modal disables the action and tells the user to add another location first.
+- `Receive` consolidates incoming bottles into an existing matching available lot through `upsert_inventory_lot()` instead of creating duplicate same-location cards.
 - The old mobile Qty card is read-only and points users to the Inventory section.
 - New lot routes: `POST /wine/<id>/drink-one`, `POST /wine/<id>/lot/<lot_id>/adjust`, `POST /wine/<id>/lot/add-location`, and `POST /wine/<id>/add-lot`.
 - Latest pushed commits include:
@@ -50,6 +55,9 @@ Inventory model notes:
 - Do not store `Multiple` in `wines.storage_location`; use primary location there and full display text in `wines.location_summary`.
 - Always run lot changes and `sync_wine_summary(conn, wine_id)` in the same transaction.
 - Lot routes must verify both wine ownership and that `lot_id` belongs to the URL's `wine_id`.
+- For final-bottle drink operations, insert `wine_drink_history` before deleting the source lot, or store a null `lot_id`.
+- Do not update incoming lots directly to receive shipments; delete/upsert so received bottles merge with any existing matching available lot.
+- `Move` should reject same-location moves on both frontend and backend.
 - Re-buy detection / "Add bottles to existing wine" UI is not implemented yet. The backend route `/wine/<id>/add-lot` exists for that future flow.
 
 Recent mobile UI work pushed to GitHub:
