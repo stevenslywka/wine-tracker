@@ -6,7 +6,7 @@ Personal Flask wine cellar app replacing Vivino. Multi-user. Local dev uses SQLi
 - Live site: `https://stevenwinecellar.up.railway.app/`
 - GitHub: `https://github.com/stevenslywka/wine-tracker`
 - Railway deploys automatically from GitHub `main`
-- Latest production work noted in this guide: mobile wine detail Cellar polish (Drinking Window moved into the Cellar grid; add-bottle status wording now Available/Not shipped), pushed to GitHub `main` after `ca6bf495de57ba47620b54d336c4d228d5a0a120`.
+- Latest production work noted in this guide: mobile wine detail Cellar polish (Drinking Window moved into the Cellar grid; add-bottle status wording now Available/Not shipped), pushed to GitHub `main` as `d219d2a3daa65a8203e8cbe7689b4618d149a30b`.
 
 ## Current Truth
 
