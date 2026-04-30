@@ -28,7 +28,7 @@ Project context:
 - Flask app: `app.py`; DB helpers/migrations: `db.py`; main cellar: `templates/index.html`; wine detail: `templates/detail.html`.
 - Local database is SQLite `wines.db`; production is PostgreSQL.
 - Schema changes must go through `db.py -> migrate()`.
-- Latest production UI work: mobile wine detail modal polish uses compact Drink/Manage titles, inline drink rating, Add bottles qty/location row, status pills, purchase date default, and a single-location tint fix.
+- Latest production UI work: mobile Drink History is a collapsed tasting-journal section with one-line rows, an edit bottom sheet, and saved-location color mapping so House stays red even when it is the only visible location.
 
 Inventory truth:
 - Current inventory uses `wine_inventory_lots`, not individual bottle records.

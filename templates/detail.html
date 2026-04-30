@@ -1476,37 +1476,164 @@
         border-top: 1px solid rgba(255,248,238,0.1);
         padding-top: 12px;
       }
+      .history-toggle {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        text-align: left;
+      }
+      .history-toggle:disabled {
+        opacity: 1;
+      }
+      .history-toggle > div.ledger-title {
+        display: none;
+      }
+      .history-toggle-chevron {
+        color: var(--mobile-muted);
+        font-size: 1.1rem;
+        line-height: 1;
+        transition: transform 0.18s ease;
+      }
+      .history-toggle.expanded .history-toggle-chevron {
+        transform: rotate(90deg);
+      }
+      .history-body {
+        padding-top: 8px;
+      }
       .history-row {
         width: 100%;
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         border: 0;
         border-top: 1px solid rgba(255,248,238,0.08);
         background: transparent;
         color: var(--mobile-muted);
         text-align: left;
-        padding: 9px 0;
+        padding: 8px 0;
+        min-height: 34px;
       }
       .history-row:first-child { border-top: 0; }
       .history-row:disabled { opacity: 1; }
-      .history-main {
-        color: var(--mobile-text);
-        font-size: 0.86rem;
-        font-weight: 900;
-        line-height: 1.25;
-      }
-      .history-meta {
+      .history-date {
+        flex: 0 0 auto;
         color: var(--mobile-muted);
-        font-size: 0.78rem;
-        font-weight: 800;
-        line-height: 1.25;
-        margin-top: 2px;
+        font-size: 0.8rem;
+        font-weight: 850;
+        white-space: nowrap;
+      }
+      .history-location {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--mobile-muted);
+        font-size: 0.8rem;
+        font-weight: 850;
+        white-space: nowrap;
+      }
+      .history-location-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .history-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex: 0 0 auto;
+      }
+      .history-actions {
+        flex: 0 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--mobile-muted);
+        min-width: 22px;
+        justify-content: flex-end;
+      }
+      .history-rating {
+        color: var(--mobile-accent);
+        font-size: 0.8rem;
+        font-weight: 900;
+        line-height: 1;
+      }
+      .history-notes-icon {
+        width: 12px;
+        height: 12px;
+        color: var(--mobile-muted);
+        flex: 0 0 auto;
       }
       .history-chevron {
         color: var(--mobile-muted);
         font-size: 1.1rem;
+        line-height: 1;
+      }
+      .history-sheet-backdrop {
+        align-items: flex-end;
+        justify-content: center;
+        padding: 0;
+      }
+      .history-sheet-dialog {
+        width: 100%;
+        max-width: 480px;
+        max-height: 85vh;
+        overflow-y: auto;
+        border: 1px solid rgba(255,248,238,0.14);
+        border-bottom: 0;
+        border-radius: 18px 18px 0 0;
+        background: #1a1410;
+        color: var(--mobile-text);
+        padding: 10px 18px calc(18px + env(safe-area-inset-bottom));
+        box-shadow: 0 -18px 44px rgba(0,0,0,0.52);
+        transform: translateY(100%);
+        transition: transform 0.2s ease;
+      }
+      .history-sheet-backdrop.visible .history-sheet-dialog {
+        transform: translateY(0);
+      }
+      .history-sheet-handle {
+        width: 32px;
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(255,248,238,0.24);
+        margin: 0 auto 14px;
+      }
+      .history-sheet-title {
+        color: var(--mobile-text);
+        font-size: 1.02rem;
+        font-weight: 900;
+        margin-bottom: 14px;
+      }
+      .history-sheet-field label {
+        color: var(--mobile-muted);
+        font-size: 0.78rem;
+        font-weight: 800;
+        display: block;
+        margin-bottom: 5px;
+      }
+      .history-sheet-field input,
+      .history-sheet-field select,
+      .history-sheet-field textarea {
+        width: 100%;
+        background: #11100f;
+        border: 1px solid rgba(255,248,238,0.14);
+        border-radius: 8px;
+        color: var(--mobile-text);
+        font-size: 0.96rem;
+        font-weight: 800;
+        padding: 8px 10px;
+      }
+      .history-sheet-field textarea {
+        resize: none;
+        line-height: 1.35;
+        font-size: 0.88rem;
+        font-weight: 700;
       }
     }
   </style>
@@ -1608,7 +1735,11 @@
       <div class="ledger-summary">
         {{ wine.quantity or 0 }} total
         {% for item in available_locations %}
-        <span class="ledger-summary-dot loc-dot-{{ loop.index0 % 5 }}"></span>{{ item.quantity }} {{ item.location }}
+        {% set summary_color = namespace(idx=loop.index0 % 5) %}
+        {% for location in user_locations %}
+          {% if location == item.location %}{% set summary_color.idx = loop.index0 % 5 %}{% endif %}
+        {% endfor %}
+        <span class="ledger-summary-dot loc-dot-{{ summary_color.idx }}"></span>{{ item.quantity }} {{ item.location }}
         {% endfor %}
       </div>
 
@@ -1623,8 +1754,11 @@
         {% else %}
         <div class="ledger-cards">
           {% for item in available_locations %}
-          {% set color_idx = loop.index0 % 5 %}
-          <div class="ledger-card {% if not can_edit %}readonly{% endif %} loc-color-{{ color_idx }}"
+          {% set card_color = namespace(idx=loop.index0 % 5) %}
+          {% for location in user_locations %}
+            {% if location == item.location %}{% set card_color.idx = loop.index0 % 5 %}{% endif %}
+          {% endfor %}
+          <div class="ledger-card {% if not can_edit %}readonly{% endif %} loc-color-{{ card_color.idx }}"
                data-location="{{ item.location }}"
                data-quantity="{{ item.quantity }}"
                data-bought="{{ item.bought }}">
@@ -1673,29 +1807,49 @@
       </div>
 
       <div class="ledger-history">
-        <div class="ledger-subtitle-row">
-          <div class="ledger-title">Drink History · {{ drank_total or 0 }} total</div>
-        </div>
-        <div class="ledger-list">
+        <button type="button" class="history-toggle" id="drinkHistoryToggle" {% if not drink_history %}disabled{% endif %} aria-expanded="false" aria-controls="drinkHistoryBody">
+          <span class="ledger-title">Drink History &middot; {% if drank_total %}{{ drank_total }} total{% else %}none{% endif %}</span>
+          {% if drink_history %}<span class="history-toggle-chevron" aria-hidden="true">&rsaquo;</span>{% endif %}
+        </button>
+        <div class="ledger-list history-body" id="drinkHistoryBody" hidden>
           {% if drink_history %}
             {% for drink in drink_history %}
             {% set drink_loc = drink.storage_location or 'Location unknown' %}
+            {% set history_color = namespace(idx=loop.index0 % 5) %}
+            {% for location in user_locations %}
+              {% if location == drink_loc %}{% set history_color.idx = loop.index0 % 5 %}{% endif %}
+            {% endfor %}
+            {% set raw_date = drink.drank_date or drink.created_at[:10] %}
+            {% set date_parts = raw_date.split('-') %}
+            {% if date_parts|length == 3 %}
+              {% set display_date = (date_parts[1]|int) ~ '/' ~ (date_parts[2]|int) ~ '/' ~ date_parts[0][2:] %}
+            {% else %}
+              {% set display_date = raw_date %}
+            {% endif %}
             {% if loop.index0 == 4 %}
             <div id="historyExtra" hidden>
             {% endif %}
             <button type="button" class="history-row"
                     data-history-id="{{ drink.id }}"
-                    data-date="{{ drink.drank_date or drink.created_at[:10] }}"
+                    data-date="{{ raw_date }}"
                     data-location="{{ drink_loc }}"
                     data-quantity="{{ drink.quantity or 1 }}"
                     data-rating="{{ drink.rating if drink.rating is not none else '' }}"
                     data-notes="{{ drink.notes or '' }}"
+                    data-display-title="{{ display_date }} &middot; {{ drink_loc }}"
                     {% if not can_edit %}disabled{% endif %}>
-              <span>
-                <span class="history-main">{{ drink.drank_date or drink.created_at[:10] }} · Drank {{ drink.quantity or 1 }} from {{ drink_loc }}</span>
-                <span class="history-meta">{% if drink.rating is not none %}Rating {{ "%.1f"|format(drink.rating) }}{% endif %}{% if drink.notes %}{% if drink.rating is not none %} · {% endif %}{{ drink.notes }}{% endif %}</span>
+              <span class="history-date">{{ display_date }}{% if (drink.quantity or 1) > 1 %} &middot;&times;{{ drink.quantity or 1 }}{% endif %}</span>
+              <span class="history-location">
+                <span class="history-dot loc-dot-{{ history_color.idx }}"></span>
+                <span class="history-location-name">{{ drink_loc }}</span>
               </span>
-              <span class="history-chevron">›</span>
+              <span class="history-actions">
+                {% if drink.rating is not none %}<span class="history-rating">{{ "%g"|format(drink.rating) }}</span>{% endif %}
+                {% if drink.notes %}
+                <svg class="history-notes-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
+                {% endif %}
+                <span class="history-chevron">&rsaquo;</span>
+              </span>
             </button>
             {% if loop.last and drink_history|length > 4 %}
             </div>
@@ -1704,7 +1858,7 @@
             {% if drink_history|length > 4 %}
             <button type="button" id="showAllHistory"
                     style="width:100%;background:transparent;border:0;color:var(--mobile-accent);font-size:0.82rem;font-weight:900;padding:8px 0;text-align:center;">
-              View all {{ drink_history|length }} ›
+              View all {{ drink_history|length }} &rsaquo;
             </button>
             {% endif %}
           {% else %}
@@ -1910,9 +2064,10 @@
     </div>
 
     <!-- Drink history edit sheet -->
-    <div class="delete-confirm-backdrop" id="historyEditModal" aria-hidden="true">
-      <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="historyEditTitle">
-        <div class="delete-confirm-title neutral-title" id="historyEditTitle">Edit drink history</div>
+    <div class="delete-confirm-backdrop history-sheet-backdrop" id="historyEditModal" aria-hidden="true">
+      <div class="history-sheet-dialog" role="dialog" aria-modal="true" aria-labelledby="historyEditTitle">
+        <div class="history-sheet-handle" aria-hidden="true"></div>
+        <div class="history-sheet-title" id="historyEditTitle">Edit drink history</div>
         <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
           <div>
             <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Date</label>
@@ -2718,6 +2873,8 @@
         }
         document.getElementById('historyRatingInput').value = row.dataset.rating || '';
         document.getElementById('historyNotesInput').value = row.dataset.notes || '';
+        const title = document.getElementById('historyEditTitle');
+        if (title) title.textContent = row.dataset.displayTitle || 'Edit drink history';
         const modal = document.getElementById('historyEditModal');
         modal.classList.add('visible');
         modal.setAttribute('aria-hidden', 'false');
@@ -2729,6 +2886,16 @@
       }
       document.querySelectorAll('.history-row').forEach(row => {
         row.addEventListener('click', () => openHistoryEditModal(row));
+      });
+      document.getElementById('drinkHistoryToggle')?.addEventListener('click', e => {
+        const btn = e.currentTarget;
+        if (btn.disabled) return;
+        const body = document.getElementById('drinkHistoryBody');
+        if (!body) return;
+        const willOpen = body.hasAttribute('hidden');
+        body.toggleAttribute('hidden', !willOpen);
+        btn.classList.toggle('expanded', willOpen);
+        btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
       });
       document.getElementById('showAllHistory')?.addEventListener('click', () => {
         document.getElementById('historyExtra')?.removeAttribute('hidden');
