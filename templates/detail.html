@@ -1439,6 +1439,18 @@
       </div>
     </div>
 
+    <!-- Last bottle confirm -->
+    <div class="delete-confirm-backdrop" id="lastBottleModal" aria-hidden="true">
+      <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="lastBottleTitle">
+        <div class="delete-confirm-title" id="lastBottleTitle">Remove last bottle?</div>
+        <div class="delete-confirm-copy" id="lastBottleSubtitle"></div>
+        <div class="delete-confirm-actions">
+          <button type="button" id="cancelLastBottle">Cancel</button>
+          <button type="button" class="danger" id="confirmLastBottle">Remove</button>
+        </div>
+      </div>
+    </div>
+
     <div class="delete-confirm-backdrop" id="deleteConfirmDialog" aria-hidden="true">
       <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="deleteConfirmTitle">
         <div class="delete-confirm-title" id="deleteConfirmTitle">Are you sure?</div>
@@ -1779,11 +1791,45 @@
         button.addEventListener('click', async () => {
           const delta = parseInt(button.dataset.lotAdjust || '0', 10);
           const qty = parseInt(button.dataset.lotQty || '0', 10);
-          if (delta < 0 && qty <= 1 && !confirm('Remove this last bottle from this location?')) return;
+          if (delta < 0 && qty <= 1) {
+            const loc = button.closest('.lot-card')?.querySelector('.lot-card-loc')?.textContent?.trim() || 'this location';
+            openLastBottleModal(button.dataset.lotId, loc);
+            return;
+          }
           const body = new URLSearchParams({ delta: String(delta) });
           const data = await postInventory(`/wine/{{ wine.id }}/lot/${button.dataset.lotId}/adjust`, body);
           if (data?.ok) window.location.reload();
         });
+      });
+
+      // ── Last bottle confirm ──
+      let pendingAdjustLotId = null;
+      function openLastBottleModal(lotId, loc) {
+        pendingAdjustLotId = lotId;
+        const sub = document.getElementById('lastBottleSubtitle');
+        if (sub) sub.textContent = `This will remove the last bottle from ${loc}.`;
+        const modal = document.getElementById('lastBottleModal');
+        modal.classList.add('visible');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+      function closeLastBottleModal() {
+        document.getElementById('lastBottleModal').classList.remove('visible');
+        document.getElementById('lastBottleModal').setAttribute('aria-hidden', 'true');
+        pendingAdjustLotId = null;
+      }
+      document.getElementById('cancelLastBottle')?.addEventListener('click', closeLastBottleModal);
+      document.getElementById('lastBottleModal')?.addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeLastBottleModal();
+      });
+      document.getElementById('confirmLastBottle')?.addEventListener('click', async () => {
+        if (!pendingAdjustLotId) return;
+        const btn = document.getElementById('confirmLastBottle');
+        btn.disabled = true;
+        const body = new URLSearchParams({ delta: '-1' });
+        closeLastBottleModal();
+        const data = await postInventory(`/wine/{{ wine.id }}/lot/${pendingAdjustLotId}/adjust`, body);
+        btn.disabled = false;
+        if (data?.ok) window.location.reload();
       });
 
       // ── Move modal ──
