@@ -1,4 +1,4 @@
-# Wine Tracker — Claude Project Guide
+﻿# Wine Tracker â€” Claude Project Guide
 
 Personal wine collection tracker to replace Vivino. Flask app with multi-user support.
 Steve's live instance: deployed on Railway. Local dev uses SQLite; production uses PostgreSQL.
@@ -31,15 +31,15 @@ Latest inventory-lots work pushed to GitHub:
 - `wines.total_price` is cached from available lots by summing `quantity * unit_price` per lot, so mixed-price re-buys do not use one latest price for every bottle.
 - New/imported wines create lots through manual Add Wine, receipt/bulk add, batch scan add, and email parsing.
 - Location filters/counts and recommendation location filters now query lots.
-- Mobile detail page now has a Bottles section with per-location lots. Each available lot shows a primary `Drink one` action, with `Move bottles` and `Correct count` tucked behind `Edit location/count`.
-- `Drank one` creates `wine_drink_history`, decrements one available lot, asks for location when multiple lots exist, and defaults drink date to today.
+- Mobile detail page now has a compact Bottle Ledger. Header summarizes total available bottles by location; each location row shows `Location - / left / bought / + / ...` with fast drink/add actions and a subtle edit sheet for move/correct count.
+- `Drank one` creates `wine_drink_history`, stores the source location, decrements one available lot from that location, and defaults drink date to today.
 - `Drank one` inserts drink history before deleting a final-bottle lot so PostgreSQL foreign keys do not block last-bottle consumption.
 - `Correct count` controls are inventory corrections only; they do not create drink history.
 - Last-bottle `Correct count` uses the custom confirmation modal and preserves the lot id before closing the modal.
 - `Move` requires a real destination different from the source location; if there is no other saved location, the mobile modal disables the action and tells the user to add another location first.
 - `Receive` consolidates incoming bottles into an existing matching available lot through `upsert_inventory_lot()` instead of creating duplicate same-location cards.
-- The old mobile Qty card was removed; total current bottles now appears in the `Bottles · N total` section header.
-- New lot routes: `POST /wine/<id>/drink-one`, `POST /wine/<id>/lot/<lot_id>/adjust`, `POST /wine/<id>/lot/add-location`, and `POST /wine/<id>/add-lot`.
+- The old mobile Qty card was removed; total current bottles now appears in the Bottle Ledger summary.
+- Inventory/detail routes include: `POST /wine/<id>/drink-one`, `POST /wine/<id>/lot/<lot_id>/adjust`, `POST /wine/<id>/lot/add-location`, `POST /wine/<id>/add-lot`, `POST /wine/<id>/lot/<lot_id>/move`, `POST /wine/<id>/lot/<lot_id>/receive`, `POST /wine/<id>/location/move`, `POST /wine/<id>/location/correct`, `POST /wine/<id>/drink-history/<history_id>/update`, and `POST /wine/<id>/drink-history/<history_id>/delete`.
 - Latest pushed commits include:
   - `233b7be` (`Add inventory lot foundation`)
   - `2fe0b17` (`Preserve wine metadata during inventory sync`)
@@ -59,7 +59,7 @@ Inventory model notes:
 - For final-bottle drink operations, insert `wine_drink_history` before deleting the source lot, or store a null `lot_id`.
 - Do not update incoming lots directly to receive shipments; delete/upsert so received bottles merge with any existing matching available lot.
 - `Move` should reject same-location moves on both frontend and backend.
-- Re-buy detection / "Add bottles to existing wine" UI is not implemented yet. The backend route `/wine/<id>/add-lot` exists for that future flow.
+- Detail-page `+ Add` now adds bottles to an existing wine through `/wine/<id>/add-lot`; broader Add Wine re-buy detection is still future work.
 
 Recent mobile UI work pushed to GitHub:
 - Mobile Cards view redesigned.
@@ -68,7 +68,7 @@ Recent mobile UI work pushed to GitHub:
 - Wine type sash adjusted.
 - Available/drank/not-shipped icons updated.
 - Storage/status mobile behavior improved.
-- Mobile cellar header now centers `🍷 Steven's wine cellar`; hamburger opens the menu and the search icon reveals the search bar.
+- Mobile cellar header now centers `ðŸ· Steven's wine cellar`; hamburger opens the menu and the search icon reveals the search bar.
 - Mobile Filter and sort sheet added, with tighter spacing and a Nestig-inspired trigger.
 - Mobile quick carousel added: Location, Type, Origin, Sticker. It should appear once only, ending with Sticker.
 - Origin carousel chips are: USA, France, Italy, and Earth emoji `Other`. `Other` filters origins outside USA/France/Italy; USA also includes common stored US origins like California, Oregon, Washington, and New York.
@@ -96,7 +96,7 @@ Current mobile UI state as of Apr 28, 2026 (supersedes older mobile bullets belo
 - Mobile detail page has a sticky wine-cellar header matching the Main Cellar page: hamburger menu on the left, centered cellar title, and a square trash icon on the right. The trash icon opens the delete confirmation.
 - Detail hero shows the editable wine name first, then vintage/sticker. The type word and type sash were removed from the detail hero.
 - Detail page wines without images use the same dark `No photo` silhouette.
-- Detail page uses a `Bottles · N total` section with per-location lot cards. Each available lot shows `Drink one` as the primary full-width action; `Move bottles` and `Correct count` live behind `Edit location/count`. Not-shipped lots show a `Receive` button. The old Qty card in the priority grid is removed. Drinking Window placeholder gives `e.g. 2024-2030` style guidance; expected format remains `YYYY-YYYY`.
+- Detail page uses a compact `Bottle Ledger` section. The summary shows total available bottles and counts by location; each available location row has `-` to drink one, `+` to add bottles, and `...` for move/correct count. Not-shipped rows show `Receive`. Drink history rows are tappable for edit/delete. Drinking Window placeholder gives `e.g. 2024-2030` style guidance; expected format remains `YYYY-YYYY`.
 - Detail notes textarea starts short and auto-grows.
 - Detail bottom action bar is Back to Cellar, Previous Wine, Next Wine. Delete is only in the sticky header. Back uses `back_url`, not `history.back()`.
 - Previous/Next on detail preserve the filtered Main Cellar list: mobile card clicks pass `list=<filtered ids>` and `back=<current cellar URL>` query params to `GET /wine/<id>`.
@@ -104,18 +104,18 @@ Current mobile UI state as of Apr 28, 2026 (supersedes older mobile bullets belo
 - Delete confirmation text is `Are you sure? This cannot be undone.` and posts to `/wine/<id>/delete` only after confirmation.
 - Recent relevant commits include `bd33cd2`, `e47502b`, `3317196`, `9c64bb2`, `5ccb08c`, `cfdf307`, `e50b04b`, `d50c8d8`, and `eb33c35`.
 
-Mobile detail page — current state (templates/detail.html):
+Mobile detail page â€” current state (templates/detail.html):
 - Separate page at `GET /wine/<id>`; tapping a card in `templates/index.html` navigates here via `data-detail-url`.
 - Do not change the mobile card/list layout in `index.html` unless Steve explicitly asks.
-- `app.py -> wine_detail()` passes `user_locations`, `wine_types`, `bottle_sizes`, `sticker_colors`, `inventory_lots`, `drink_history`, `drank_total`, and `not_shipped_count` into `detail.html`.
+- `app.py -> wine_detail()` passes `user_locations`, `wine_types`, `bottle_sizes`, `sticker_colors`, `inventory_lots`, `available_locations`, `incoming_locations`, `drink_history`, `drank_total`, and `not_shipped_count` into `detail.html`.
 - Mobile-only layout in the same template; desktop view is separate and should not be changed unless requested.
-- **Hero**: bottle image wrapped in `.mobile-bottle-wrap` with diagonal type sash (same color scheme as card sash). Right side: type · vintage kicker with sticker dot, editable wine name textarea, flag+region row, grape+varietal row.
-- **Quick strip** (1 tile): Drinking Window only (editable, color-coded hold/ready/soon/overdue). The read-only Location quick tile was removed because location is represented by the per-lot Bottles section.
-- **Bottles section**: header shows `Bottles · N total`. Per-location lot cards (`.lot-card`) show location name and bottle count. Available lots show `Drink one` as the primary action; tapping `Edit location/count` reveals secondary `Move bottles` (qty+destination modal, posts to `move` route) and `Correct count` (expands inline minus/count/plus/Done controls; last bottle removal uses a custom confirm modal, not native `confirm()`). Not-shipped lots render as amber `.lot-card-incoming` cards with a `Receive` button (location selector modal, posts to `receive` route). Footer has `Add bottles` for the existing add-location flow.
+- **Hero**: bottle image wrapped in `.mobile-bottle-wrap` with diagonal type sash (same color scheme as card sash). Right side: type Â· vintage kicker with sticker dot, editable wine name textarea, flag+region row, grape+varietal row.
+- **Quick strip** (1 tile): Drinking Window only (editable, color-coded hold/ready/soon/overdue). The read-only Location quick tile was removed because location is represented by Bottle Ledger rows.
+- **Bottle Ledger**: compact mobile section with a `Bottles - N total - N Apt - N House` style summary. Available location rows show `Location`, `-`, `N left / M bought`, `+`, and `...`. `-` opens the drink-one sheet for that location; `+` opens Add bottles prefilled to that location with optional purchase details; `...` opens move/correct-count controls. Not-shipped rows show `Receive`.
 - **Main body**: Source, Sticker, Rating, then full-width Notes. The old Qty card was removed. Sticker picker shows 6 dots in 2 rows of 3: Green/Yellow/Orange then Red/Blue/None. Rating shows as a large gold number (tap to edit); no star.
-- **Drink history**: open by default, summary shows total drank count, displays the latest 3 drink rows, and uses a `See all` expander when more rows exist.
-- **Collapsed sections** (`<details>`): "Wine details" and "Purchase", each with a rotating ▾ chevron. All rows have emoji icon prefixes (🍷 🍇 📍 🌍 🍾 🗓️ 💳 🏷️ 💰). Label column is 100px wide so "🗓️ Order date" fits on one line. Date input is left-aligned with `padding-left: 4px`.
-- **Bottom action bar**: ← Back, ★ Rate, ✏️ Notes, ✓ Drank.
+- **Drink history**: lives inside Bottle Ledger. Rows show date, quantity, and source location; tapping a row opens edit controls for date/location/rating/notes plus delete. Deleting a history row restores the bottle to the selected/source location.
+- **Collapsed sections** (`<details>`): "Wine details" and "Purchase", each with a rotating â–¾ chevron. All rows have emoji icon prefixes (ðŸ· ðŸ‡ ðŸ“ ðŸŒ ðŸ¾ ðŸ—“ï¸ ðŸ’³ ðŸ·ï¸ ðŸ’°). Label column is 100px wide so "ðŸ—“ï¸ Order date" fits on one line. Date input is left-aligned with `padding-left: 4px`.
+- **Bottom action bar**: â† Back, â˜… Rate, âœï¸ Notes, âœ“ Drank.
 - Naming: use `Location` (not `Storage`), `Source` (not `Retailer`).
 
 Mobile carousel (templates/index.html):
@@ -152,7 +152,7 @@ Session preference:
 | File | Purpose |
 |---|---|
 | `app.py` | All Flask routes and business logic |
-| `db.py` | DB connection + `migrate()` — runs on every startup |
+| `db.py` | DB connection + `migrate()` â€” runs on every startup |
 | `templates/index.html` | Main cellar view (table, filters, inline editing, popups) |
 | `templates/settings_locations.html` | User storage location management |
 | `enrich_wines.py` | Auto-extract varietal/region/origin from wine name |
@@ -165,7 +165,7 @@ Session preference:
 
 ## Dual-DB Pattern (CRITICAL)
 
-Always use these helpers — never hardcode `?` or `%s`:
+Always use these helpers â€” never hardcode `?` or `%s`:
 
 ```python
 from db import get_connection, is_postgres, get_placeholder
@@ -216,9 +216,9 @@ Lots are current inventory only. When bottles are consumed, decrement/delete lot
 
 ### `wine_drink_history`
 ```
-id, wine_id, lot_id, quantity, drank_date, rating, notes, created_at
+id, wine_id, lot_id, quantity, storage_location, drank_date, rating, notes, created_at
 ```
-This stores consumption history. `lot_id` can become null if the source lot is later deleted.
+This stores consumption history. `storage_location` snapshots where the bottle was consumed from, so history remains readable/editable even if lots are merged or deleted. `lot_id` can become null if the source lot is later deleted.
 
 ### `users`
 ```
@@ -233,9 +233,9 @@ Each user has their own list of storage locations (default: Cellar, Apt, House).
 
 ---
 
-## Schema Changes — Always Use `migrate()`
+## Schema Changes â€” Always Use `migrate()`
 
-**Never run raw ALTER TABLE directly.** Add all schema changes to `db.py → migrate()`.
+**Never run raw ALTER TABLE directly.** Add all schema changes to `db.py â†’ migrate()`.
 It runs on every app startup and is safe to re-run (uses `IF NOT EXISTS`, `PRAGMA` checks, try/except).
 
 Pattern for adding a column:
@@ -253,11 +253,11 @@ else:
 ## Routes Reference
 
 ### Auth
-- `GET/POST /login` — login
+- `GET/POST /login` â€” login
 - `GET /logout`
-- `GET /` — home (user list)
-- `GET /cellar/<username>` — main cellar view
-- `GET /friends` — friends' cellars
+- `GET /` â€” home (user list)
+- `GET /cellar/<username>` â€” main cellar view
+- `GET /friends` â€” friends' cellars
 
 ### Inline Edit (all POST, return 204)
 - `/wine/<id>/wine_name`
@@ -279,30 +279,30 @@ else:
 - `/wine/<id>/status`
 - `/wine/<id>/storage_location`
 
-Compatibility note: mobile inventory counts should use the Bottles section controls. Older whole-wine quantity/status/location routes still exist and may collapse lots as compatibility behavior.
+Compatibility note: mobile inventory counts should use the Bottle Ledger controls. Older whole-wine quantity/status/location routes still exist and may collapse lots as compatibility behavior.
 
 ### Bulk / Other
-- `POST /wines/bulk-status` — multi-select status change
-- `POST /wines/bulk-edit` — mobile Select mode bulk updates for status, location, sticker, source, and order date
-- `POST /wine/<id>/drink-one` — decrement one available lot and write drink history; returns location choices if multiple lots exist
-- `POST /wine/<id>/lot/<lot_id>/adjust` — inventory correction only, adjusts one lot by +/- 1; does not write drink history
-- `POST /wine/<id>/lot/add-location` — add current inventory to a saved location
-- `POST /wine/<id>/add-lot` — backend endpoint for future re-buy flow to add bottles to an existing wine
-- `POST /wine/<id>/lot/<lot_id>/move` — move qty bottles from a source in_collection lot to a destination user location; upserts destination lot, decrements/deletes source; verifies ownership and valid user location
-- `POST /wine/<id>/lot/<lot_id>/receive` — convert a not_shipped lot to in_collection at a chosen storage location; verifies ownership and valid user location
-- `POST /wine/add` — add single wine
-- `POST /wine/add-bulk` — add from receipt scan
-- `POST /wine/scan-batch-labels` — AI scan of one multi-bottle photo, returns editable batch candidates
-- `POST /wine/add-batch-scan` — add selected/reviewed batch-scan candidates
+- `POST /wines/bulk-status` â€” multi-select status change
+- `POST /wines/bulk-edit` â€” mobile Select mode bulk updates for status, location, sticker, source, and order date
+- `POST /wine/<id>/drink-one` â€” decrement one available lot and write drink history; returns location choices if multiple lots exist
+- `POST /wine/<id>/lot/<lot_id>/adjust` â€” inventory correction only, adjusts one lot by +/- 1; does not write drink history
+- `POST /wine/<id>/lot/add-location` â€” add current inventory to a saved location
+- `POST /wine/<id>/add-lot` â€” backend endpoint for future re-buy flow to add bottles to an existing wine
+- `POST /wine/<id>/lot/<lot_id>/move` â€” move qty bottles from a source in_collection lot to a destination user location; upserts destination lot, decrements/deletes source; verifies ownership and valid user location
+- `POST /wine/<id>/lot/<lot_id>/receive` â€” convert a not_shipped lot to in_collection at a chosen storage location; verifies ownership and valid user location
+- `POST /wine/add` â€” add single wine
+- `POST /wine/add-bulk` â€” add from receipt scan
+- `POST /wine/scan-batch-labels` â€” AI scan of one multi-bottle photo, returns editable batch candidates
+- `POST /wine/add-batch-scan` â€” add selected/reviewed batch-scan candidates
 - `POST /wine/<id>/delete`
-- `POST /wine/scan-receipt` — Claude receipt scan
-- `POST /wine/scan-label` — Claude label scan
-- `POST /wine/recommend` — Claude wine recommendation
-- `POST /wine/enrich-drinking-windows` — Claude batch enrich
+- `POST /wine/scan-receipt` â€” Claude receipt scan
+- `POST /wine/scan-label` â€” Claude label scan
+- `POST /wine/recommend` â€” Claude wine recommendation
+- `POST /wine/enrich-drinking-windows` â€” Claude batch enrich
 - `GET  /export/csv`
 - `GET  /analytics` + `GET /cellar/<username>/analytics`
-- `GET/POST /settings/locations` — manage user storage locations
-- `GET /api/wines` — JSON API
+- `GET/POST /settings/locations` â€” manage user storage locations
+- `GET /api/wines` â€” JSON API
 
 ---
 
@@ -317,7 +317,7 @@ All editable cells use class `editable-cell` with data attributes:
     data-value="{{ wine.region or '' }}"
     data-input-type="text"   <!-- optional: text/number/date -->
     onclick="event.stopPropagation()">
-  <span class="editable-display">{{ wine.region or '—' }}</span>
+  <span class="editable-display">{{ wine.region or 'â€”' }}</span>
 </td>
 ```
 The JS handler in `index.html` picks these up automatically. No extra JS needed for new text fields.
@@ -335,23 +335,23 @@ document.addEventListener('mousedown', e => {
 
 ### Location/Status color classes
 ```css
-.loc-color-0  /* Blue   — index % 5 == 0 */
-.loc-color-1  /* Red    — index % 5 == 1 */
-.loc-color-2  /* Green  — index % 5 == 2 */
-.loc-color-3  /* Purple — index % 5 == 3 */
-.loc-color-4  /* Orange — index % 5 == 4 */
+.loc-color-0  /* Blue   â€” index % 5 == 0 */
+.loc-color-1  /* Red    â€” index % 5 == 1 */
+.loc-color-2  /* Green  â€” index % 5 == 2 */
+.loc-color-3  /* Purple â€” index % 5 == 3 */
+.loc-color-4  /* Orange â€” index % 5 == 4 */
 ```
 
 ### Scrollable table layout
-Body is a CSS flexbox column (`flex: 1; min-height: 0` chain). Only `#tableScroll` scrolls — never add `overflow` to parent elements or the fixed header breaks.
+Body is a CSS flexbox column (`flex: 1; min-height: 0` chain). Only `#tableScroll` scrolls â€” never add `overflow` to parent elements or the fixed header breaks.
 
 ---
 
 ## Deferred / Future Work
 
-- **Per-bottle location tracking** — architecture decided (separate `bottles` table), implementation deferred. See memory file `project_wine_tracker_bottles.md`.
-- **Mobile column visibility** — some columns could be hidden on small screens
-- **Friends permissions** — currently view-only; edit access not yet implemented
+- **Per-bottle location tracking** â€” architecture decided (separate `bottles` table), implementation deferred. See memory file `project_wine_tracker_bottles.md`.
+- **Mobile column visibility** â€” some columns could be hidden on small screens
+- **Friends permissions** â€” currently view-only; edit access not yet implemented
 
 ---
 

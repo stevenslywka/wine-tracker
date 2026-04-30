@@ -1102,6 +1102,157 @@
         margin-top: 4px;
         line-height: 1;
       }
+      .ledger-section {
+        margin-top: 18px;
+        padding-top: 2px;
+      }
+      .ledger-title-row,
+      .ledger-subtitle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .ledger-title {
+        color: var(--mobile-label);
+        font-size: 0.74rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 900;
+      }
+      .ledger-add-btn {
+        border-radius: 999px;
+        border: 1px solid rgba(231,189,112,0.34);
+        background: #211a13;
+        color: var(--mobile-accent);
+        font-size: 0.76rem;
+        font-weight: 900;
+        padding: 7px 11px;
+        line-height: 1;
+      }
+      .ledger-summary {
+        color: var(--mobile-muted);
+        font-size: 0.78rem;
+        font-weight: 800;
+        margin-top: 4px;
+        overflow-wrap: anywhere;
+      }
+      .ledger-list {
+        display: grid;
+        gap: 7px;
+        margin-top: 9px;
+      }
+      .ledger-row {
+        display: grid;
+        grid-template-columns: minmax(74px, 1fr) 28px minmax(108px, auto) 28px 30px;
+        align-items: center;
+        gap: 7px;
+        border: 1px solid rgba(255,248,238,0.1);
+        border-radius: 9px;
+        background: var(--mobile-panel);
+        padding: 8px;
+        min-height: 43px;
+      }
+      .ledger-row.incoming {
+        grid-template-columns: minmax(0, 1fr) auto;
+        background: rgba(70,55,10,0.25);
+        border-color: rgba(231,189,112,0.22);
+      }
+      .ledger-row.readonly {
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+      .ledger-location {
+        color: var(--mobile-text);
+        font-size: 0.9rem;
+        font-weight: 900;
+        line-height: 1.15;
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      .ledger-count {
+        color: var(--mobile-muted);
+        font-size: 0.82rem;
+        font-weight: 850;
+        text-align: center;
+        white-space: nowrap;
+      }
+      .ledger-icon-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        border: 1px solid rgba(231,189,112,0.38);
+        background: #211a13;
+        color: var(--mobile-accent);
+        font-size: 1rem;
+        font-weight: 900;
+        line-height: 1;
+        padding: 0;
+      }
+      .ledger-edit-btn {
+        width: 30px;
+        height: 28px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,248,238,0.11);
+        background: transparent;
+        color: var(--mobile-muted);
+        font-size: 1rem;
+        font-weight: 900;
+        line-height: 1;
+        padding: 0 0 3px;
+      }
+      .ledger-receive-btn {
+        border-radius: 999px;
+        border: 1px solid rgba(231,189,112,0.42);
+        background: #211a13;
+        color: var(--mobile-accent);
+        font-size: 0.78rem;
+        font-weight: 900;
+        padding: 8px 12px;
+        line-height: 1;
+      }
+      .ledger-empty {
+        color: var(--mobile-muted);
+        font-size: 0.84rem;
+        font-weight: 800;
+        padding: 8px 2px;
+      }
+      .ledger-history {
+        margin-top: 15px;
+        border-top: 1px solid rgba(255,248,238,0.1);
+        padding-top: 12px;
+      }
+      .history-row {
+        width: 100%;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 8px;
+        border: 0;
+        border-top: 1px solid rgba(255,248,238,0.08);
+        background: transparent;
+        color: var(--mobile-muted);
+        text-align: left;
+        padding: 9px 0;
+      }
+      .history-row:first-child { border-top: 0; }
+      .history-row:disabled { opacity: 1; }
+      .history-main {
+        color: var(--mobile-text);
+        font-size: 0.86rem;
+        font-weight: 900;
+        line-height: 1.25;
+      }
+      .history-meta {
+        color: var(--mobile-muted);
+        font-size: 0.78rem;
+        font-weight: 800;
+        line-height: 1.25;
+        margin-top: 2px;
+      }
+      .history-chevron {
+        color: var(--mobile-muted);
+        font-size: 1.1rem;
+      }
     }
   </style>
 </head>
@@ -1205,115 +1356,91 @@
       </div>
     </div>
 
-    <section class="detail-section" id="inventoryFields">
-      <div class="section-title">Bottles{% if wine.quantity %} · {{ wine.quantity }} total{% endif %}</div>
-
-      {% for lot in inventory_lots if lot.status == 'in_collection' %}
-      <div class="lot-card" data-lot-id="{{ lot.id }}" data-lot-qty="{{ lot.quantity }}">
-        <div class="lot-card-head">
-          <div>
-            <div class="lot-card-loc">{{ lot.storage_location or 'Unassigned' }}</div>
-            {% if lot.retailer or lot.order_date %}
-            <div class="inventory-meta">{% if lot.retailer %}{{ lot.retailer }}{% endif %}{% if lot.order_date %} · {{ lot.order_date[:10] }}{% endif %}</div>
-            {% endif %}
-          </div>
-          <div class="lot-card-count">{{ lot.quantity }}</div>
-        </div>
-        {% if can_edit %}
-        <div class="lot-card-actions" id="lotActions-{{ lot.id }}">
-          <button type="button" class="lot-drink-btn"
-                  data-lot-id="{{ lot.id }}"
-                  data-lot-qty="{{ lot.quantity }}"
-                  data-lot-loc="{{ lot.storage_location or 'Unassigned' }}">Drink one</button>
-        </div>
-        <button type="button" class="lot-edit-toggle"
-                data-lot-id="{{ lot.id }}"
-                aria-expanded="false"
-                aria-controls="lotSecondary-{{ lot.id }}">Edit location/count</button>
-        <div class="lot-secondary-actions" id="lotSecondary-{{ lot.id }}" hidden>
-          <button type="button" class="lot-move-btn"
-                  data-lot-id="{{ lot.id }}"
-                  data-lot-qty="{{ lot.quantity }}"
-                  data-lot-loc="{{ lot.storage_location or 'Unassigned' }}">Move bottles</button>
-          <button type="button" class="lot-adjust-btn"
-                  data-lot-id="{{ lot.id }}">Correct count</button>
-        </div>
-        <div class="lot-adjust-row" id="adjustRow-{{ lot.id }}" style="display:none;">
-          <button type="button" class="lot-step" data-lot-adjust="-1" data-lot-id="{{ lot.id }}" data-lot-qty="{{ lot.quantity }}" aria-label="Decrease">−</button>
-          <div class="lot-count" id="lotCount-{{ lot.id }}">{{ lot.quantity }}</div>
-          <button type="button" class="lot-step" data-lot-adjust="1" data-lot-id="{{ lot.id }}" aria-label="Increase">+</button>
-          <button type="button" class="lot-adjust-done" data-lot-id="{{ lot.id }}">Done</button>
-        </div>
-        {% else %}
-        <div class="lot-card-readonly-count">{{ lot.quantity }} bottle{{ 's' if lot.quantity != 1 else '' }}</div>
-        {% endif %}
+    <section class="ledger-section" id="bottleLedger">
+      <div class="ledger-title-row">
+        <div class="ledger-title">Bottle Ledger</div>
+        {% if can_edit %}<button type="button" class="ledger-add-btn" id="openAddBottleSheet">+ Add</button>{% endif %}
       </div>
-      {% else %}
-      <div class="lot-empty">No bottles available</div>
-      {% endfor %}
+      <div class="ledger-summary">
+        Bottles · {{ wine.quantity or 0 }} total
+        {% for item in available_locations %} · {{ item.quantity }} {{ item.location }}{% endfor %}
+      </div>
 
-      {% for lot in inventory_lots if lot.status == 'not_shipped' %}
-      <div class="lot-card lot-card-incoming" data-lot-id="{{ lot.id }}">
-        <div class="lot-card-head">
+      <div class="ledger-list">
+        {% for item in available_locations %}
+        <div class="ledger-row {% if not can_edit %}readonly{% endif %}"
+             data-location="{{ item.location }}"
+             data-quantity="{{ item.quantity }}"
+             data-bought="{{ item.bought }}">
           <div>
-            <div class="lot-card-loc">Not shipped · {{ lot.quantity }}</div>
-            {% if lot.retailer or lot.order_date %}
-            <div class="inventory-meta">{% if lot.retailer %}{{ lot.retailer }}{% endif %}{% if lot.order_date %} · {{ lot.order_date[:10] }}{% endif %}</div>
-            {% endif %}
+            <div class="ledger-location">{{ item.location }}</div>
+            {% if item.summary %}<div class="inventory-meta">{{ item.summary }}</div>{% endif %}
           </div>
           {% if can_edit %}
-          <button type="button" class="lot-receive-btn"
-                  data-lot-id="{{ lot.id }}"
-                  data-lot-qty="{{ lot.quantity }}">Receive</button>
-          {% else %}
-          <div class="lot-card-count">{{ lot.quantity }}</div>
+          <button type="button" class="ledger-icon-btn ledger-drink-btn"
+                  data-location="{{ item.location }}"
+                  data-quantity="{{ item.quantity }}"
+                  aria-label="Drink one from {{ item.location }}">−</button>
+          {% endif %}
+          <div class="ledger-count">{{ item.quantity }} left / {{ item.bought }} bought</div>
+          {% if can_edit %}
+          <button type="button" class="ledger-icon-btn ledger-plus-btn"
+                  data-location="{{ item.location }}"
+                  aria-label="Add one to {{ item.location }}">+</button>
+          <button type="button" class="ledger-edit-btn"
+                  data-location="{{ item.location }}"
+                  data-quantity="{{ item.quantity }}"
+                  aria-label="Edit {{ item.location }} bottles">...</button>
           {% endif %}
         </div>
-      </div>
-      {% endfor %}
+        {% else %}
+        <div class="ledger-empty">No bottles available</div>
+        {% endfor %}
 
-      <div class="inventory-footer">
-        {% if can_edit %}
-        <button type="button" class="inventory-add-btn" id="toggleAddLocationAction">Add bottles</button>
-        <div class="inventory-add" id="addLocationRow" style="display:none;">
-          <select id="addLocationSelect" aria-label="Location to add">
-            {% for location in user_locations %}
-            <option value="{{ location }}">{{ location }}</option>
-            {% endfor %}
-          </select>
-          <input id="addLocationQty" type="number" min="1" inputmode="numeric" value="1" aria-label="Quantity">
-          <button type="button" id="addLocationConfirm">Add</button>
+        {% for item in incoming_locations %}
+        <div class="ledger-row incoming">
+          <div>
+            <div class="ledger-location">Not shipped · {{ item.quantity }} incoming</div>
+            {% if item.summary %}<div class="inventory-meta">{{ item.summary }}</div>{% endif %}
+          </div>
+          {% if can_edit and item.lot_ids %}
+          <button type="button" class="ledger-receive-btn"
+                  data-lot-id="{{ item.lot_ids[0] }}"
+                  data-lot-qty="{{ item.quantity }}">Receive</button>
+          {% endif %}
         </div>
-        {% endif %}
+        {% endfor %}
+      </div>
+
+      <div class="ledger-history">
+        <div class="ledger-subtitle-row">
+          <div class="ledger-title">Drink History · {{ drank_total or 0 }} total</div>
+        </div>
+        <div class="ledger-list">
+          {% if drink_history %}
+            {% for drink in drink_history[:4] %}
+            {% set drink_loc = drink.storage_location or 'Location unknown' %}
+            <button type="button" class="history-row"
+                    data-history-id="{{ drink.id }}"
+                    data-date="{{ drink.drank_date or drink.created_at[:10] }}"
+                    data-location="{{ drink_loc }}"
+                    data-quantity="{{ drink.quantity or 1 }}"
+                    data-rating="{{ drink.rating if drink.rating is not none else '' }}"
+                    data-notes="{{ drink.notes or '' }}"
+                    {% if not can_edit %}disabled{% endif %}>
+              <span>
+                <span class="history-main">{{ drink.drank_date or drink.created_at[:10] }} · Drank {{ drink.quantity or 1 }} from {{ drink_loc }}</span>
+                <span class="history-meta">{% if drink.rating is not none %}Rating {{ "%.1f"|format(drink.rating) }}{% endif %}{% if drink.notes %}{% if drink.rating is not none %} · {% endif %}{{ drink.notes }}{% endif %}</span>
+              </span>
+              <span class="history-chevron">›</span>
+            </button>
+            {% endfor %}
+          {% else %}
+          <div class="ledger-empty">No drink history yet.</div>
+          {% endif %}
+        </div>
       </div>
     </section>
-
-    <details class="mobile-details" id="drinkHistoryFields" open>
-      <summary>Drink history · {{ drank_total or 0 }} total</summary>
-      <div class="drink-history-list">
-        {% if drink_history %}
-          {% for drink in drink_history[:3] %}
-          <div class="drink-history-item">
-            <strong>{{ drink.drank_date or drink.created_at[:10] }}</strong> · Drank {{ drink.quantity or 1 }}{% if drink.rating is not none %} · {{ "%.1f"|format(drink.rating) }}{% endif %}
-            {% if drink.notes %}<div>{{ drink.notes }}</div>{% endif %}
-          </div>
-          {% endfor %}
-          {% if drink_history|length > 3 %}
-          <details style="margin-top:4px;">
-            <summary style="color:var(--mobile-muted);font-size:0.8rem;font-weight:800;cursor:pointer;list-style:none;padding:4px 0;">See all ({{ drink_history|length - 3 }} more)</summary>
-            {% for drink in drink_history[3:] %}
-            <div class="drink-history-item">
-              <strong>{{ drink.drank_date or drink.created_at[:10] }}</strong> · Drank {{ drink.quantity or 1 }}{% if drink.rating is not none %} · {{ "%.1f"|format(drink.rating) }}{% endif %}
-              {% if drink.notes %}<div>{{ drink.notes }}</div>{% endif %}
-            </div>
-            {% endfor %}
-          </details>
-          {% endif %}
-        {% else %}
-        <div class="drink-history-item">No drink history yet.</div>
-        {% endif %}
-      </div>
-    </details>
 
     <section class="detail-section" id="cellarFields">
       <div class="section-title">Cellar</div>
@@ -1396,6 +1523,128 @@
           <button type="button" id="cancelDrinkOne">Cancel</button>
           <button type="button" id="confirmDrinkOne" class="danger">Drink one</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Add bottles sheet -->
+    <div class="delete-confirm-backdrop" id="addBottleModal" aria-hidden="true">
+      <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="addBottleTitle">
+        <div class="delete-confirm-title" id="addBottleTitle">Add bottles</div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+          <div>
+            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Quantity</label>
+            <input type="number" id="addBottleQtyInput" min="1" value="1" inputmode="numeric"
+                   style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;">
+          </div>
+          <div>
+            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Location</label>
+            <select id="addBottleLocationSelect"
+                    style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;appearance:none;">
+              {% for location in user_locations %}
+              <option value="{{ location }}">{{ location }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Status</label>
+            <select id="addBottleStatusSelect"
+                    style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;appearance:none;">
+              <option value="in_collection">Available</option>
+              <option value="not_shipped">Not shipped</option>
+            </select>
+          </div>
+          <details>
+            <summary style="color:var(--mobile-muted);font-size:0.78rem;font-weight:900;cursor:pointer;list-style:none;">Purchase details</summary>
+            <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;">
+              <input type="text" id="addBottleSourceInput" placeholder="Source"
+                     style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.9rem;font-weight:800;padding:8px 10px;">
+              <input type="date" id="addBottleDateInput"
+                     style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.9rem;font-weight:800;padding:8px 10px;">
+              <input type="number" id="addBottlePriceInput" min="0" step="0.01" inputmode="decimal" placeholder="Paid each"
+                     style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.9rem;font-weight:800;padding:8px 10px;">
+            </div>
+          </details>
+        </div>
+        <div class="delete-confirm-actions">
+          <button type="button" id="cancelAddBottle">Cancel</button>
+          <button type="button" id="confirmAddBottle"
+                  style="background:#214833;border-color:#31a86a;color:#8fd0a7;border-radius:999px;border:1px solid;font-weight:900;font-size:0.86rem;padding:10px 8px;">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Location edit sheet -->
+    <div class="delete-confirm-backdrop" id="locationEditModal" aria-hidden="true">
+      <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="locationEditTitle">
+        <div class="delete-confirm-title" id="locationEditTitle">Edit bottles</div>
+        <div class="delete-confirm-copy" id="locationEditSubtitle"></div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+          <div>
+            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Correct current count</label>
+            <input type="number" id="correctLocationQtyInput" min="0" inputmode="numeric"
+                   style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;">
+          </div>
+          <div>
+            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Move quantity</label>
+            <input type="number" id="moveLocationQtyInput" min="1" value="1" inputmode="numeric"
+                   style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;">
+          </div>
+          <div>
+            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Move to</label>
+            <select id="moveLocationToSelect"
+                    style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;appearance:none;">
+              {% for location in user_locations %}
+              <option value="{{ location }}">{{ location }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="delete-confirm-actions">
+          <button type="button" id="confirmCorrectLocation">Correct count</button>
+          <button type="button" id="confirmMoveLocation"
+                  style="background:#1a3a5c;border-color:#2a6a9c;color:#9ecfe0;border-radius:999px;border:1px solid;font-weight:900;font-size:0.86rem;padding:10px 8px;">Move</button>
+        </div>
+        <button type="button" id="cancelLocationEdit" style="width:100%;margin-top:8px;border-radius:999px;border:1px solid rgba(255,248,238,0.14);background:#211a13;color:var(--mobile-text);font-size:0.86rem;font-weight:900;padding:10px 8px;">Done</button>
+      </div>
+    </div>
+
+    <!-- Drink history edit sheet -->
+    <div class="delete-confirm-backdrop" id="historyEditModal" aria-hidden="true">
+      <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="historyEditTitle">
+        <div class="delete-confirm-title" id="historyEditTitle">Edit drink history</div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+          <div>
+            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Date</label>
+            <input type="date" id="historyDateInput"
+                   style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;">
+          </div>
+          <div>
+            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Location</label>
+            <select id="historyLocationSelect"
+                    style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;appearance:none;">
+              <option value="">Choose location</option>
+              {% for location in user_locations %}
+              <option value="{{ location }}">{{ location }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Rating</label>
+            <input type="number" id="historyRatingInput" min="0" max="5" step="0.5" inputmode="decimal" placeholder="—"
+                   style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;">
+          </div>
+          <div>
+            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Notes</label>
+            <textarea id="historyNotesInput" rows="2"
+                      style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.88rem;font-weight:700;padding:9px 10px;resize:none;line-height:1.35;"></textarea>
+          </div>
+        </div>
+        <div class="delete-confirm-actions">
+          <button type="button" id="deleteHistoryEntry" class="danger">Delete</button>
+          <button type="button" id="saveHistoryEntry"
+                  style="background:#214833;border-color:#31a86a;color:#8fd0a7;border-radius:999px;border:1px solid;font-weight:900;font-size:0.86rem;padding:10px 8px;">Save</button>
+        </div>
+        <button type="button" id="cancelHistoryEdit" style="width:100%;margin-top:8px;border-radius:999px;border:1px solid rgba(255,248,238,0.14);background:#211a13;color:var(--mobile-text);font-size:0.86rem;font-weight:900;padding:10px 8px;">Cancel</button>
       </div>
     </div>
 
@@ -1747,12 +1996,14 @@
       // ── Drink one modal ──
       let pendingLotId = null;
       let pendingLotQty = null;
+      let pendingDrinkLocation = null;
 
       function openDrinkOneModal(lotId, qty, loc) {
         pendingLotId = lotId;
         pendingLotQty = qty;
+        pendingDrinkLocation = loc;
         const subtitle = document.getElementById('drinkOneSubtitle');
-        if (subtitle) subtitle.textContent = `From: ${loc} · ${qty} bottle${qty !== 1 ? 's' : ''} remaining`;
+        if (subtitle) subtitle.textContent = `From: ${loc} · ${qty} bottle${qty !== 1 ? 's' : ''} left`;
         document.getElementById('drinkRatingInput').value = '';
         document.getElementById('drinkNotesInput').value = '';
         const modal = document.getElementById('drinkOneModal');
@@ -1763,18 +2014,21 @@
         document.getElementById('drinkOneModal').classList.remove('visible');
         document.getElementById('drinkOneModal').setAttribute('aria-hidden', 'true');
         pendingLotId = null;
+        pendingDrinkLocation = null;
       }
       document.getElementById('cancelDrinkOne')?.addEventListener('click', closeDrinkOneModal);
       document.getElementById('drinkOneModal')?.addEventListener('click', e => {
         if (e.target === e.currentTarget) closeDrinkOneModal();
       });
       document.getElementById('confirmDrinkOne')?.addEventListener('click', async () => {
-        if (!pendingLotId) return;
+        if (!pendingLotId && !pendingDrinkLocation) return;
         const btn = document.getElementById('confirmDrinkOne');
         btn.disabled = true;
         const rating = document.getElementById('drinkRatingInput').value.trim();
         const notes = document.getElementById('drinkNotesInput').value.trim();
-        const body = new URLSearchParams({ lot_id: String(pendingLotId) });
+        const body = new URLSearchParams();
+        if (pendingLotId) body.set('lot_id', String(pendingLotId));
+        if (pendingDrinkLocation) body.set('storage_location', pendingDrinkLocation);
         if (rating) body.set('rating', rating);
         if (notes) body.set('notes', notes);
         closeDrinkOneModal();
@@ -1790,6 +2044,130 @@
             btn.dataset.lotLoc || 'Unassigned'
           );
         });
+      });
+      document.querySelectorAll('.ledger-drink-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          openDrinkOneModal(
+            null,
+            parseInt(btn.dataset.quantity || '0', 10),
+            btn.dataset.location || 'Unassigned'
+          );
+        });
+      });
+
+      // ── Add bottles sheet ──
+      function openAddBottleModal(location) {
+        const qty = document.getElementById('addBottleQtyInput');
+        const loc = document.getElementById('addBottleLocationSelect');
+        const status = document.getElementById('addBottleStatusSelect');
+        if (qty) qty.value = 1;
+        if (status) status.value = 'in_collection';
+        if (loc && location) loc.value = location;
+        const source = document.getElementById('addBottleSourceInput');
+        const date = document.getElementById('addBottleDateInput');
+        const price = document.getElementById('addBottlePriceInput');
+        if (source) source.value = '';
+        if (date) date.value = '';
+        if (price) price.value = '';
+        const modal = document.getElementById('addBottleModal');
+        modal.classList.add('visible');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+      function closeAddBottleModal() {
+        document.getElementById('addBottleModal').classList.remove('visible');
+        document.getElementById('addBottleModal').setAttribute('aria-hidden', 'true');
+      }
+      document.getElementById('openAddBottleSheet')?.addEventListener('click', () => openAddBottleModal());
+      document.querySelectorAll('.ledger-plus-btn').forEach(btn => {
+        btn.addEventListener('click', () => openAddBottleModal(btn.dataset.location || ''));
+      });
+      document.getElementById('cancelAddBottle')?.addEventListener('click', closeAddBottleModal);
+      document.getElementById('addBottleModal')?.addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeAddBottleModal();
+      });
+      document.getElementById('confirmAddBottle')?.addEventListener('click', async () => {
+        const btn = document.getElementById('confirmAddBottle');
+        btn.disabled = true;
+        const quantity = Math.max(1, parseInt(document.getElementById('addBottleQtyInput')?.value || '1', 10) || 1);
+        const location = document.getElementById('addBottleLocationSelect')?.value || '';
+        const status = document.getElementById('addBottleStatusSelect')?.value || 'in_collection';
+        if (!location) { btn.disabled = false; return; }
+        const body = new URLSearchParams({ quantity: String(quantity), storage_location: location, status });
+        const source = document.getElementById('addBottleSourceInput')?.value?.trim() || '';
+        const date = document.getElementById('addBottleDateInput')?.value || '';
+        const price = document.getElementById('addBottlePriceInput')?.value?.trim() || '';
+        if (source) body.set('retailer', source);
+        if (date) body.set('order_date', date);
+        if (price) body.set('unit_price', price);
+        closeAddBottleModal();
+        const data = await postInventory('/wine/{{ wine.id }}/add-lot', body);
+        btn.disabled = false;
+        if (data?.ok) window.location.reload();
+      });
+
+      // ── Location edit sheet ──
+      let pendingLocation = null;
+      let pendingLocationQty = 0;
+      function openLocationEditModal(location, quantity) {
+        pendingLocation = location;
+        pendingLocationQty = quantity;
+        const subtitle = document.getElementById('locationEditSubtitle');
+        if (subtitle) subtitle.textContent = `${location} · ${quantity} bottle${quantity !== 1 ? 's' : ''} left`;
+        const correct = document.getElementById('correctLocationQtyInput');
+        const moveQty = document.getElementById('moveLocationQtyInput');
+        if (correct) correct.value = quantity;
+        if (moveQty) { moveQty.value = 1; moveQty.max = quantity; }
+        const select = document.getElementById('moveLocationToSelect');
+        if (select) {
+          Array.from(select.options).forEach(opt => {
+            opt.disabled = opt.value === location;
+            opt.style.display = opt.value === location ? 'none' : '';
+          });
+          const first = Array.from(select.options).find(o => !o.disabled);
+          if (first) select.value = first.value;
+        }
+        const modal = document.getElementById('locationEditModal');
+        modal.classList.add('visible');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+      function closeLocationEditModal() {
+        document.getElementById('locationEditModal').classList.remove('visible');
+        document.getElementById('locationEditModal').setAttribute('aria-hidden', 'true');
+        pendingLocation = null;
+      }
+      document.querySelectorAll('.ledger-edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => openLocationEditModal(
+          btn.dataset.location || 'Unassigned',
+          parseInt(btn.dataset.quantity || '0', 10)
+        ));
+      });
+      document.getElementById('cancelLocationEdit')?.addEventListener('click', closeLocationEditModal);
+      document.getElementById('locationEditModal')?.addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeLocationEditModal();
+      });
+      document.getElementById('confirmCorrectLocation')?.addEventListener('click', async () => {
+        if (!pendingLocation) return;
+        const btn = document.getElementById('confirmCorrectLocation');
+        btn.disabled = true;
+        const quantity = Math.max(0, parseInt(document.getElementById('correctLocationQtyInput')?.value || '0', 10) || 0);
+        const body = new URLSearchParams({ storage_location: pendingLocation, quantity: String(quantity) });
+        closeLocationEditModal();
+        const data = await postInventory('/wine/{{ wine.id }}/location/correct', body);
+        btn.disabled = false;
+        if (data?.ok) window.location.reload();
+      });
+      document.getElementById('confirmMoveLocation')?.addEventListener('click', async () => {
+        if (!pendingLocation) return;
+        const btn = document.getElementById('confirmMoveLocation');
+        btn.disabled = true;
+        const quantity = Math.max(1, Math.min(pendingLocationQty, parseInt(document.getElementById('moveLocationQtyInput')?.value || '1', 10) || 1));
+        const to = document.getElementById('moveLocationToSelect')?.value || '';
+        if (!to) { btn.disabled = false; return; }
+        const body = new URLSearchParams({ from_location: pendingLocation, to_location: to, quantity: String(quantity) });
+        closeLocationEditModal();
+        const data = await postInventory('/wine/{{ wine.id }}/location/move', body);
+        btn.disabled = false;
+        if (data?.ok) window.location.reload();
       });
 
       // ── Adjust flow ──
@@ -1970,10 +2348,69 @@
         btn.disabled = false;
         if (data?.ok) window.location.reload();
       });
-      document.querySelectorAll('.lot-receive-btn').forEach(btn => {
+      document.querySelectorAll('.lot-receive-btn, .ledger-receive-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           openReceiveModal(parseInt(btn.dataset.lotId), parseInt(btn.dataset.lotQty));
         });
+      });
+
+      // ── Drink history edit sheet ──
+      let pendingHistoryId = null;
+      function openHistoryEditModal(row) {
+        pendingHistoryId = row.dataset.historyId;
+        document.getElementById('historyDateInput').value = row.dataset.date || '';
+        const locSelect = document.getElementById('historyLocationSelect');
+        if (locSelect && row.dataset.location && row.dataset.location !== 'Location unknown') {
+          locSelect.value = row.dataset.location;
+        }
+        document.getElementById('historyRatingInput').value = row.dataset.rating || '';
+        document.getElementById('historyNotesInput').value = row.dataset.notes || '';
+        const modal = document.getElementById('historyEditModal');
+        modal.classList.add('visible');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+      function closeHistoryEditModal() {
+        document.getElementById('historyEditModal').classList.remove('visible');
+        document.getElementById('historyEditModal').setAttribute('aria-hidden', 'true');
+        pendingHistoryId = null;
+      }
+      document.querySelectorAll('.history-row').forEach(row => {
+        row.addEventListener('click', () => openHistoryEditModal(row));
+      });
+      document.getElementById('cancelHistoryEdit')?.addEventListener('click', closeHistoryEditModal);
+      document.getElementById('historyEditModal')?.addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeHistoryEditModal();
+      });
+      document.getElementById('saveHistoryEntry')?.addEventListener('click', async () => {
+        if (!pendingHistoryId) return;
+        const btn = document.getElementById('saveHistoryEntry');
+        btn.disabled = true;
+        const historyId = pendingHistoryId;
+        const body = new URLSearchParams({
+          drank_date: document.getElementById('historyDateInput')?.value || '',
+          storage_location: document.getElementById('historyLocationSelect')?.value || '',
+          quantity: '1',
+          rating: document.getElementById('historyRatingInput')?.value || '',
+          notes: document.getElementById('historyNotesInput')?.value || ''
+        });
+        closeHistoryEditModal();
+        const data = await postInventory(`/wine/{{ wine.id }}/drink-history/${historyId}/update`, body);
+        btn.disabled = false;
+        if (data?.ok) window.location.reload();
+      });
+      document.getElementById('deleteHistoryEntry')?.addEventListener('click', async () => {
+        if (!pendingHistoryId) return;
+        const btn = document.getElementById('deleteHistoryEntry');
+        btn.disabled = true;
+        const historyId = pendingHistoryId;
+        const body = new URLSearchParams({
+          restore: '1',
+          storage_location: document.getElementById('historyLocationSelect')?.value || ''
+        });
+        closeHistoryEditModal();
+        const data = await postInventory(`/wine/{{ wine.id }}/drink-history/${historyId}/delete`, body);
+        btn.disabled = false;
+        if (data?.ok) window.location.reload();
       });
 
       // ── Add here (footer) ──

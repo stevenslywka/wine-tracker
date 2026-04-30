@@ -1,4 +1,4 @@
-# Wine Tracker New Chat Prompt
+﻿# Wine Tracker New Chat Prompt
 
 Copy/paste this at the start of a new Codex chat:
 
@@ -28,17 +28,17 @@ Inventory-lots work now live:
 - Lots are not individual bottles. A lot is current inventory for one wine at one location/status/source/date/price.
 - Lot statuses are only `in_collection` and `not_shipped`; `drank` is a derived wine summary state and drink history record.
 - Existing/current imported wines create lots through migration, manual Add Wine, receipt/bulk add, batch scan add, and email parsing.
-- Mobile detail uses a `Bottles - N total` section with per-location lot cards. Each available lot shows location name, bottle count, and a primary `Drink one` button; `Move bottles` and `Correct count` are tucked behind `Edit location/count`.
+- Mobile detail uses a compact `Bottle Ledger`: summary shows total available bottles by location; each location row shows `Location - / left / bought / + / ...` for fast drink/add plus subtle move/correct controls.
 - Not-shipped lots appear as amber cards with a `Receive` button (location selector modal, converts lot to in_collection).
-- `Drink one` writes `wine_drink_history` with optional rating and notes; always requires a specific lot_id from the per-lot button.
+- `Drink one` writes `wine_drink_history` with source location plus optional rating and notes, and decrements one available lot from that location.
 - `Drink one` records history before deleting a final-bottle lot, so the last bottle works with PostgreSQL foreign keys.
 - `Correct count` controls are inventory corrections only and do not write drink history.
 - Last-bottle `Correct count` uses the custom confirmation modal and preserves the lot id before closing the modal.
 - `Move` requires a destination different from the source; if no other saved location exists, the mobile modal disables the action and says to add another location first.
 - `Receive` consolidates incoming bottles through `upsert_inventory_lot()` so receiving into an existing available location does not create duplicate same-location cards.
-- The old mobile Qty card was removed; total current bottles now appears in the `Bottles - N total` section header.
-- Inventory routes: `POST /wine/<id>/drink-one`, `POST /wine/<id>/lot/<lot_id>/adjust`, `POST /wine/<id>/lot/add-location`, `POST /wine/<id>/add-lot`, `POST /wine/<id>/lot/<lot_id>/move`, `POST /wine/<id>/lot/<lot_id>/receive`.
-- Re-buy detection / "Add bottles to existing wine" UI is not implemented yet. `/wine/<id>/add-lot` exists for that future flow.
+- The old mobile Qty card was removed; total current bottles now appears in the Bottle Ledger summary.
+- Inventory routes: `POST /wine/<id>/drink-one`, `POST /wine/<id>/lot/<lot_id>/adjust`, `POST /wine/<id>/lot/add-location`, `POST /wine/<id>/add-lot`, `POST /wine/<id>/lot/<lot_id>/move`, `POST /wine/<id>/lot/<lot_id>/receive`, `POST /wine/<id>/location/move`, `POST /wine/<id>/location/correct`, `POST /wine/<id>/drink-history/<history_id>/update`, `POST /wine/<id>/drink-history/<history_id>/delete`.
+- Detail-page `+ Add` now adds bottles to an existing wine through `/wine/<id>/add-lot`; broader Add Wine re-buy detection is still future work.
 - Wine family/vertical grouping is not implemented yet.
 - Latest inventory/detail commits on GitHub main include `233b7be`, `2fe0b17`, `142a59e`, `76c1de4`, and `eb33c35`.
 
@@ -49,7 +49,7 @@ Recent UI work already pushed:
 - Wine type sash adjusted.
 - Available/drank/not-shipped icons updated.
 - Storage/status mobile behavior improved.
-- Mobile home/cellar header now centers `🍷 Steven's wine cellar`; hamburger opens Menu and the search icon reveals search.
+- Mobile home/cellar header now centers `ðŸ· Steven's wine cellar`; hamburger opens Menu and the search icon reveals search.
 - Mobile Filter and sort sheet is live, with Cards/List toggle on the same row as Filter and sort and the wine counter below.
 - Mobile quick carousel is live with one sequence only: Location, Type, Origin, Sticker.
 - Origin carousel options are USA, France, Italy, and Earth emoji `Other`. `Other` means anything outside USA/France/Italy, while USA includes common stored US origins like California, Oregon, Washington, and New York.
@@ -75,7 +75,7 @@ Current mobile UI state as of Apr 28, 2026 (supersedes older mobile bullets belo
 - Mobile detail page has a sticky wine-cellar header matching the Main Cellar page: hamburger menu on the left, centered cellar title, and a square trash icon on the right. The trash icon opens the delete confirmation.
 - Detail hero shows the editable wine name first, then vintage/sticker. The type word and type sash were removed from the detail hero.
 - Detail page wines without images use the same dark `No photo` silhouette.
-- Detail page uses a `Bottles - N total` section with per-location lot cards. Each available lot shows `Drink one` as the primary full-width action; `Move bottles` and `Correct count` live behind `Edit location/count`. Not-shipped lots show a `Receive` button. The old Qty card in the priority grid is removed. Drinking Window placeholder gives `e.g. 2024-2030` style guidance; expected format remains `YYYY-YYYY`.
+- Detail page uses a compact `Bottle Ledger` section. The summary shows total available bottles and counts by location; each location row has `-` to drink one, `+` to add bottles, and `...` for move/correct count. Not-shipped rows show `Receive`; Drink History rows are tappable for edit/delete. Drinking Window placeholder gives `e.g. 2024-2030` style guidance; expected format remains `YYYY-YYYY`.
 - Detail notes textarea starts short and auto-grows.
 - Detail bottom action bar is Back to Cellar, Previous Wine, Next Wine. Delete is only in the sticky header. Back uses `back_url`, not `history.back()`.
 - Previous/Next on detail preserve the filtered Main Cellar list: mobile card clicks pass `list=<filtered ids>` and `back=<current cellar URL>` query params to `GET /wine/<id>`.
@@ -85,18 +85,18 @@ Current mobile UI state as of Apr 28, 2026 (supersedes older mobile bullets belo
 
 Current mobile detail page context:
 - Separate page at `GET /wine/<id>`, rendered by `templates/detail.html`. Tapping a card in `index.html` navigates here via `data-detail-url`. Do not change the mobile Cards/List layout unless I explicitly ask.
-- `app.py -> wine_detail()` passes `user_locations`, `wine_types`, `bottle_sizes`, `sticker_colors`, `inventory_lots`, `drink_history`, `drank_total`, and `not_shipped_count`.
+- `app.py -> wine_detail()` passes `user_locations`, `wine_types`, `bottle_sizes`, `sticker_colors`, `inventory_lots`, `available_locations`, `incoming_locations`, `drink_history`, `drank_total`, and `not_shipped_count`.
 - Mobile-only layout in the same template; desktop detail view is separate and should not be changed unless requested.
 - Current mobile detail layout:
-  - Hero: bottle image in `.mobile-bottle-wrap` with diagonal type sash (same color scheme as card). Right: type · vintage kicker with sticker dot, editable wine name, flag+region row, grape+varietal row.
+  - Hero: bottle image in `.mobile-bottle-wrap` with diagonal type sash (same color scheme as card). Right: type Â· vintage kicker with sticker dot, editable wine name, flag+region row, grape+varietal row.
   - Quick strip (1 tile): Drinking Window only (editable, color-coded). The Location quick tile was removed because bottle locations are shown in Bottles.
-  - Bottles section: header shows `Bottles - N total`. Per-location lot cards show location name and bottle count. `Drink one` is the primary full-width action; `Edit location/count` reveals `Move bottles` and `Correct count`. Not-shipped cards show `Receive`. Footer button is `Add bottles`.
+  - Bottle Ledger: summary shows `Bottles - N total - N Apt - N House`. Available rows show `Location`, `-`, `N left / M bought`, `+`, and `...`; `-` opens drink-one for that location, `+` opens Add bottles with optional purchase details, and `...` opens move/correct count. Not-shipped rows show `Receive`.
   - Main body: Source, Sticker, Rating, then full-width Notes. The old Qty card was removed. Sticker is 2 rows of 3: Green/Yellow/Orange then Red/Blue/None. Rating shows as large gold number (no star).
-  - Collapsed sections with rotating ▾ chevron: "Wine details" (🍷 🍇 📍 🌍 🍾) and "Purchase" (🗓️ 💳 🏷️ 💰). Label column 100px; date input left-aligned.
-  - Bottom bar: ← Back, ★ Rate, ✏️ Notes, ✓ Drank.
+  - Collapsed sections with rotating â–¾ chevron: "Wine details" (ðŸ· ðŸ‡ ðŸ“ ðŸŒ ðŸ¾) and "Purchase" (ðŸ—“ï¸ ðŸ’³ ðŸ·ï¸ ðŸ’°). Label column 100px; date input left-aligned.
+  - Bottom bar: â† Back, â˜… Rate, âœï¸ Notes, âœ“ Drank.
 - Naming: use `Location` (not `Storage`), `Source` (not `Retailer`).
 
-Mobile carousel (index.html) — current state:
+Mobile carousel (index.html) â€” current state:
 - Location chips use `loc-color-*` classes (Apt=blue loc-color-0, House=red loc-color-1). Active state uses standard gold highlight.
 - Wine type chips (Red/White/Rose) use `.type-Red/.type-White/.type-Rose` with sash colors.
 

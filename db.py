@@ -402,6 +402,7 @@ def migrate():
                 wine_id INTEGER NOT NULL REFERENCES wines(id) ON DELETE CASCADE,
                 lot_id INTEGER REFERENCES wine_inventory_lots(id) ON DELETE SET NULL,
                 quantity INTEGER NOT NULL DEFAULT 1,
+                storage_location TEXT,
                 drank_date TEXT,
                 rating REAL,
                 notes TEXT,
@@ -430,12 +431,21 @@ def migrate():
                 wine_id INTEGER NOT NULL,
                 lot_id INTEGER,
                 quantity INTEGER NOT NULL DEFAULT 1,
+                storage_location TEXT,
                 drank_date TEXT,
                 rating REAL,
                 notes TEXT,
                 created_at TEXT DEFAULT (datetime('now'))
             )
         """)
+
+    if pg:
+        cur.execute("ALTER TABLE wine_drink_history ADD COLUMN IF NOT EXISTS storage_location TEXT")
+    else:
+        cur.execute("PRAGMA table_info(wine_drink_history)")
+        drink_history_cols = {r['name'] for r in cur.fetchall()}
+        if 'storage_location' not in drink_history_cols:
+            cur.execute("ALTER TABLE wine_drink_history ADD COLUMN storage_location TEXT")
 
     # --- Migrate old location-based statuses → in_collection + storage_location ---
     p2 = "%s" if pg else "?"
