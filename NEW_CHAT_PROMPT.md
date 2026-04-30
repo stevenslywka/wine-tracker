@@ -28,7 +28,7 @@ Project context:
 - Flask app: `app.py`; DB helpers/migrations: `db.py`; main cellar: `templates/index.html`; wine detail: `templates/detail.html`.
 - Local database is SQLite `wines.db`; production is PostgreSQL.
 - Schema changes must go through `db.py -> migrate()`.
-- Latest production UI work: mobile Bottles panel has a `+ Add` header button, pencil SVG edit icon on cards (replaced `⋯`), zero-state CTA when inventory is empty, "View all" toggle for drink history beyond 4 rows, and larger location dots. Commit `ca6bf495de57`.
+- Latest production UI work: mobile wine detail Cellar polish moves Drinking Window into the Cellar grid and changes add-bottle status wording to `Available` / `Not shipped`. Built on the Bottles panel polish from commit `ca6bf495de57`.
 
 Inventory truth:
 - Current inventory uses `wine_inventory_lots`, not individual bottle records.

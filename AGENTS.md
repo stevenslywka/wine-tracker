@@ -1,4 +1,4 @@
-# Wine Tracker - Codex Project Guide
+﻿# Wine Tracker - Codex Project Guide
 
 Personal Flask wine cellar app replacing Vivino. Multi-user. Local dev uses SQLite; production uses PostgreSQL on Railway.
 
@@ -6,7 +6,7 @@ Personal Flask wine cellar app replacing Vivino. Multi-user. Local dev uses SQLi
 - Live site: `https://stevenwinecellar.up.railway.app/`
 - GitHub: `https://github.com/stevenslywka/wine-tracker`
 - Railway deploys automatically from GitHub `main`
-- Latest production work noted in this guide: mobile Bottles panel polish (add button, pencil edit icon, empty state, view-all history, larger dots), pushed to GitHub `main` as `ca6bf495de57ba47620b54d336c4d228d5a0a120`.
+- Latest production work noted in this guide: mobile wine detail Cellar polish (Drinking Window moved into the Cellar grid; add-bottle status wording now Available/Not shipped), pushed to GitHub `main` after `ca6bf495de57ba47620b54d336c4d228d5a0a120`.
 
 ## Current Truth
 
@@ -45,14 +45,13 @@ File: `templates/detail.html`; route: `GET /wine/<id>` from `app.py -> wine_deta
 
 - Sticky mobile header: menu left, centered cellar title, trash icon right.
 - Hero: image/no-photo placeholder, editable name, vintage/sticker, region/origin, varietal.
-- Quick strip: Drinking Window only.
 - Bottles panel: header row has "Bottles" label and `+ Add` button (id `openAddBottleSheet`); `N total` summary with colored location dots (9px); two-column location stock cards with top-right pencil edit icon and a `- / count / +` stepper row; not-shipped lots show an incoming `Receive` strip. When inventory is completely empty, a zero-state CTA is shown instead of cards.
 - `-` opens Drink one for that location with optional rating/notes/date.
-- `+` opens Add bottles, prefilled to that location, with quantity stepper, `In cellar` / `On order` status labels, and optional purchase details.
+- `+` opens Add bottles, prefilled to that location, with quantity stepper, `Available` / `Not shipped` status labels, and optional purchase details.
 - Pencil icon (SVG) opens a Manage sheet with separate Move bottles and Correct count sections; corrections do not create drink history.
 - Drink History shows first 4 rows; a "View all N ›" button reveals the rest inline.
 - Drink History rows show date, quantity, and source location; tapping opens edit/delete. Deleting restores the bottle to the selected/source location.
-- Main body: Source, Sticker, Rating, full-width Notes.
+- Cellar section: Source, Sticker, Rating, Drinking Window, then full-width Notes.
 - Collapsed sections: Wine details and Purchase.
 - Bottom bar: Back to Cellar, Previous Wine, Next Wine.
 

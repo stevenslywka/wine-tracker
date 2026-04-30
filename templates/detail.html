@@ -1568,19 +1568,6 @@
       </div>
     </section>
 
-    <div class="quick-strip">
-      <div class="quick-tile">
-        <div class="quick-label">Drinking Window</div>
-        {% if can_edit %}
-        <form data-detail-form action="/wine/{{ wine.id }}/drinking_window" method="post">
-          <input class="quick-control mobile-drinking-window" name="drinking_window" id="drinkControl" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}" value="{{ wine.drinking_window or '' }}" placeholder="e.g. 2024–2030">
-        </form>
-        {% else %}
-        <div class="quick-value mobile-drinking-window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}">{{ wine.drinking_window or 'Not set' }}</div>
-        {% endif %}
-      </div>
-    </div>
-
     <section class="ledger-section" id="bottleLedger">
       <div class="ledger-title-row">
         <div class="ledger-title">Bottles</div>
@@ -1724,6 +1711,16 @@
           <div class="rating-value-display">{{ "%.1f"|format(wine.my_rating) if wine.my_rating is not none else '—' }}</div>
           {% endif %}
         </div>
+        <div class="field-card">
+          <span class="edit-label">Drinking Window</span>
+          {% if can_edit %}
+          <form data-detail-form action="/wine/{{ wine.id }}/drinking_window" method="post">
+            <input class="mobile-input mobile-drinking-window" name="drinking_window" id="drinkControl" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}" value="{{ wine.drinking_window or '' }}" placeholder="e.g. 2024-2030">
+          </form>
+          {% else %}
+          <div class="read-only-value mobile-drinking-window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}">{{ wine.drinking_window or 'Not set' }}</div>
+          {% endif %}
+        </div>
         <div class="field-card wide" id="notesFields">
           <span class="edit-label">Notes</span>
           {% if can_edit %}
@@ -1818,8 +1815,8 @@
             <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Status</label>
             <select id="addBottleStatusSelect"
                     style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;appearance:none;">
-              <option value="in_collection">In cellar</option>
-              <option value="not_shipped">On order</option>
+              <option value="in_collection">Available</option>
+              <option value="not_shipped">Not shipped</option>
             </select>
           </div>
           <details>
