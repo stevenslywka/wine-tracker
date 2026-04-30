@@ -1135,18 +1135,18 @@
       }
       .ledger-summary {
         color: var(--mobile-muted);
-        font-size: 0.78rem;
+        font-size: 0.82rem;
         font-weight: 800;
         margin-top: 4px;
         overflow-wrap: anywhere;
       }
       .ledger-summary-dot {
         display: inline-block;
-        width: 7px;
-        height: 7px;
+        width: 9px;
+        height: 9px;
         border-radius: 50%;
-        margin: 0 4px 0 8px;
-        vertical-align: 1px;
+        margin: 0 5px 0 10px;
+        vertical-align: 0px;
         flex-shrink: 0;
       }
       .loc-dot-0 { background: #7eb8cb; }
@@ -1304,10 +1304,23 @@
         color: var(--mobile-muted);
         font-size: 0.82rem;
         font-weight: 900;
-        padding: 5px 9px;
+        padding: 6px 8px;
         line-height: 1;
-        opacity: 0.7;
+        opacity: 0.9;
         flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .ledger-zero-state {
+        text-align: center;
+        padding: 22px 0 14px;
+      }
+      .ledger-zero-state > div {
+        color: var(--mobile-muted);
+        font-size: 0.88rem;
+        font-weight: 800;
+        margin-bottom: 12px;
       }
       .ledger-card.loc-color-0 { background: #1a3a5c; border-color: #2a6a9c; }
       .ledger-card.loc-color-0 .ledger-card-loc,
@@ -1571,6 +1584,9 @@
     <section class="ledger-section" id="bottleLedger">
       <div class="ledger-title-row">
         <div class="ledger-title">Bottles</div>
+        {% if can_edit %}
+        <button type="button" class="ledger-add-btn" id="openAddBottleSheet">+ Add</button>
+        {% endif %}
       </div>
       <div class="ledger-summary">
         {{ wine.quantity or 0 }} total
@@ -1580,6 +1596,14 @@
       </div>
 
       <div class="ledger-list">
+        {% if not available_locations and not incoming_locations %}
+        <div class="ledger-zero-state">
+          <div>No bottles in inventory yet.</div>
+          {% if can_edit %}
+          <button type="button" class="ledger-add-btn" onclick="document.getElementById('openAddBottleSheet').click()">+ Add bottles</button>
+          {% endif %}
+        </div>
+        {% else %}
         <div class="ledger-cards">
           {% for item in available_locations %}
           {% set color_idx = loop.index0 % 5 %}
@@ -1593,7 +1617,7 @@
               <button type="button" class="ledger-card-kebab ledger-edit-btn"
                       data-location="{{ item.location }}"
                       data-quantity="{{ item.quantity }}"
-                      aria-label="Edit {{ item.location }} bottles">&#8943;</button>
+                      aria-label="Edit {{ item.location }} bottles"><svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>
               {% endif %}
             </div>
             <div class="ledger-card-stepper">
@@ -1615,8 +1639,6 @@
               {% endif %}
             </div>
           </div>
-          {% else %}
-          <div class="ledger-empty" style="grid-column:1/-1;">No bottles available</div>
           {% endfor %}
         </div>
 
@@ -1630,6 +1652,7 @@
           {% endif %}
         </div>
         {% endfor %}
+        {% endif %}
       </div>
 
       <div class="ledger-history">
@@ -1638,8 +1661,11 @@
         </div>
         <div class="ledger-list">
           {% if drink_history %}
-            {% for drink in drink_history[:4] %}
+            {% for drink in drink_history %}
             {% set drink_loc = drink.storage_location or 'Location unknown' %}
+            {% if loop.index0 == 4 %}
+            <div id="historyExtra" hidden>
+            {% endif %}
             <button type="button" class="history-row"
                     data-history-id="{{ drink.id }}"
                     data-date="{{ drink.drank_date or drink.created_at[:10] }}"
@@ -1654,7 +1680,16 @@
               </span>
               <span class="history-chevron">›</span>
             </button>
+            {% if loop.last and drink_history|length > 4 %}
+            </div>
+            {% endif %}
             {% endfor %}
+            {% if drink_history|length > 4 %}
+            <button type="button" id="showAllHistory"
+                    style="width:100%;background:transparent;border:0;color:var(--mobile-accent);font-size:0.82rem;font-weight:900;padding:8px 0;text-align:center;">
+              View all {{ drink_history|length }} ›
+            </button>
+            {% endif %}
           {% else %}
           <div class="ledger-empty">No drink history yet.</div>
           {% endif %}
@@ -2647,6 +2682,10 @@
       }
       document.querySelectorAll('.history-row').forEach(row => {
         row.addEventListener('click', () => openHistoryEditModal(row));
+      });
+      document.getElementById('showAllHistory')?.addEventListener('click', () => {
+        document.getElementById('historyExtra')?.removeAttribute('hidden');
+        document.getElementById('showAllHistory').style.display = 'none';
       });
       document.getElementById('cancelHistoryEdit')?.addEventListener('click', closeHistoryEditModal);
       document.getElementById('historyEditModal')?.addEventListener('click', e => {
