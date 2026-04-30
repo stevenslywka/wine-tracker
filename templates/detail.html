@@ -516,7 +516,7 @@
       }
       .quick-strip {
         display: grid;
-        grid-template-columns: 0.86fr 0.94fr 1.2fr;
+        grid-template-columns: 1fr 1.2fr;
         gap: 6px;
         margin: 10px 0 14px;
         overflow: visible;
@@ -819,7 +819,7 @@
       .quick-label,
       .quick-control,
       .quick-value { text-align: center; }
-      .quick-strip { grid-template-columns: 0.86fr 0.94fr 1.24fr; }
+      .quick-strip { grid-template-columns: 1fr 1.24fr; }
       .priority-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
@@ -954,6 +954,134 @@
         text-align: left !important;
         padding-left: 0;
       }
+      /* ── Lot cards (new inventory design) ── */
+      .lot-card {
+        border: 1px solid rgba(255,248,238,0.12);
+        border-radius: 10px;
+        background: var(--mobile-panel);
+        padding: 11px 13px;
+        margin-bottom: 8px;
+      }
+      .lot-card-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 9px;
+      }
+      .lot-card-loc {
+        color: var(--mobile-text);
+        font-size: 0.96rem;
+        font-weight: 900;
+        line-height: 1.2;
+      }
+      .lot-card-count {
+        color: var(--mobile-text);
+        font-size: 1.5rem;
+        font-weight: 900;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+      .lot-card-actions {
+        display: flex;
+        gap: 7px;
+        align-items: center;
+      }
+      .lot-drink-btn {
+        flex: 1;
+        border-radius: 999px;
+        border: 1px solid rgba(166,75,76,0.6);
+        background: var(--mobile-burgundy);
+        color: #fffaf2;
+        font-size: 0.82rem;
+        font-weight: 900;
+        padding: 9px 10px;
+        line-height: 1;
+      }
+      .lot-move-btn,
+      .lot-adjust-btn {
+        flex: 0 0 auto;
+        border-radius: 999px;
+        border: 1px solid rgba(231,189,112,0.38);
+        background: #211a13;
+        color: var(--mobile-accent);
+        font-size: 0.82rem;
+        font-weight: 900;
+        padding: 9px 13px;
+        line-height: 1;
+      }
+      .lot-adjust-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 9px;
+        padding-top: 9px;
+        border-top: 1px solid rgba(255,248,238,0.09);
+      }
+      .lot-adjust-done {
+        margin-left: auto;
+        border-radius: 999px;
+        border: 1px solid rgba(255,248,238,0.16);
+        background: transparent;
+        color: var(--mobile-muted);
+        font-size: 0.78rem;
+        font-weight: 900;
+        padding: 7px 13px;
+        line-height: 1;
+      }
+      .lot-card-incoming {
+        background: rgba(70,55,10,0.25);
+        border-color: rgba(231,189,112,0.22);
+      }
+      .lot-card-incoming .lot-card-loc { color: var(--mobile-accent); }
+      .lot-receive-btn {
+        flex-shrink: 0;
+        border-radius: 999px;
+        border: 1px solid rgba(231,189,112,0.42);
+        background: #211a13;
+        color: var(--mobile-accent);
+        font-size: 0.82rem;
+        font-weight: 900;
+        padding: 9px 14px;
+        line-height: 1;
+      }
+      .lot-empty {
+        color: var(--mobile-muted);
+        font-size: 0.88rem;
+        font-weight: 800;
+        padding: 12px 2px;
+      }
+      .lot-card-readonly-count {
+        color: var(--mobile-muted);
+        font-size: 0.84rem;
+        font-weight: 800;
+        margin-top: 2px;
+      }
+      .inventory-footer {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px solid rgba(255,248,238,0.09);
+      }
+      .inventory-footer-row {
+        display: flex;
+        justify-content: space-between;
+        color: var(--mobile-muted);
+        font-size: 0.84rem;
+        font-weight: 800;
+        margin-bottom: 8px;
+      }
+      .inventory-add-btn {
+        width: 100%;
+        border-radius: 999px;
+        border: 1px solid rgba(231,189,112,0.28);
+        background: transparent;
+        color: var(--mobile-accent);
+        font-size: 0.82rem;
+        font-weight: 900;
+        padding: 9px;
+        margin-top: 4px;
+        line-height: 1;
+      }
     }
   </style>
 </head>
@@ -1046,38 +1174,17 @@
 
     {% set loc_idx = (user_locations.index(wine.storage_location) % 5) if wine.storage_location and wine.storage_location in user_locations else -1 %}
     <div class="quick-strip">
-      <div class="quick-tile quick-tile-status-{{ wine.status or 'in_collection' }}">
-        <div class="quick-label">Status</div>
-        {% if can_edit %}
-        <form data-detail-form data-status-form action="/wine/{{ wine.id }}/status" method="post">
-          <input type="hidden" name="storage_location" value="{{ wine.storage_location or '' }}">
-          <select class="quick-control" name="status" id="statusControl">
-            <option value="in_collection" {% if wine.status == 'in_collection' or not wine.status %}selected{% endif %}>Available</option>
-            <option value="not_shipped" {% if wine.status == 'not_shipped' %}selected{% endif %}>Not Shipped</option>
-            <option value="drank" {% if wine.status == 'drank' %}selected{% endif %}>Drank</option>
-          </select>
-        </form>
-        {% else %}
-        <div class="quick-value">{{ status_label }}</div>
-        {% endif %}
-      </div>
       <div class="quick-tile {% if loc_idx >= 0 %}loc-color-{{ loc_idx }}{% else %}loc-unassigned{% endif %}">
         <div class="quick-label">Location</div>
-        {% if can_edit %}
-        <form data-detail-form data-storage-form action="/wine/{{ wine.id }}/storage_location" method="post">
-          <select class="quick-control" name="storage_location" id="locationControl">
-            <option value="">Unassigned</option>
-            {% for location in user_locations %}
-            <option value="{{ location }}" data-loc-idx="{{ loop.index0 % 5 }}" {% if wine.storage_location == location %}selected{% endif %}>{{ location }}</option>
-            {% endfor %}
-            {% if wine.storage_location and wine.storage_location not in user_locations %}
-            <option value="{{ wine.storage_location }}" selected>{{ wine.storage_location }}</option>
-            {% endif %}
-          </select>
-        </form>
-        {% else %}
-        <div class="quick-value">{{ wine.storage_location or 'Unassigned' }}</div>
-        {% endif %}
+        <div class="quick-value">
+          {%- if wine.location_summary -%}
+            {{ wine.location_summary }}
+          {%- elif wine.status == 'not_shipped' -%}
+            Not shipped
+          {%- else -%}
+            Unassigned
+          {%- endif -%}
+        </div>
       </div>
       <div class="quick-tile">
         <div class="quick-label">Drinking Window</div>
@@ -1093,53 +1200,79 @@
 
     <section class="detail-section" id="inventoryFields">
       <div class="section-title">Inventory</div>
-      <div class="inventory-card">
-        <div class="inventory-head">
-          <div class="inventory-total">Available {{ wine.quantity or 0 }}</div>
-          {% if wine.location_summary %}<div class="inventory-meta">{{ wine.location_summary }}</div>{% endif %}
+
+      {% for lot in inventory_lots if lot.status == 'in_collection' %}
+      <div class="lot-card" data-lot-id="{{ lot.id }}" data-lot-qty="{{ lot.quantity }}">
+        <div class="lot-card-head">
+          <div>
+            <div class="lot-card-loc">{{ lot.storage_location or 'Unassigned' }}</div>
+            {% if lot.retailer or lot.order_date %}
+            <div class="inventory-meta">{% if lot.retailer %}{{ lot.retailer }}{% endif %}{% if lot.order_date %} · {{ lot.order_date[:10] }}{% endif %}</div>
+            {% endif %}
+          </div>
+          <div class="lot-card-count">{{ lot.quantity }}</div>
         </div>
-        {% for lot in inventory_lots if lot.status == 'in_collection' %}
-        <div class="inventory-row" data-lot-row data-lot-id="{{ lot.id }}" data-lot-qty="{{ lot.quantity }}">
-          <div>
-            <div class="inventory-loc">{{ lot.storage_location or 'Unassigned' }}</div>
-            <div class="inventory-meta">{% if lot.retailer %}{{ lot.retailer }}{% else %}Available{% endif %}{% if lot.order_date %} · {{ lot.order_date[:10] }}{% endif %}</div>
-          </div>
-          {% if can_edit %}
-          <div>
-            <div class="lot-controls">
-              <button type="button" class="lot-step" data-lot-adjust="-1" data-lot-id="{{ lot.id }}" data-lot-qty="{{ lot.quantity }}" aria-label="Decrease {{ lot.storage_location or 'location' }}">-</button>
-              <div class="lot-count">{{ lot.quantity }}</div>
-              <button type="button" class="lot-step" data-lot-adjust="1" data-lot-id="{{ lot.id }}" aria-label="Increase {{ lot.storage_location or 'location' }}">+</button>
-            </div>
-            <div class="inventory-adjust-label">Adjust count</div>
-          </div>
-          {% else %}
-          <div class="lot-count">{{ lot.quantity }}</div>
-          {% endif %}
+        {% if can_edit %}
+        <div class="lot-card-actions" id="lotActions-{{ lot.id }}">
+          <button type="button" class="lot-drink-btn"
+                  data-lot-id="{{ lot.id }}"
+                  data-lot-qty="{{ lot.quantity }}"
+                  data-lot-loc="{{ lot.storage_location or 'Unassigned' }}">Drink one</button>
+          <button type="button" class="lot-move-btn"
+                  data-lot-id="{{ lot.id }}"
+                  data-lot-qty="{{ lot.quantity }}"
+                  data-lot-loc="{{ lot.storage_location or 'Unassigned' }}">Move</button>
+          <button type="button" class="lot-adjust-btn"
+                  data-lot-id="{{ lot.id }}">Adjust</button>
+        </div>
+        <div class="lot-adjust-row" id="adjustRow-{{ lot.id }}" style="display:none;">
+          <button type="button" class="lot-step" data-lot-adjust="-1" data-lot-id="{{ lot.id }}" data-lot-qty="{{ lot.quantity }}" aria-label="Decrease">−</button>
+          <div class="lot-count" id="lotCount-{{ lot.id }}">{{ lot.quantity }}</div>
+          <button type="button" class="lot-step" data-lot-adjust="1" data-lot-id="{{ lot.id }}" aria-label="Increase">+</button>
+          <button type="button" class="lot-adjust-done" data-lot-id="{{ lot.id }}">Done</button>
         </div>
         {% else %}
-        <div class="inventory-muted-row"><span>No available bottles</span><span></span></div>
-        {% endfor %}
-        {% if not_shipped_count %}
-        <div class="inventory-muted-row"><span>Not shipped</span><span>{{ not_shipped_count }}</span></div>
+        <div class="lot-card-readonly-count">{{ lot.quantity }} bottle{{ 's' if lot.quantity != 1 else '' }}</div>
         {% endif %}
-        <div class="inventory-muted-row"><span>Drank total</span><span id="drankTotalValue">{{ drank_total or 0 }}</span></div>
-        {% if can_edit %}
-        <div class="inventory-actions">
-          {% if wine.quantity and wine.quantity > 0 %}
-          <button type="button" class="inventory-action primary" id="drinkOneAction">Drank one</button>
+      </div>
+      {% else %}
+      <div class="lot-empty">No bottles available</div>
+      {% endfor %}
+
+      {% for lot in inventory_lots if lot.status == 'not_shipped' %}
+      <div class="lot-card lot-card-incoming" data-lot-id="{{ lot.id }}">
+        <div class="lot-card-head">
+          <div>
+            <div class="lot-card-loc">Not shipped · {{ lot.quantity }}</div>
+            {% if lot.retailer or lot.order_date %}
+            <div class="inventory-meta">{% if lot.retailer %}{{ lot.retailer }}{% endif %}{% if lot.order_date %} · {{ lot.order_date[:10] }}{% endif %}</div>
+            {% endif %}
+          </div>
+          {% if can_edit %}
+          <button type="button" class="lot-receive-btn"
+                  data-lot-id="{{ lot.id }}"
+                  data-lot-qty="{{ lot.quantity }}">Receive</button>
           {% else %}
-          <button type="button" class="inventory-action primary" disabled>No bottles available</button>
+          <div class="lot-card-count">{{ lot.quantity }}</div>
           {% endif %}
-          <button type="button" class="inventory-action" id="toggleAddLocationAction">Add location</button>
         </div>
+      </div>
+      {% endfor %}
+
+      <div class="inventory-footer">
+        <div class="inventory-footer-row">
+          <span>Drank total</span>
+          <span id="drankTotalValue">{{ drank_total or 0 }}</span>
+        </div>
+        {% if can_edit %}
+        <button type="button" class="inventory-add-btn" id="toggleAddLocationAction">+ Add here</button>
         <div class="inventory-add" id="addLocationRow" style="display:none;">
           <select id="addLocationSelect" aria-label="Location to add">
             {% for location in user_locations %}
             <option value="{{ location }}">{{ location }}</option>
             {% endfor %}
           </select>
-          <input id="addLocationQty" type="number" min="1" inputmode="numeric" value="1" aria-label="Quantity to add">
+          <input id="addLocationQty" type="number" min="1" inputmode="numeric" value="1" aria-label="Quantity">
           <button type="button" id="addLocationConfirm">Add</button>
         </div>
         {% endif %}
@@ -1225,13 +1358,83 @@
       <a href="{{ next_wine_url or '#' }}" class="{% if not next_wine_url %}disabled-action{% endif %}">Next ›</a>
     </nav>
 
-    <div class="delete-confirm-backdrop" id="drinkLocationDialog" aria-hidden="true">
-      <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="drinkLocationTitle">
-        <div class="delete-confirm-title" id="drinkLocationTitle">Drink from where?</div>
-        <div class="delete-confirm-copy">Choose the location for this bottle.</div>
-        <div id="drinkLocationChoices" style="display:flex;flex-direction:column;gap:8px;"></div>
-        <div class="delete-confirm-actions" style="grid-template-columns:1fr;margin-top:12px;">
-          <button type="button" id="cancelDrinkLocation">Cancel</button>
+    <!-- Drink one modal -->
+    <div class="delete-confirm-backdrop" id="drinkOneModal" aria-hidden="true">
+      <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="drinkOneTitle">
+        <div class="delete-confirm-title" id="drinkOneTitle">Drink one</div>
+        <div class="delete-confirm-copy" id="drinkOneSubtitle"></div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+          <div>
+            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Rating (optional, 0–5)</label>
+            <input type="number" id="drinkRatingInput" min="0" max="5" step="0.5" inputmode="decimal" placeholder="—"
+                   style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;">
+          </div>
+          <div>
+            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Notes (optional)</label>
+            <textarea id="drinkNotesInput" rows="2" placeholder="Tasting notes for this bottle…"
+                      style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.88rem;font-weight:700;padding:9px 10px;resize:none;line-height:1.35;"></textarea>
+          </div>
+        </div>
+        <div class="delete-confirm-actions">
+          <button type="button" id="cancelDrinkOne">Cancel</button>
+          <button type="button" id="confirmDrinkOne" class="danger">Drink one</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Move modal -->
+    <div class="delete-confirm-backdrop" id="moveModal" aria-hidden="true">
+      <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="moveTitle">
+        <div class="delete-confirm-title" id="moveTitle">Move bottles</div>
+        <div class="delete-confirm-copy" id="moveSubtitle"></div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+          <div>
+            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Quantity to move</label>
+            <div style="display:grid;grid-template-columns:36px 1fr 36px;gap:6px;align-items:center;">
+              <button type="button" id="moveQtyMinus"
+                      style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(231,189,112,0.42);background:#211a13;color:var(--mobile-accent);font-size:1.1rem;font-weight:900;line-height:1;">−</button>
+              <input type="number" id="moveQtyInput" min="1" value="1" inputmode="numeric"
+                     style="text-align:center;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px;">
+              <button type="button" id="moveQtyPlus"
+                      style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(231,189,112,0.42);background:#211a13;color:var(--mobile-accent);font-size:1.1rem;font-weight:900;line-height:1;">+</button>
+            </div>
+          </div>
+          <div>
+            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Move to</label>
+            <select id="moveToSelect"
+                    style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;appearance:none;">
+              {% for location in user_locations %}
+              <option value="{{ location }}">{{ location }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="delete-confirm-actions">
+          <button type="button" id="cancelMove">Cancel</button>
+          <button type="button" id="confirmMove"
+                  style="background:#1a3a5c;border-color:#2a6a9c;color:#9ecfe0;border-radius:999px;border:1px solid;font-weight:900;font-size:0.86rem;padding:10px 8px;">Move</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Receive modal -->
+    <div class="delete-confirm-backdrop" id="receiveModal" aria-hidden="true">
+      <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="receiveTitle">
+        <div class="delete-confirm-title" id="receiveTitle">Receive shipment</div>
+        <div class="delete-confirm-copy" id="receiveSubtitle"></div>
+        <div style="margin-bottom:16px;">
+          <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Receive into location</label>
+          <select id="receiveLocationSelect"
+                  style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;appearance:none;">
+            {% for location in user_locations %}
+            <option value="{{ location }}">{{ location }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="delete-confirm-actions">
+          <button type="button" id="cancelReceive">Cancel</button>
+          <button type="button" id="confirmReceive"
+                  style="background:#214833;border-color:#31a86a;color:#8fd0a7;border-radius:999px;border:1px solid;font-weight:900;font-size:0.86rem;padding:10px 8px;">Receive all</button>
         </div>
       </div>
     </div>
@@ -1469,38 +1672,6 @@
         });
       });
 
-      const statusForm = document.querySelector('[data-status-form]');
-      const statusTile = statusForm?.closest('.quick-tile');
-      statusForm?.querySelector('[name="status"]')?.addEventListener('change', event => {
-        document.querySelectorAll('.mobile-drinking-window').forEach(cell => {
-          cell.dataset.status = event.target.value;
-          applyDetailDrinkingWindowColor(cell, cell.dataset.value || cell.value || cell.textContent.trim());
-        });
-        if (statusTile) {
-          statusTile.className = statusTile.className.replace(/quick-tile-status-\S+/g, '').trim();
-          statusTile.classList.add(`quick-tile-status-${event.target.value}`);
-        }
-      });
-
-      const storageForm = document.querySelector('[data-storage-form]');
-      const locTile = storageForm?.closest('.quick-tile');
-      storageForm?.querySelector('select')?.addEventListener('change', event => {
-        const storageSummary = document.getElementById('storageSummary');
-        if (storageSummary) storageSummary.textContent = event.target.value || 'Unassigned';
-        const statusStorageInput = document.querySelector('[data-status-form] [name="storage_location"]');
-        if (statusStorageInput) statusStorageInput.value = event.target.value;
-        if (locTile) {
-          locTile.className = locTile.className.replace(/\bloc-color-\d\b|\bloc-unassigned\b/g, '').trim();
-          const selectedOpt = event.target.options[event.target.selectedIndex];
-          const locIdx = selectedOpt?.dataset?.locIdx;
-          if (locIdx !== undefined && event.target.value) {
-            locTile.classList.add(`loc-color-${locIdx}`);
-          } else {
-            locTile.classList.add('loc-unassigned');
-          }
-        }
-      });
-
       document.getElementById('drinkControl')?.addEventListener('input', event => {
         document.querySelectorAll('.mobile-drinking-window').forEach(cell => {
           cell.dataset.value = event.target.value;
@@ -1514,8 +1685,6 @@
         button.addEventListener('click', () => {
           colorForm.querySelector('[name="color_code"]').value = button.dataset.colorChoice;
           colorForm.querySelectorAll('[data-color-choice]').forEach(btn => btn.classList.toggle('active', btn === button));
-          const stickerSummary = document.getElementById('stickerSummary');
-          if (stickerSummary) stickerSummary.textContent = button.dataset.colorChoice || 'None';
           const heroSticker = document.getElementById('heroSticker');
           if (heroSticker) {
             heroSticker.className = `hero-sticker ${button.dataset.colorChoice ? `color-${button.dataset.colorChoice}` : ''}`;
@@ -1523,17 +1692,6 @@
             heroSticker.style.display = button.dataset.colorChoice ? 'inline-block' : 'none';
           }
           submitDetailForm(colorForm);
-        });
-      });
-
-      const qtyForm = document.querySelector('[data-qty-form]');
-      const qtyInput = document.getElementById('quantityInput');
-      qtyForm?.querySelectorAll('[data-qty-step]').forEach(button => {
-        button.addEventListener('click', () => {
-          const current = parseInt(qtyInput.value || '1', 10) || 1;
-          const step = parseInt(button.dataset.qtyStep || '0', 10);
-          qtyInput.value = Math.max(1, current + step);
-          submitDetailForm(qtyForm);
         });
       });
 
@@ -1553,53 +1711,71 @@
         return data;
       }
 
-      async function drinkOne(lotId) {
-        const body = new URLSearchParams();
-        if (lotId) body.set('lot_id', lotId);
+      // ── Drink one modal ──
+      let pendingLotId = null;
+      let pendingLotQty = null;
+
+      function openDrinkOneModal(lotId, qty, loc) {
+        pendingLotId = lotId;
+        pendingLotQty = qty;
+        const subtitle = document.getElementById('drinkOneSubtitle');
+        if (subtitle) subtitle.textContent = `From: ${loc} · ${qty} bottle${qty !== 1 ? 's' : ''} remaining`;
+        document.getElementById('drinkRatingInput').value = '';
+        document.getElementById('drinkNotesInput').value = '';
+        const modal = document.getElementById('drinkOneModal');
+        modal.classList.add('visible');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+      function closeDrinkOneModal() {
+        document.getElementById('drinkOneModal').classList.remove('visible');
+        document.getElementById('drinkOneModal').setAttribute('aria-hidden', 'true');
+        pendingLotId = null;
+      }
+      document.getElementById('cancelDrinkOne')?.addEventListener('click', closeDrinkOneModal);
+      document.getElementById('drinkOneModal')?.addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeDrinkOneModal();
+      });
+      document.getElementById('confirmDrinkOne')?.addEventListener('click', async () => {
+        if (!pendingLotId) return;
+        const btn = document.getElementById('confirmDrinkOne');
+        btn.disabled = true;
+        const rating = document.getElementById('drinkRatingInput').value.trim();
+        const notes = document.getElementById('drinkNotesInput').value.trim();
+        const body = new URLSearchParams({ lot_id: String(pendingLotId) });
+        if (rating) body.set('rating', rating);
+        if (notes) body.set('notes', notes);
+        closeDrinkOneModal();
         const data = await postInventory('/wine/{{ wine.id }}/drink-one', body);
-        if (!data) return;
-        if (data.needs_location) {
-          openDrinkLocationDialog(data.locations || []);
-          return;
-        }
-        window.location.reload();
-      }
-
-      function openDrinkLocationDialog(locations) {
-        const dialog = document.getElementById('drinkLocationDialog');
-        const choices = document.getElementById('drinkLocationChoices');
-        if (!dialog || !choices) return;
-        choices.innerHTML = '';
-        locations.forEach(location => {
-          const button = document.createElement('button');
-          button.type = 'button';
-          button.className = 'inventory-action';
-          button.textContent = `${location.name} (${location.qty})`;
-          button.addEventListener('click', () => {
-            dialog.classList.remove('visible');
-            dialog.setAttribute('aria-hidden', 'true');
-            drinkOne(location.lot_id);
-          });
-          choices.appendChild(button);
+        btn.disabled = false;
+        if (data?.ok) window.location.reload();
+      });
+      document.querySelectorAll('.lot-drink-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          openDrinkOneModal(
+            parseInt(btn.dataset.lotId),
+            parseInt(btn.dataset.lotQty),
+            btn.dataset.lotLoc || 'Unassigned'
+          );
         });
-        dialog.classList.add('visible');
-        dialog.setAttribute('aria-hidden', 'false');
-      }
-
-      document.getElementById('drinkOneAction')?.addEventListener('click', () => drinkOne());
-      document.getElementById('cancelDrinkLocation')?.addEventListener('click', () => {
-        const dialog = document.getElementById('drinkLocationDialog');
-        dialog?.classList.remove('visible');
-        dialog?.setAttribute('aria-hidden', 'true');
-      });
-      document.getElementById('drinkLocationDialog')?.addEventListener('click', event => {
-        if (event.target === event.currentTarget) {
-          event.currentTarget.classList.remove('visible');
-          event.currentTarget.setAttribute('aria-hidden', 'true');
-        }
       });
 
-      document.querySelectorAll('[data-lot-adjust]').forEach(button => {
+      // ── Adjust flow ──
+      document.querySelectorAll('.lot-adjust-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lotId = btn.dataset.lotId;
+          btn.closest('.lot-card-actions').style.display = 'none';
+          document.getElementById(`adjustRow-${lotId}`).style.display = 'flex';
+        });
+      });
+      document.querySelectorAll('.lot-adjust-done').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lotId = btn.dataset.lotId;
+          const card = btn.closest('.lot-card');
+          card?.querySelector('.lot-card-actions').style.display = 'flex';
+          document.getElementById(`adjustRow-${lotId}`).style.display = 'none';
+        });
+      });
+      document.querySelectorAll('.lot-step').forEach(button => {
         button.addEventListener('click', async () => {
           const delta = parseInt(button.dataset.lotAdjust || '0', 10);
           const qty = parseInt(button.dataset.lotQty || '0', 10);
@@ -1610,12 +1786,109 @@
         });
       });
 
+      // ── Move modal ──
+      let moveMaxQty = 1;
+
+      function openMoveModal(lotId, qty, loc) {
+        pendingLotId = lotId;
+        moveMaxQty = qty;
+        const subtitle = document.getElementById('moveSubtitle');
+        if (subtitle) subtitle.textContent = `From: ${loc} · ${qty} bottle${qty !== 1 ? 's' : ''}`;
+        const qtyIn = document.getElementById('moveQtyInput');
+        if (qtyIn) { qtyIn.value = 1; qtyIn.max = qty; }
+        const select = document.getElementById('moveToSelect');
+        if (select) {
+          Array.from(select.options).forEach(opt => {
+            opt.disabled = opt.value === loc;
+            opt.style.display = opt.value === loc ? 'none' : '';
+          });
+          const first = Array.from(select.options).find(o => !o.disabled);
+          if (first) select.value = first.value;
+        }
+        const modal = document.getElementById('moveModal');
+        modal.classList.add('visible');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+      function closeMoveModal() {
+        document.getElementById('moveModal').classList.remove('visible');
+        document.getElementById('moveModal').setAttribute('aria-hidden', 'true');
+      }
+      document.getElementById('cancelMove')?.addEventListener('click', closeMoveModal);
+      document.getElementById('moveModal')?.addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeMoveModal();
+      });
+      document.getElementById('moveQtyMinus')?.addEventListener('click', () => {
+        const inp = document.getElementById('moveQtyInput');
+        inp.value = Math.max(1, (parseInt(inp.value) || 1) - 1);
+      });
+      document.getElementById('moveQtyPlus')?.addEventListener('click', () => {
+        const inp = document.getElementById('moveQtyInput');
+        inp.value = Math.min(moveMaxQty, (parseInt(inp.value) || 1) + 1);
+      });
+      document.getElementById('confirmMove')?.addEventListener('click', async () => {
+        if (!pendingLotId) return;
+        const btn = document.getElementById('confirmMove');
+        btn.disabled = true;
+        const qty = Math.max(1, Math.min(moveMaxQty, parseInt(document.getElementById('moveQtyInput').value) || 1));
+        const to = document.getElementById('moveToSelect').value;
+        if (!to) { btn.disabled = false; return; }
+        const body = new URLSearchParams({ quantity: String(qty), to_location: to });
+        closeMoveModal();
+        const data = await postInventory(`/wine/{{ wine.id }}/lot/${pendingLotId}/move`, body);
+        btn.disabled = false;
+        if (data?.ok) window.location.reload();
+      });
+      document.querySelectorAll('.lot-move-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          openMoveModal(
+            parseInt(btn.dataset.lotId),
+            parseInt(btn.dataset.lotQty),
+            btn.dataset.lotLoc || 'Unassigned'
+          );
+        });
+      });
+
+      // ── Receive modal ──
+      function openReceiveModal(lotId, qty) {
+        pendingLotId = lotId;
+        const subtitle = document.getElementById('receiveSubtitle');
+        if (subtitle) subtitle.textContent = `${qty} bottle${qty !== 1 ? 's' : ''} incoming`;
+        const modal = document.getElementById('receiveModal');
+        modal.classList.add('visible');
+        modal.setAttribute('aria-hidden', 'false');
+      }
+      function closeReceiveModal() {
+        document.getElementById('receiveModal').classList.remove('visible');
+        document.getElementById('receiveModal').setAttribute('aria-hidden', 'true');
+      }
+      document.getElementById('cancelReceive')?.addEventListener('click', closeReceiveModal);
+      document.getElementById('receiveModal')?.addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeReceiveModal();
+      });
+      document.getElementById('confirmReceive')?.addEventListener('click', async () => {
+        if (!pendingLotId) return;
+        const btn = document.getElementById('confirmReceive');
+        btn.disabled = true;
+        const loc = document.getElementById('receiveLocationSelect').value;
+        if (!loc) { btn.disabled = false; return; }
+        const body = new URLSearchParams({ storage_location: loc });
+        closeReceiveModal();
+        const data = await postInventory(`/wine/{{ wine.id }}/lot/${pendingLotId}/receive`, body);
+        btn.disabled = false;
+        if (data?.ok) window.location.reload();
+      });
+      document.querySelectorAll('.lot-receive-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          openReceiveModal(parseInt(btn.dataset.lotId), parseInt(btn.dataset.lotQty));
+        });
+      });
+
+      // ── Add here (footer) ──
       document.getElementById('toggleAddLocationAction')?.addEventListener('click', () => {
         const row = document.getElementById('addLocationRow');
         if (!row) return;
         row.style.display = row.style.display === 'none' ? 'grid' : 'none';
       });
-
       document.getElementById('addLocationConfirm')?.addEventListener('click', async () => {
         const select = document.getElementById('addLocationSelect');
         const location = select?.value || '';
