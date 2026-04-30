@@ -516,7 +516,7 @@
       }
       .quick-strip {
         display: grid;
-        grid-template-columns: 1fr 1.2fr;
+        grid-template-columns: 1fr;
         gap: 6px;
         margin: 10px 0 14px;
         overflow: visible;
@@ -819,7 +819,7 @@
       .quick-label,
       .quick-control,
       .quick-value { text-align: center; }
-      .quick-strip { grid-template-columns: 1fr 1.24fr; }
+      .quick-strip { grid-template-columns: 1fr; }
       .priority-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 10px;
@@ -983,12 +983,13 @@
         flex-shrink: 0;
       }
       .lot-card-actions {
-        display: flex;
+        display: grid;
+        grid-template-columns: 1fr;
         gap: 7px;
         align-items: center;
       }
       .lot-drink-btn {
-        flex: 1;
+        width: 100%;
         border-radius: 999px;
         border: 1px solid rgba(166,75,76,0.6);
         background: var(--mobile-burgundy);
@@ -998,9 +999,28 @@
         padding: 9px 10px;
         line-height: 1;
       }
+      .lot-edit-toggle {
+        width: 100%;
+        margin-top: 7px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,248,238,0.12);
+        background: transparent;
+        color: var(--mobile-muted);
+        font-size: 0.78rem;
+        font-weight: 900;
+        padding: 8px 10px;
+        line-height: 1;
+      }
+      .lot-secondary-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 7px;
+        margin-top: 7px;
+      }
+      .lot-secondary-actions[hidden] { display: none; }
       .lot-move-btn,
       .lot-adjust-btn {
-        flex: 0 0 auto;
+        width: 100%;
         border-radius: 999px;
         border: 1px solid rgba(231,189,112,0.38);
         background: #211a13;
@@ -1172,20 +1192,7 @@
       </div>
     </section>
 
-    {% set loc_idx = (user_locations.index(wine.storage_location) % 5) if wine.storage_location and wine.storage_location in user_locations else -1 %}
     <div class="quick-strip">
-      <div class="quick-tile {% if loc_idx >= 0 %}loc-color-{{ loc_idx }}{% else %}loc-unassigned{% endif %}">
-        <div class="quick-label">Location</div>
-        <div class="quick-value">
-          {%- if wine.location_summary -%}
-            {{ wine.location_summary }}
-          {%- elif wine.status == 'not_shipped' -%}
-            Not shipped
-          {%- else -%}
-            Unassigned
-          {%- endif -%}
-        </div>
-      </div>
       <div class="quick-tile">
         <div class="quick-label">Drinking Window</div>
         {% if can_edit %}
@@ -1199,7 +1206,7 @@
     </div>
 
     <section class="detail-section" id="inventoryFields">
-      <div class="section-title">Inventory</div>
+      <div class="section-title">Bottles{% if wine.quantity %} · {{ wine.quantity }} total{% endif %}</div>
 
       {% for lot in inventory_lots if lot.status == 'in_collection' %}
       <div class="lot-card" data-lot-id="{{ lot.id }}" data-lot-qty="{{ lot.quantity }}">
@@ -1218,12 +1225,18 @@
                   data-lot-id="{{ lot.id }}"
                   data-lot-qty="{{ lot.quantity }}"
                   data-lot-loc="{{ lot.storage_location or 'Unassigned' }}">Drink one</button>
+        </div>
+        <button type="button" class="lot-edit-toggle"
+                data-lot-id="{{ lot.id }}"
+                aria-expanded="false"
+                aria-controls="lotSecondary-{{ lot.id }}">Edit location/count</button>
+        <div class="lot-secondary-actions" id="lotSecondary-{{ lot.id }}" hidden>
           <button type="button" class="lot-move-btn"
                   data-lot-id="{{ lot.id }}"
                   data-lot-qty="{{ lot.quantity }}"
-                  data-lot-loc="{{ lot.storage_location or 'Unassigned' }}">Move</button>
+                  data-lot-loc="{{ lot.storage_location or 'Unassigned' }}">Move bottles</button>
           <button type="button" class="lot-adjust-btn"
-                  data-lot-id="{{ lot.id }}">Adjust</button>
+                  data-lot-id="{{ lot.id }}">Correct count</button>
         </div>
         <div class="lot-adjust-row" id="adjustRow-{{ lot.id }}" style="display:none;">
           <button type="button" class="lot-step" data-lot-adjust="-1" data-lot-id="{{ lot.id }}" data-lot-qty="{{ lot.quantity }}" aria-label="Decrease">−</button>
@@ -1260,12 +1273,8 @@
       {% endfor %}
 
       <div class="inventory-footer">
-        <div class="inventory-footer-row">
-          <span>Drank total</span>
-          <span id="drankTotalValue">{{ drank_total or 0 }}</span>
-        </div>
         {% if can_edit %}
-        <button type="button" class="inventory-add-btn" id="toggleAddLocationAction">+ Add here</button>
+        <button type="button" class="inventory-add-btn" id="toggleAddLocationAction">Add bottles</button>
         <div class="inventory-add" id="addLocationRow" style="display:none;">
           <select id="addLocationSelect" aria-label="Location to add">
             {% for location in user_locations %}
@@ -1279,28 +1288,36 @@
       </div>
     </section>
 
-    <details class="mobile-details" id="drinkHistoryFields">
-      <summary>Drink history<span class="details-preview">{{ drank_total or 0 }} total</span></summary>
+    <details class="mobile-details" id="drinkHistoryFields" open>
+      <summary>Drink history · {{ drank_total or 0 }} total</summary>
       <div class="drink-history-list">
-        {% for drink in drink_history %}
-        <div class="drink-history-item">
-          <strong>{{ drink.drank_date or drink.created_at[:10] }}</strong> · Drank {{ drink.quantity or 1 }}{% if drink.rating is not none %} · {{ "%.1f"|format(drink.rating) }}{% endif %}
-          {% if drink.notes %}<div>{{ drink.notes }}</div>{% endif %}
-        </div>
+        {% if drink_history %}
+          {% for drink in drink_history[:3] %}
+          <div class="drink-history-item">
+            <strong>{{ drink.drank_date or drink.created_at[:10] }}</strong> · Drank {{ drink.quantity or 1 }}{% if drink.rating is not none %} · {{ "%.1f"|format(drink.rating) }}{% endif %}
+            {% if drink.notes %}<div>{{ drink.notes }}</div>{% endif %}
+          </div>
+          {% endfor %}
+          {% if drink_history|length > 3 %}
+          <details style="margin-top:4px;">
+            <summary style="color:var(--mobile-muted);font-size:0.8rem;font-weight:800;cursor:pointer;list-style:none;padding:4px 0;">See all ({{ drink_history|length - 3 }} more)</summary>
+            {% for drink in drink_history[3:] %}
+            <div class="drink-history-item">
+              <strong>{{ drink.drank_date or drink.created_at[:10] }}</strong> · Drank {{ drink.quantity or 1 }}{% if drink.rating is not none %} · {{ "%.1f"|format(drink.rating) }}{% endif %}
+              {% if drink.notes %}<div>{{ drink.notes }}</div>{% endif %}
+            </div>
+            {% endfor %}
+          </details>
+          {% endif %}
         {% else %}
         <div class="drink-history-item">No drink history yet.</div>
-        {% endfor %}
+        {% endif %}
       </div>
     </details>
 
     <section class="detail-section" id="cellarFields">
       <div class="section-title">Cellar</div>
       <div class="priority-grid">
-        <div class="field-card">
-          <span class="edit-label">Qty</span>
-          <div class="rating-value-display" style="font-size:1.45rem;">{{ wine.quantity or 0 }}</div>
-          <div class="field-hint" style="text-align:center;">Use Inventory to change counts</div>
-        </div>
         <div class="field-card">
           <span class="edit-label">Source</span>
           {% if can_edit %}
@@ -1659,30 +1676,32 @@
     });
 
     if (canEditMobile) {
-      document.querySelectorAll('[data-detail-form]').forEach(form => {
-        let blurTimer;
-        form.addEventListener('submit', event => {
-          event.preventDefault();
-          submitDetailForm(form);
-        });
-        form.querySelectorAll('select').forEach(control => {
-          control.addEventListener('change', () => submitDetailForm(form));
-        });
-        form.querySelectorAll('input, textarea').forEach(control => {
-          control.addEventListener('blur', () => submitDetailForm(form));
-          control.addEventListener('keydown', event => {
-            if (event.key === 'Enter' && control.tagName !== 'TEXTAREA') {
-              event.preventDefault();
-              control.blur();
-            }
+      try {
+        document.querySelectorAll('[data-detail-form]').forEach(form => {
+          let blurTimer;
+          form.addEventListener('submit', event => {
+            event.preventDefault();
+            submitDetailForm(form);
           });
-          control.addEventListener('input', () => {
-            if (control.tagName !== 'TEXTAREA') return;
-            clearTimeout(blurTimer);
-            blurTimer = setTimeout(() => submitDetailForm(form), 900);
+          form.querySelectorAll('select').forEach(control => {
+            control.addEventListener('change', () => submitDetailForm(form));
+          });
+          form.querySelectorAll('input, textarea').forEach(control => {
+            control.addEventListener('blur', () => submitDetailForm(form));
+            control.addEventListener('keydown', event => {
+              if (event.key === 'Enter' && control.tagName !== 'TEXTAREA') {
+                event.preventDefault();
+                control.blur();
+              }
+            });
+            control.addEventListener('input', () => {
+              if (control.tagName !== 'TEXTAREA') return;
+              clearTimeout(blurTimer);
+              blurTimer = setTimeout(() => submitDetailForm(form), 900);
+            });
           });
         });
-      });
+      } catch (e) {}
 
       document.getElementById('drinkControl')?.addEventListener('input', event => {
         document.querySelectorAll('.mobile-drinking-window').forEach(cell => {
@@ -1692,20 +1711,22 @@
         });
       });
 
-      const colorForm = document.querySelector('[data-color-form]');
-      colorForm?.querySelectorAll('[data-color-choice]').forEach(button => {
-        button.addEventListener('click', () => {
-          colorForm.querySelector('[name="color_code"]').value = button.dataset.colorChoice;
-          colorForm.querySelectorAll('[data-color-choice]').forEach(btn => btn.classList.toggle('active', btn === button));
-          const heroSticker = document.getElementById('heroSticker');
-          if (heroSticker) {
-            heroSticker.className = `hero-sticker ${button.dataset.colorChoice ? `color-${button.dataset.colorChoice}` : ''}`;
-            heroSticker.title = button.dataset.colorChoice ? `${button.dataset.colorChoice} sticker` : 'No sticker';
-            heroSticker.style.display = button.dataset.colorChoice ? 'inline-block' : 'none';
-          }
-          submitDetailForm(colorForm);
+      try {
+        const colorForm = document.querySelector('[data-color-form]');
+        colorForm?.querySelectorAll('[data-color-choice]').forEach(button => {
+          button.addEventListener('click', () => {
+            colorForm.querySelector('[name="color_code"]').value = button.dataset.colorChoice;
+            colorForm.querySelectorAll('[data-color-choice]').forEach(btn => btn.classList.toggle('active', btn === button));
+            const heroSticker = document.getElementById('heroSticker');
+            if (heroSticker) {
+              heroSticker.className = `hero-sticker ${button.dataset.colorChoice ? `color-${button.dataset.colorChoice}` : ''}`;
+              heroSticker.title = button.dataset.colorChoice ? `${button.dataset.colorChoice} sticker` : 'No sticker';
+              heroSticker.style.display = button.dataset.colorChoice ? 'inline-block' : 'none';
+            }
+            submitDetailForm(colorForm);
+          });
         });
-      });
+      } catch (e) {}
 
       async function postInventory(url, body) {
         setSaveState('Saving...', 'saving');
@@ -1772,18 +1793,34 @@
       });
 
       // ── Adjust flow ──
+      document.querySelectorAll('.lot-edit-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const lotId = btn.dataset.lotId;
+          const secondary = document.getElementById(`lotSecondary-${lotId}`);
+          if (!secondary) return;
+          const willOpen = secondary.hidden;
+          secondary.hidden = !willOpen;
+          btn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+          btn.textContent = willOpen ? 'Done editing' : 'Edit location/count';
+        });
+      });
       document.querySelectorAll('.lot-adjust-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const lotId = btn.dataset.lotId;
-          btn.closest('.lot-card-actions').style.display = 'none';
+          const card = btn.closest('.lot-card');
+          const secondary = document.getElementById(`lotSecondary-${lotId}`);
+          const toggle = card?.querySelector('.lot-edit-toggle');
+          if (secondary) secondary.hidden = true;
+          if (toggle) {
+            toggle.setAttribute('aria-expanded', 'false');
+            toggle.textContent = 'Edit location/count';
+          }
           document.getElementById(`adjustRow-${lotId}`).style.display = 'flex';
         });
       });
       document.querySelectorAll('.lot-adjust-done').forEach(btn => {
         btn.addEventListener('click', () => {
           const lotId = btn.dataset.lotId;
-          const card = btn.closest('.lot-card');
-          card?.querySelector('.lot-card-actions').style.display = 'flex';
           document.getElementById(`adjustRow-${lotId}`).style.display = 'none';
         });
       });
