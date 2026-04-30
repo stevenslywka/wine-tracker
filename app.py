@@ -10,9 +10,12 @@ load_dotenv()
 from functools import wraps
 from flask import (Flask, render_template, request, redirect, url_for,
                    jsonify, session, flash)
+from urllib.parse import urlsplit, urlunsplit
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-prod")
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 # Run DB migrations on startup
 import db as _db_module
@@ -29,9 +32,23 @@ def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         if not session.get("user_id"):
-            return redirect(url_for("login", next=request.url))
+            next_url = request.full_path if request.query_string else request.path
+            return redirect(url_for("login", next=next_url))
         return f(*args, **kwargs)
     return decorated
+
+
+def safe_next_url(next_url):
+    if not next_url:
+        return url_for("home")
+    parsed = urlsplit(next_url)
+    if parsed.netloc and parsed.netloc != request.host:
+        return url_for("home")
+    if parsed.scheme and parsed.scheme not in ("http", "https"):
+        return url_for("home")
+    if parsed.netloc:
+        return urlunsplit(("", "", parsed.path or "/", parsed.query, parsed.fragment))
+    return next_url
 
 
 def admin_required(f):
@@ -165,7 +182,7 @@ def login():
                     session["username"] = user["username"]
                     session["display_name"] = user["display_name"]
                     session["is_admin"] = bool(user["is_admin"])
-                    next_url = request.args.get("next") or url_for("home")
+                    next_url = safe_next_url(request.args.get("next"))
                     return redirect(next_url)
         error = "Incorrect username or password."
     return render_template("login.html", error=error)
