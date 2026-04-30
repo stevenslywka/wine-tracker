@@ -1,4 +1,4 @@
-# Wine Tracker - Codex Project Guide
+﻿# Wine Tracker - Codex Project Guide
 
 Personal Flask wine cellar app replacing Vivino. Multi-user. Local dev uses SQLite; production uses PostgreSQL on Railway.
 
@@ -24,7 +24,7 @@ Trust this section first when older notes or local Git disagree.
 
 At the start of a new chat:
 
-1. Read `CLAUDE.md` and `NEW_CHAT_PROMPT.md`.
+1. Read `AGENTS.md` and `NEW_CHAT_PROMPT.md`.
 2. Run `git status --short` as a rough dirty-worktree signal.
 3. Inspect current files before suggesting or editing.
 4. Do not overwrite existing local changes.
@@ -192,7 +192,7 @@ Rules:
 
 ## Markdown Update Workflow
 
-For `CLAUDE.md` and `NEW_CHAT_PROMPT.md`, prefer scripted stable-prefix replacements or a deliberate full rewrite. Avoid repeated fragile `apply_patch` attempts against prose containing emoji/mojibake. Verify with `rg`.
+For `AGENTS.md` and `NEW_CHAT_PROMPT.md`, prefer scripted stable-prefix replacements or a deliberate full rewrite. Avoid repeated fragile `apply_patch` attempts against prose containing emoji/mojibake. Verify with `rg`.
 
 ## Future Work
 

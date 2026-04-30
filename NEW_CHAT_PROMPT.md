@@ -1,4 +1,4 @@
-# Wine Tracker New Chat Prompt
+﻿# Wine Tracker New Chat Prompt
 
 Copy/paste this at the start of a new Codex chat:
 
@@ -6,7 +6,7 @@ Copy/paste this at the start of a new Codex chat:
 I am working on my Flask wine cellar app in:
 C:\Users\steve\wine-tracker
 
-Please use that folder as the project root. Start by reading `CLAUDE.md` and this `NEW_CHAT_PROMPT.md`, then inspect the current files and run `git status --short` before changing anything. Do not overwrite existing local changes.
+Please use that folder as the project root. Start by reading `AGENTS.md` and this `NEW_CHAT_PROMPT.md`, then inspect the current files and run `git status --short` before changing anything. Do not overwrite existing local changes.
 
 High-signal project context:
 - Live site: https://stevenwinecellar.up.railway.app/
