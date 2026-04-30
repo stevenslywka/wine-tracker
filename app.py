@@ -861,6 +861,115 @@ def add_inventory_lot(wine_id):
     return jsonify({"ok": True})
 
 
+@app.route("/wine/<int:wine_id>/lot/<int:lot_id>/move", methods=["POST"])
+@login_required
+def move_inventory_lot(wine_id, lot_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
+
+    to_location = request.form.get("to_location", "").strip()
+    if not to_location:
+        return ("", 400)
+
+    try:
+        qty = max(1, int(request.form.get("quantity", "1").strip()))
+    except ValueError:
+        qty = 1
+
+    p = ph()
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        f"""SELECT * FROM wine_inventory_lots
+            WHERE id = {p} AND wine_id = {p}
+              AND status = 'in_collection' AND quantity > 0""",
+        (lot_id, wine_id)
+    )
+    lot = cur.fetchone()
+    if not lot:
+        conn.close()
+        return jsonify({"error": "Lot not found"}), 404
+
+    cur.execute(
+        f"SELECT 1 FROM user_locations WHERE user_id = {p} AND name = {p}",
+        (session["user_id"], to_location)
+    )
+    if not cur.fetchone():
+        conn.close()
+        return ("", 400)
+
+    qty = min(qty, lot["quantity"])
+
+    if lot["quantity"] <= qty:
+        cur.execute(
+            f"DELETE FROM wine_inventory_lots WHERE id = {p} AND wine_id = {p}",
+            (lot_id, wine_id)
+        )
+    else:
+        cur.execute(
+            f"""UPDATE wine_inventory_lots
+                SET quantity = quantity - {p}, updated_at = CURRENT_TIMESTAMP
+                WHERE id = {p} AND wine_id = {p}""",
+            (qty, lot_id, wine_id)
+        )
+
+    upsert_inventory_lot(
+        conn, wine_id, qty, "in_collection", to_location,
+        lot["retailer"], lot["order_date"], lot["unit_price"]
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+
+@app.route("/wine/<int:wine_id>/lot/<int:lot_id>/receive", methods=["POST"])
+@login_required
+def receive_inventory_lot(wine_id, lot_id):
+    if not owns_wine(wine_id):
+        return ("", 403)
+
+    storage_location = request.form.get("storage_location", "").strip()
+    if not storage_location:
+        return ("", 400)
+
+    p = ph()
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        f"""SELECT * FROM wine_inventory_lots
+            WHERE id = {p} AND wine_id = {p}
+              AND status = 'not_shipped' AND quantity > 0""",
+        (lot_id, wine_id)
+    )
+    lot = cur.fetchone()
+    if not lot:
+        conn.close()
+        return jsonify({"error": "Lot not found"}), 404
+
+    cur.execute(
+        f"SELECT 1 FROM user_locations WHERE user_id = {p} AND name = {p}",
+        (session["user_id"], storage_location)
+    )
+    if not cur.fetchone():
+        conn.close()
+        return ("", 400)
+
+    cur.execute(
+        f"""UPDATE wine_inventory_lots
+            SET status = 'in_collection',
+                storage_location = {p},
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = {p} AND wine_id = {p}""",
+        (storage_location, lot_id, wine_id)
+    )
+    sync_wine_summary(conn, wine_id)
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True})
+
+
 @app.route("/wines/bulk-status", methods=["POST"])
 @login_required
 def bulk_update_status():
