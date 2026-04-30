@@ -1239,24 +1239,32 @@
         background: var(--mobile-panel);
         padding: 11px 10px 10px;
         display: grid;
-        gap: 14px;
-        min-height: 88px;
+        gap: 10px;
+        min-height: 76px;
       }
-      .ledger-cards > .ledger-card:only-child,
       .ledger-cards > .ledger-card:last-child:nth-child(odd) {
         grid-column: 1 / -1;
       }
+      .ledger-cards > .ledger-card:only-child {
+        grid-column: auto;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+        min-height: 48px;
+        padding: 10px 14px;
+      }
       .ledger-card-loc {
         color: var(--mobile-muted);
-        font-size: 0.65rem;
+        font-size: 0.62rem;
         font-weight: 900;
         text-transform: uppercase;
-        letter-spacing: 0.06em;
+        letter-spacing: 0.07em;
         min-width: 0;
         overflow-wrap: anywhere;
       }
       .ledger-card-count {
-        font-size: 1.85rem;
+        font-size: 2.6rem;
         font-weight: 900;
         line-height: 1;
         text-align: center;
@@ -1268,11 +1276,28 @@
         justify-content: space-between;
         gap: 8px;
       }
+      .ledger-cards > .ledger-card:only-child .ledger-card-header {
+        flex: 1;
+        min-width: 0;
+        margin-bottom: 0;
+        align-items: center;
+      }
+      .ledger-cards > .ledger-card:only-child .ledger-card-loc {
+        font-size: 0.78rem;
+        text-transform: none;
+        letter-spacing: 0;
+      }
       .ledger-card-stepper {
         display: grid;
         grid-template-columns: 36px 1fr 36px;
         align-items: center;
         gap: 6px;
+      }
+      .ledger-cards > .ledger-card:only-child .ledger-card-stepper {
+        flex-shrink: 0;
+      }
+      .ledger-cards > .ledger-card:only-child .ledger-card-count {
+        font-size: 1.85rem;
       }
       .ledger-card-step {
         width: 34px;
@@ -1322,19 +1347,19 @@
         font-weight: 800;
         margin-bottom: 12px;
       }
-      .ledger-card.loc-color-0 { background: #1a3a5c; border-color: #2a6a9c; }
+      .ledger-card.loc-color-0 { background: rgba(26,58,92,0.10); border-color: rgba(42,106,156,0.60); }
       .ledger-card.loc-color-0 .ledger-card-loc,
       .ledger-card.loc-color-0 .ledger-card-count { color: #7eb8cb; }
-      .ledger-card.loc-color-1 { background: #5c1a1a; border-color: #8c2a2a; }
+      .ledger-card.loc-color-1 { background: rgba(92,26,26,0.10); border-color: rgba(140,42,42,0.60); }
       .ledger-card.loc-color-1 .ledger-card-loc,
       .ledger-card.loc-color-1 .ledger-card-count { color: #e08080; }
-      .ledger-card.loc-color-2 { background: #1a3a2a; border-color: #2a6a3a; }
+      .ledger-card.loc-color-2 { background: rgba(26,58,42,0.10); border-color: rgba(42,106,58,0.60); }
       .ledger-card.loc-color-2 .ledger-card-loc,
       .ledger-card.loc-color-2 .ledger-card-count { color: #7ecb9e; }
-      .ledger-card.loc-color-3 { background: #3a1a5c; border-color: #5a2a8c; }
+      .ledger-card.loc-color-3 { background: rgba(58,26,92,0.10); border-color: rgba(90,42,140,0.60); }
       .ledger-card.loc-color-3 .ledger-card-loc,
       .ledger-card.loc-color-3 .ledger-card-count { color: #c0a0e0; }
-      .ledger-card.loc-color-4 { background: #5c3a1a; border-color: #8c5a2a; }
+      .ledger-card.loc-color-4 { background: rgba(92,58,26,0.10); border-color: rgba(140,90,42,0.60); }
       .ledger-card.loc-color-4 .ledger-card-loc,
       .ledger-card.loc-color-4 .ledger-card-count { color: #e0a870; }
       .manage-section {

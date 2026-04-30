@@ -28,7 +28,7 @@ Project context:
 - Flask app: `app.py`; DB helpers/migrations: `db.py`; main cellar: `templates/index.html`; wine detail: `templates/detail.html`.
 - Local database is SQLite `wines.db`; production is PostgreSQL.
 - Schema changes must go through `db.py -> migrate()`.
-- Latest production UI work: mobile wine detail Cellar polish moves Drinking Window into the Cellar grid and changes add-bottle status wording to `Available` / `Not shipped`. Commit `d219d2a3daa65a8203e8cbe7689b4618d149a30b`.
+- Latest production UI work: mobile wine detail Bottles UI polish uses faint location-card tints, larger accented counts, and a compact single-location row.
 
 Inventory truth:
 - Current inventory uses `wine_inventory_lots`, not individual bottle records.
