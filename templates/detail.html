@@ -910,6 +910,9 @@
         font-weight: 900;
         margin-bottom: 6px;
       }
+      .delete-confirm-title.neutral-title {
+        color: var(--mobile-text);
+      }
       .delete-confirm-copy {
         color: var(--mobile-muted);
         font-size: 0.9rem;
@@ -1235,10 +1238,9 @@
         border-radius: 11px;
         background: var(--mobile-panel);
         padding: 11px 10px 10px;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        min-height: 100px;
+        display: grid;
+        gap: 14px;
+        min-height: 88px;
       }
       .ledger-cards > .ledger-card:only-child,
       .ledger-cards > .ledger-card:last-child:nth-child(odd) {
@@ -1250,26 +1252,27 @@
         font-weight: 900;
         text-transform: uppercase;
         letter-spacing: 0.06em;
-        align-self: flex-start;
-        margin-bottom: 6px;
+        min-width: 0;
+        overflow-wrap: anywhere;
       }
       .ledger-card-count {
-        font-size: 2.2rem;
+        font-size: 1.85rem;
         font-weight: 900;
         line-height: 1;
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        text-align: center;
         color: var(--mobile-text);
       }
-      .ledger-card-controls {
+      .ledger-card-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        width: 100%;
+        gap: 8px;
+      }
+      .ledger-card-stepper {
+        display: grid;
+        grid-template-columns: 36px 1fr 36px;
+        align-items: center;
         gap: 6px;
-        margin-top: 8px;
       }
       .ledger-card-step {
         width: 34px;
@@ -1283,6 +1286,16 @@
         line-height: 1;
         padding: 0;
         flex-shrink: 0;
+      }
+      .ledger-drink-btn {
+        background: #3d1010;
+        border-color: rgba(166,75,76,0.55);
+        color: #e08080;
+      }
+      .ledger-plus-btn {
+        background: #0f2d1a;
+        border-color: rgba(49,168,106,0.45);
+        color: #7ecb9e;
       }
       .ledger-card-kebab {
         border: 1px solid rgba(255,248,238,0.11);
@@ -1311,6 +1324,90 @@
       .ledger-card.loc-color-4 { background: #5c3a1a; border-color: #8c5a2a; }
       .ledger-card.loc-color-4 .ledger-card-loc,
       .ledger-card.loc-color-4 .ledger-card-count { color: #e0a870; }
+      .manage-section {
+        padding: 12px 0;
+        border-top: 1px solid rgba(255,248,238,0.09);
+      }
+      .manage-section:first-of-type { border-top: 0; }
+      .manage-section-label {
+        color: var(--mobile-muted);
+        font-size: 0.7rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        margin-bottom: 9px;
+      }
+      .manage-move-row,
+      .manage-correct-row {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        flex-wrap: wrap;
+      }
+      .manage-stepper-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 1px solid rgba(231,189,112,0.42);
+        background: #211a13;
+        color: var(--mobile-accent);
+        font-size: 1.05rem;
+        font-weight: 900;
+        line-height: 1;
+        padding: 0;
+        flex-shrink: 0;
+      }
+      .manage-stepper-input {
+        width: 48px;
+        text-align: center;
+        background: #11100f;
+        border: 1px solid rgba(255,248,238,0.14);
+        border-radius: 8px;
+        color: var(--mobile-text);
+        font-size: 0.96rem;
+        font-weight: 800;
+        padding: 6px 4px;
+      }
+      .manage-select {
+        flex: 1;
+        min-width: 90px;
+        background: #11100f;
+        border: 1px solid rgba(255,248,238,0.14);
+        border-radius: 8px;
+        color: var(--mobile-text);
+        font-size: 0.9rem;
+        font-weight: 800;
+        padding: 6px 8px;
+        appearance: none;
+      }
+      .manage-action-btn {
+        margin-left: auto;
+        border-radius: 999px;
+        border: 1px solid rgba(255,248,238,0.2);
+        background: #211a13;
+        color: var(--mobile-text);
+        font-size: 0.82rem;
+        font-weight: 900;
+        padding: 7px 13px;
+        line-height: 1;
+        flex-shrink: 0;
+      }
+      .manage-action-btn.move-btn {
+        background: #1a3a5c;
+        border-color: #2a6a9c;
+        color: #9ecfe0;
+      }
+      .manage-done-btn {
+        width: 100%;
+        margin-top: 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(255,248,238,0.14);
+        background: transparent;
+        color: var(--mobile-muted);
+        font-size: 0.86rem;
+        font-weight: 900;
+        padding: 10px 8px;
+      }
       .ledger-incoming-strip {
         display: flex;
         align-items: center;
@@ -1490,21 +1587,31 @@
                data-location="{{ item.location }}"
                data-quantity="{{ item.quantity }}"
                data-bought="{{ item.bought }}">
-            <div class="ledger-card-loc">{{ item.location }}</div>
-            <div class="ledger-card-count">{{ item.quantity }}</div>
-            <div class="ledger-card-controls">
+            <div class="ledger-card-header">
+              <div class="ledger-card-loc">{{ item.location }}</div>
+              {% if can_edit %}
+              <button type="button" class="ledger-card-kebab ledger-edit-btn"
+                      data-location="{{ item.location }}"
+                      data-quantity="{{ item.quantity }}"
+                      aria-label="Edit {{ item.location }} bottles">&#8943;</button>
+              {% endif %}
+            </div>
+            <div class="ledger-card-stepper">
               {% if can_edit %}
               <button type="button" class="ledger-card-step ledger-drink-btn"
                       data-location="{{ item.location }}"
                       data-quantity="{{ item.quantity }}"
                       aria-label="Drink one from {{ item.location }}">&minus;</button>
+              {% else %}
+              <span></span>
+              {% endif %}
+              <div class="ledger-card-count">{{ item.quantity }}</div>
+              {% if can_edit %}
               <button type="button" class="ledger-card-step ledger-plus-btn"
                       data-location="{{ item.location }}"
                       aria-label="Add one to {{ item.location }}">+</button>
-              <button type="button" class="ledger-card-kebab ledger-edit-btn"
-                      data-location="{{ item.location }}"
-                      data-quantity="{{ item.quantity }}"
-                      aria-label="Edit {{ item.location }} bottles">&#8943;</button>
+              {% else %}
+              <span></span>
               {% endif %}
             </div>
           </div>
@@ -1631,10 +1738,18 @@
             <textarea id="drinkNotesInput" rows="2" placeholder="Tasting notes for this bottle…"
                       style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.88rem;font-weight:700;padding:9px 10px;resize:none;line-height:1.35;"></textarea>
           </div>
+          <div>
+            <a href="#" id="drinkDateToggle" style="font-size:0.78rem;color:var(--mobile-muted);font-weight:800;text-decoration:none;">Different date?</a>
+            <div id="drinkDateRow" hidden style="margin-top:9px;">
+              <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Date</label>
+              <input type="date" id="drinkDateInput"
+                     style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;">
+            </div>
+          </div>
         </div>
         <div class="delete-confirm-actions">
           <button type="button" id="cancelDrinkOne">Cancel</button>
-          <button type="button" id="confirmDrinkOne" class="danger">Drink one</button>
+          <button type="button" id="confirmDrinkOne" class="danger">Drink</button>
         </div>
       </div>
     </div>
@@ -1642,12 +1757,18 @@
     <!-- Add bottles sheet -->
     <div class="delete-confirm-backdrop" id="addBottleModal" aria-hidden="true">
       <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="addBottleTitle">
-        <div class="delete-confirm-title" id="addBottleTitle">Add bottles</div>
+        <div class="delete-confirm-title neutral-title" id="addBottleTitle">Add bottles</div>
         <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
           <div>
             <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Quantity</label>
-            <input type="number" id="addBottleQtyInput" min="1" value="1" inputmode="numeric"
-                   style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;">
+            <div style="display:grid;grid-template-columns:36px 1fr 36px;gap:6px;align-items:center;">
+              <button type="button" id="addQtyMinus"
+                      style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(231,189,112,0.42);background:#211a13;color:var(--mobile-accent);font-size:1.1rem;font-weight:900;line-height:1;">&minus;</button>
+              <input type="number" id="addBottleQtyInput" min="1" value="1" inputmode="numeric"
+                     style="text-align:center;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px;">
+              <button type="button" id="addQtyPlus"
+                      style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(231,189,112,0.42);background:#211a13;color:var(--mobile-accent);font-size:1.1rem;font-weight:900;line-height:1;">+</button>
+            </div>
           </div>
           <div>
             <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Location</label>
@@ -1662,8 +1783,8 @@
             <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Status</label>
             <select id="addBottleStatusSelect"
                     style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;appearance:none;">
-              <option value="in_collection">Available</option>
-              <option value="not_shipped">Not shipped</option>
+              <option value="in_collection">In cellar</option>
+              <option value="not_shipped">On order</option>
             </select>
           </div>
           <details>
@@ -1689,42 +1810,40 @@
     <!-- Location edit sheet -->
     <div class="delete-confirm-backdrop" id="locationEditModal" aria-hidden="true">
       <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="locationEditTitle">
-        <div class="delete-confirm-title" id="locationEditTitle">Edit bottles</div>
+        <div class="delete-confirm-title neutral-title" id="locationEditTitle">Manage bottles</div>
         <div class="delete-confirm-copy" id="locationEditSubtitle"></div>
-        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
-          <div>
-            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Correct current count</label>
-            <input type="number" id="correctLocationQtyInput" min="0" inputmode="numeric"
-                   style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;">
-          </div>
-          <div>
-            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Move quantity</label>
-            <input type="number" id="moveLocationQtyInput" min="1" value="1" inputmode="numeric"
-                   style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;">
-          </div>
-          <div>
-            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Move to</label>
-            <select id="moveLocationToSelect"
-                    style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;appearance:none;">
+        <div class="manage-section">
+          <div class="manage-section-label">Move bottles</div>
+          <div class="manage-move-row">
+            <button type="button" id="moveLocQtyMinus" class="manage-stepper-btn">&minus;</button>
+            <input type="number" id="moveLocationQtyInput" min="1" value="1" inputmode="numeric" class="manage-stepper-input">
+            <button type="button" id="moveLocQtyPlus" class="manage-stepper-btn">+</button>
+            <span style="color:var(--mobile-muted);font-size:0.82rem;font-weight:800;">to</span>
+            <select id="moveLocationToSelect" class="manage-select">
               {% for location in user_locations %}
               <option value="{{ location }}">{{ location }}</option>
               {% endfor %}
             </select>
+            <button type="button" id="confirmMoveLocation" class="manage-action-btn move-btn">Move</button>
           </div>
         </div>
-        <div class="delete-confirm-actions">
-          <button type="button" id="confirmCorrectLocation">Correct count</button>
-          <button type="button" id="confirmMoveLocation"
-                  style="background:#1a3a5c;border-color:#2a6a9c;color:#9ecfe0;border-radius:999px;border:1px solid;font-weight:900;font-size:0.86rem;padding:10px 8px;">Move</button>
+        <div class="manage-section">
+          <div class="manage-section-label">Correct count</div>
+          <div class="manage-correct-row">
+            <span style="color:var(--mobile-muted);font-size:0.82rem;font-weight:800;">Set to</span>
+            <input type="number" id="correctLocationQtyInput" min="0" inputmode="numeric" class="manage-stepper-input">
+            <span style="color:var(--mobile-muted);font-size:0.82rem;font-weight:800;">bottles</span>
+            <button type="button" id="confirmCorrectLocation" class="manage-action-btn">Save</button>
+          </div>
         </div>
-        <button type="button" id="cancelLocationEdit" style="width:100%;margin-top:8px;border-radius:999px;border:1px solid rgba(255,248,238,0.14);background:#211a13;color:var(--mobile-text);font-size:0.86rem;font-weight:900;padding:10px 8px;">Done</button>
+        <button type="button" id="cancelLocationEdit" class="manage-done-btn">Done</button>
       </div>
     </div>
 
     <!-- Drink history edit sheet -->
     <div class="delete-confirm-backdrop" id="historyEditModal" aria-hidden="true">
       <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="historyEditTitle">
-        <div class="delete-confirm-title" id="historyEditTitle">Edit drink history</div>
+        <div class="delete-confirm-title neutral-title" id="historyEditTitle">Edit drink history</div>
         <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
           <div>
             <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Date</label>
@@ -1764,7 +1883,7 @@
     <!-- Move modal -->
     <div class="delete-confirm-backdrop" id="moveModal" aria-hidden="true">
       <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="moveTitle">
-        <div class="delete-confirm-title" id="moveTitle">Move bottles</div>
+        <div class="delete-confirm-title neutral-title" id="moveTitle">Move bottles</div>
         <div class="delete-confirm-copy" id="moveSubtitle"></div>
         <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
           <div>
@@ -1799,7 +1918,7 @@
     <!-- Receive modal -->
     <div class="delete-confirm-backdrop" id="receiveModal" aria-hidden="true">
       <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="receiveTitle">
-        <div class="delete-confirm-title" id="receiveTitle">Receive shipment</div>
+        <div class="delete-confirm-title neutral-title" id="receiveTitle">Receive shipment</div>
         <div class="delete-confirm-copy" id="receiveSubtitle"></div>
         <div style="margin-bottom:16px;">
           <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Receive into location</label>
@@ -2115,10 +2234,16 @@
         pendingLotId = lotId;
         pendingLotQty = qty;
         pendingDrinkLocation = loc;
+        const title = document.getElementById('drinkOneTitle');
+        if (title) title.textContent = `Drink from ${loc}`;
         const subtitle = document.getElementById('drinkOneSubtitle');
         if (subtitle) subtitle.textContent = `From: ${loc} · ${qty} bottle${qty !== 1 ? 's' : ''} left`;
         document.getElementById('drinkRatingInput').value = '';
         document.getElementById('drinkNotesInput').value = '';
+        const dateRow = document.getElementById('drinkDateRow');
+        const dateInput = document.getElementById('drinkDateInput');
+        if (dateRow) dateRow.hidden = true;
+        if (dateInput) dateInput.value = '';
         const modal = document.getElementById('drinkOneModal');
         modal.classList.add('visible');
         modal.setAttribute('aria-hidden', 'false');
@@ -2133,17 +2258,30 @@
       document.getElementById('drinkOneModal')?.addEventListener('click', e => {
         if (e.target === e.currentTarget) closeDrinkOneModal();
       });
+      document.getElementById('drinkDateToggle')?.addEventListener('click', e => {
+        e.preventDefault();
+        const row = document.getElementById('drinkDateRow');
+        const input = document.getElementById('drinkDateInput');
+        if (!row) return;
+        row.hidden = !row.hidden;
+        if (!row.hidden && input && !input.value) {
+          input.value = new Date().toISOString().slice(0, 10);
+        }
+      });
       document.getElementById('confirmDrinkOne')?.addEventListener('click', async () => {
         if (!pendingLotId && !pendingDrinkLocation) return;
         const btn = document.getElementById('confirmDrinkOne');
         btn.disabled = true;
         const rating = document.getElementById('drinkRatingInput').value.trim();
         const notes = document.getElementById('drinkNotesInput').value.trim();
+        const dateRow = document.getElementById('drinkDateRow');
+        const date = document.getElementById('drinkDateInput')?.value || '';
         const body = new URLSearchParams();
         if (pendingLotId) body.set('lot_id', String(pendingLotId));
         if (pendingDrinkLocation) body.set('storage_location', pendingDrinkLocation);
         if (rating) body.set('rating', rating);
         if (notes) body.set('notes', notes);
+        if (dateRow && !dateRow.hidden && date) body.set('drank_date', date);
         closeDrinkOneModal();
         const data = await postInventory('/wine/{{ wine.id }}/drink-one', body);
         btn.disabled = false;
@@ -2173,6 +2311,8 @@
         const qty = document.getElementById('addBottleQtyInput');
         const loc = document.getElementById('addBottleLocationSelect');
         const status = document.getElementById('addBottleStatusSelect');
+        const title = document.getElementById('addBottleTitle');
+        if (title) title.textContent = location ? `Add to ${location}` : 'Add bottles';
         if (qty) qty.value = 1;
         if (status) status.value = 'in_collection';
         if (loc && location) loc.value = location;
@@ -2197,6 +2337,14 @@
       document.getElementById('cancelAddBottle')?.addEventListener('click', closeAddBottleModal);
       document.getElementById('addBottleModal')?.addEventListener('click', e => {
         if (e.target === e.currentTarget) closeAddBottleModal();
+      });
+      document.getElementById('addQtyMinus')?.addEventListener('click', () => {
+        const inp = document.getElementById('addBottleQtyInput');
+        if (inp) inp.value = Math.max(1, (parseInt(inp.value, 10) || 1) - 1);
+      });
+      document.getElementById('addQtyPlus')?.addEventListener('click', () => {
+        const inp = document.getElementById('addBottleQtyInput');
+        if (inp) inp.value = Math.max(1, (parseInt(inp.value, 10) || 1) + 1);
       });
       document.getElementById('confirmAddBottle')?.addEventListener('click', async () => {
         const btn = document.getElementById('confirmAddBottle');
@@ -2224,6 +2372,8 @@
       function openLocationEditModal(location, quantity) {
         pendingLocation = location;
         pendingLocationQty = quantity;
+        const title = document.getElementById('locationEditTitle');
+        if (title) title.textContent = `Manage ${location}`;
         const subtitle = document.getElementById('locationEditSubtitle');
         if (subtitle) subtitle.textContent = `${location} · ${quantity} bottle${quantity !== 1 ? 's' : ''} left`;
         const correct = document.getElementById('correctLocationQtyInput');
@@ -2257,6 +2407,14 @@
       document.getElementById('cancelLocationEdit')?.addEventListener('click', closeLocationEditModal);
       document.getElementById('locationEditModal')?.addEventListener('click', e => {
         if (e.target === e.currentTarget) closeLocationEditModal();
+      });
+      document.getElementById('moveLocQtyMinus')?.addEventListener('click', () => {
+        const inp = document.getElementById('moveLocationQtyInput');
+        if (inp) inp.value = Math.max(1, (parseInt(inp.value, 10) || 1) - 1);
+      });
+      document.getElementById('moveLocQtyPlus')?.addEventListener('click', () => {
+        const inp = document.getElementById('moveLocationQtyInput');
+        if (inp) inp.value = Math.min(pendingLocationQty || 1, (parseInt(inp.value, 10) || 1) + 1);
       });
       document.getElementById('confirmCorrectLocation')?.addEventListener('click', async () => {
         if (!pendingLocation) return;
