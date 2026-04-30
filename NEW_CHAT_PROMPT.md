@@ -122,8 +122,10 @@ Important workflow notes:
 - If PowerShell `Invoke-RestMethod` or Git HTTPS fails, use Node/fetch with the same token; that worked in the prior chat.
 
 Doc update workflow:
-- When updating CLAUDE.md, NEW_CHAT_PROMPT.md, or plan markdown files from Codex, use exact scripted line/prefix replacements when text includes emoji, smart punctuation, or mojibake. First print the target lines as JSON-escaped strings if needed, then replace exact lines or stable prefixes with Node or Python, verify with `rg`, and push only the markdown files that actually changed.
-- Avoid repeated broad manual patches against visually similar text; encoding differences can make them fail.
+- Hard rule for Codex: do not use repeated apply_patch attempts against prose in CLAUDE.md, NEW_CHAT_PROMPT.md, DETAIL_PAGE_REWORK_PLAN.md, or other project markdown notes.
+- Use scripted line/prefix replacements only. Read target lines as JSON-escaped strings if needed; replace by stable line prefix or section heading, not by full paragraphs containing emoji, smart punctuation, or mojibake.
+- Make scripts idempotent: if old text is gone, check whether the new text is already present.
+- Verify with `rg`, then push only the markdown files that changed.
 
 Local dev command:
 ```powershell

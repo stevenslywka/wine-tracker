@@ -363,9 +363,16 @@ Inventory follow-ups to prioritize next:
 
 ## Markdown Update Workflow
 
-When updating these project markdown files from Codex, prefer small scripted line/prefix replacements over repeated manual patches if text contains emoji, smart punctuation, or mojibake. Read the target lines with a script that prints JSON-escaped strings, replace exact lines or stable prefixes with Node or Python, then verify with `rg` before pushing. Avoid broad rewrites of the docs unless Steve asks; update only stale bullets and push only the markdown files involved.
+Hard rule for Codex: do not use repeated apply_patch attempts against prose in CLAUDE.md, NEW_CHAT_PROMPT.md, DETAIL_PAGE_REWORK_PLAN.md, or other project markdown notes.
 
----
+Use scripted line/prefix replacements only:
+- Read target lines as JSON-escaped strings if needed.
+- Replace by stable line prefix or section heading, not by full paragraphs containing emoji, smart punctuation, or mojibake.
+- Make scripts idempotent: if old text is gone, check whether the new text is already present.
+- Verify with `rg`.
+- Push only the markdown files that changed.
+
+This should keep doc updates quick and avoid wasting tokens on patch retries.
 
 ## Local Dev
 

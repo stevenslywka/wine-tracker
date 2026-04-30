@@ -84,7 +84,9 @@ Currently every lot card shows three buttons side by side: `Drink one` / `Move` 
 
 ## Doc Update Workflow
 
-If this plan or the project docs need updates later, use exact scripted line/prefix replacements instead of repeated manual patches. Print target lines as JSON-escaped strings first if needed, replace exact lines or stable prefixes with Node or Python, verify with `rg`, then push only the markdown files that changed. This avoids failures caused by emoji, smart punctuation, or mojibake in older notes.
+Hard rule for Codex: do not use repeated apply_patch attempts against prose in project markdown notes.
+
+Use scripted line/prefix replacements only. Print target lines as JSON-escaped strings if needed; replace by stable line prefix or section heading, not by full paragraphs containing emoji, smart punctuation, or mojibake. Make scripts idempotent, verify with `rg`, then push only the markdown files that changed.
 
 ---
 
