@@ -31,14 +31,14 @@ Latest inventory-lots work pushed to GitHub:
 - `wines.total_price` is cached from available lots by summing `quantity * unit_price` per lot, so mixed-price re-buys do not use one latest price for every bottle.
 - New/imported wines create lots through manual Add Wine, receipt/bulk add, batch scan add, and email parsing.
 - Location filters/counts and recommendation location filters now query lots.
-- Mobile detail page now has an Inventory section with per-location lots, `Drank one`, `Add location`, and per-lot `[-]/[+]` Adjust count controls.
+- Mobile detail page now has a Bottles section with per-location lots. Each available lot shows a primary `Drink one` action, with `Move bottles` and `Correct count` tucked behind `Edit location/count`.
 - `Drank one` creates `wine_drink_history`, decrements one available lot, asks for location when multiple lots exist, and defaults drink date to today.
 - `Drank one` inserts drink history before deleting a final-bottle lot so PostgreSQL foreign keys do not block last-bottle consumption.
-- `[-]/[+]` controls are inventory corrections only; they do not create drink history.
-- Last-bottle `Adjust` uses the custom confirmation modal and preserves the lot id before closing the modal.
+- `Correct count` controls are inventory corrections only; they do not create drink history.
+- Last-bottle `Correct count` uses the custom confirmation modal and preserves the lot id before closing the modal.
 - `Move` requires a real destination different from the source location; if there is no other saved location, the mobile modal disables the action and tells the user to add another location first.
 - `Receive` consolidates incoming bottles into an existing matching available lot through `upsert_inventory_lot()` instead of creating duplicate same-location cards.
-- The old mobile Qty card is read-only and points users to the Inventory section.
+- The old mobile Qty card was removed; total current bottles now appears in the `Bottles · N total` section header.
 - New lot routes: `POST /wine/<id>/drink-one`, `POST /wine/<id>/lot/<lot_id>/adjust`, `POST /wine/<id>/lot/add-location`, and `POST /wine/<id>/add-lot`.
 - Latest pushed commits include:
   - `233b7be` (`Add inventory lot foundation`)
@@ -48,6 +48,7 @@ Latest inventory-lots work pushed to GitHub:
   - `26c01c5` (`Add move and receive inventory lot routes`)
   - `afac831` (`Redesign mobile inventory UI: per-lot cards, Drink one modal, Move, Receive`)
   - `6d49096` (`Replace last-bottle native confirm with custom modal`)
+  - `eb33c35` (`Rework mobile wine detail bottles section`)
 
 Inventory model notes:
 - Use lots, not individual bottles. A lot is current inventory for one wine at one location/status/source/date/price.
@@ -95,13 +96,13 @@ Current mobile UI state as of Apr 28, 2026 (supersedes older mobile bullets belo
 - Mobile detail page has a sticky wine-cellar header matching the Main Cellar page: hamburger menu on the left, centered cellar title, and a square trash icon on the right. The trash icon opens the delete confirmation.
 - Detail hero shows the editable wine name first, then vintage/sticker. The type word and type sash were removed from the detail hero.
 - Detail page wines without images use the same dark `No photo` silhouette.
-- Detail page Inventory section uses per-location lot cards with `Drink one`, `Move`, and `Adjust` actions per lot. Not-shipped lots show a `Receive` button. The old Qty card in the priority grid is read-only. Drinking Window placeholder gives `e.g. 2024-2030` style guidance; expected format remains `YYYY-YYYY`.
+- Detail page uses a `Bottles · N total` section with per-location lot cards. Each available lot shows `Drink one` as the primary full-width action; `Move bottles` and `Correct count` live behind `Edit location/count`. Not-shipped lots show a `Receive` button. The old Qty card in the priority grid is removed. Drinking Window placeholder gives `e.g. 2024-2030` style guidance; expected format remains `YYYY-YYYY`.
 - Detail notes textarea starts short and auto-grows.
 - Detail bottom action bar is Back to Cellar, Previous Wine, Next Wine. Delete is only in the sticky header. Back uses `back_url`, not `history.back()`.
 - Previous/Next on detail preserve the filtered Main Cellar list: mobile card clicks pass `list=<filtered ids>` and `back=<current cellar URL>` query params to `GET /wine/<id>`.
 - `app.py -> wine_detail()` now passes `cellar_username`, `cellar_display_name`, `back_url`, `prev_wine_url`, and `next_wine_url` in addition to the detail picker lists.
 - Delete confirmation text is `Are you sure? This cannot be undone.` and posts to `/wine/<id>/delete` only after confirmation.
-- Recent relevant commits include `bd33cd2`, `e47502b`, `3317196`, `9c64bb2`, `5ccb08c`, `cfdf307`, `e50b04b`, and `d50c8d8`.
+- Recent relevant commits include `bd33cd2`, `e47502b`, `3317196`, `9c64bb2`, `5ccb08c`, `cfdf307`, `e50b04b`, `d50c8d8`, and `eb33c35`.
 
 Mobile detail page — current state (templates/detail.html):
 - Separate page at `GET /wine/<id>`; tapping a card in `templates/index.html` navigates here via `data-detail-url`.
@@ -109,10 +110,10 @@ Mobile detail page — current state (templates/detail.html):
 - `app.py -> wine_detail()` passes `user_locations`, `wine_types`, `bottle_sizes`, `sticker_colors`, `inventory_lots`, `drink_history`, `drank_total`, and `not_shipped_count` into `detail.html`.
 - Mobile-only layout in the same template; desktop view is separate and should not be changed unless requested.
 - **Hero**: bottle image wrapped in `.mobile-bottle-wrap` with diagonal type sash (same color scheme as card sash). Right side: type · vintage kicker with sticker dot, editable wine name textarea, flag+region row, grape+varietal row.
-- **Quick strip** (2 tiles): Location (read-only display of `wine.location_summary`, e.g. "House 4 · Apt 2"; `loc-color-*` class based on primary `wine.storage_location`), Drinking Window (editable, color-coded hold/ready/soon/overdue). Status tile removed — status is derived from inventory lots.
-- **Inventory section**: per-location lot cards (`.lot-card`), each showing location name, bottle count, and three action buttons: `Drink one` (opens modal for optional rating/notes, posts to `drink-one` route), `Move` (opens qty+destination modal, posts to `move` route), `Adjust` (expands inline −/count/+/Done controls; last bottle removal uses a custom confirm modal, not native `confirm()`). Not-shipped lots render as amber `.lot-card-incoming` cards with a `Receive` button (location selector modal, posts to `receive` route). Footer shows Drank total and `+ Add here` (existing add-location flow).
-- **Main body** (2×2 priority grid): Qty is read-only and points to Inventory for count changes. Source, Sticker, Rating follow; then full-width Notes. Sticker picker shows 6 dots in 2 rows of 3: Green/Yellow/Orange then Red/Blue/None. Rating shows as a large gold number (tap to edit); no star.
-- **Drink history**: collapsed section with recent drink rows and total drank count.
+- **Quick strip** (1 tile): Drinking Window only (editable, color-coded hold/ready/soon/overdue). The read-only Location quick tile was removed because location is represented by the per-lot Bottles section.
+- **Bottles section**: header shows `Bottles · N total`. Per-location lot cards (`.lot-card`) show location name and bottle count. Available lots show `Drink one` as the primary action; tapping `Edit location/count` reveals secondary `Move bottles` (qty+destination modal, posts to `move` route) and `Correct count` (expands inline minus/count/plus/Done controls; last bottle removal uses a custom confirm modal, not native `confirm()`). Not-shipped lots render as amber `.lot-card-incoming` cards with a `Receive` button (location selector modal, posts to `receive` route). Footer has `Add bottles` for the existing add-location flow.
+- **Main body**: Source, Sticker, Rating, then full-width Notes. The old Qty card was removed. Sticker picker shows 6 dots in 2 rows of 3: Green/Yellow/Orange then Red/Blue/None. Rating shows as a large gold number (tap to edit); no star.
+- **Drink history**: open by default, summary shows total drank count, displays the latest 3 drink rows, and uses a `See all` expander when more rows exist.
 - **Collapsed sections** (`<details>`): "Wine details" and "Purchase", each with a rotating ▾ chevron. All rows have emoji icon prefixes (🍷 🍇 📍 🌍 🍾 🗓️ 💳 🏷️ 💰). Label column is 100px wide so "🗓️ Order date" fits on one line. Date input is left-aligned with `padding-left: 4px`.
 - **Bottom action bar**: ← Back, ★ Rate, ✏️ Notes, ✓ Drank.
 - Naming: use `Location` (not `Storage`), `Source` (not `Retailer`).
@@ -278,7 +279,7 @@ else:
 - `/wine/<id>/status`
 - `/wine/<id>/storage_location`
 
-Compatibility note: mobile inventory counts should use the Inventory section controls. Older whole-wine quantity/status/location routes still exist and may collapse lots as compatibility behavior.
+Compatibility note: mobile inventory counts should use the Bottles section controls. Older whole-wine quantity/status/location routes still exist and may collapse lots as compatibility behavior.
 
 ### Bulk / Other
 - `POST /wines/bulk-status` — multi-select status change
@@ -359,6 +360,12 @@ Inventory follow-ups to prioritize next:
 - Expanded drink history when recent rows are not enough.
 - Wine family / vertical grouping across vintages.
 - Keep the current lots-only decision; do not add individual bottle tracking unless Steve changes direction.
+
+## Markdown Update Workflow
+
+When updating these project markdown files from Codex, prefer small scripted line/prefix replacements over repeated manual patches if text contains emoji, smart punctuation, or mojibake. Read the target lines with a script that prints JSON-escaped strings, replace exact lines or stable prefixes with Node or Python, then verify with `rg` before pushing. Avoid broad rewrites of the docs unless Steve asks; update only stale bullets and push only the markdown files involved.
+
+---
 
 ## Local Dev
 

@@ -28,19 +28,19 @@ Inventory-lots work now live:
 - Lots are not individual bottles. A lot is current inventory for one wine at one location/status/source/date/price.
 - Lot statuses are only `in_collection` and `not_shipped`; `drank` is a derived wine summary state and drink history record.
 - Existing/current imported wines create lots through migration, manual Add Wine, receipt/bulk add, batch scan add, and email parsing.
-- Mobile detail Inventory section uses per-location lot cards. Each in_collection lot card shows: location name, bottle count, `Drink one` button (opens modal for optional rating/notes before confirming), `Move` button (qty stepper + destination selector), and `Adjust` (inline −/count/+/Done; last-bottle removal uses a custom confirm modal).
+- Mobile detail uses a `Bottles - N total` section with per-location lot cards. Each available lot shows location name, bottle count, and a primary `Drink one` button; `Move bottles` and `Correct count` are tucked behind `Edit location/count`.
 - Not-shipped lots appear as amber cards with a `Receive` button (location selector modal, converts lot to in_collection).
 - `Drink one` writes `wine_drink_history` with optional rating and notes; always requires a specific lot_id from the per-lot button.
 - `Drink one` records history before deleting a final-bottle lot, so the last bottle works with PostgreSQL foreign keys.
-- `Adjust` controls are inventory corrections only and do not write drink history.
-- Last-bottle `Adjust` uses the custom confirmation modal and preserves the lot id before closing the modal.
+- `Correct count` controls are inventory corrections only and do not write drink history.
+- Last-bottle `Correct count` uses the custom confirmation modal and preserves the lot id before closing the modal.
 - `Move` requires a destination different from the source; if no other saved location exists, the mobile modal disables the action and says to add another location first.
 - `Receive` consolidates incoming bottles through `upsert_inventory_lot()` so receiving into an existing available location does not create duplicate same-location cards.
-- The old mobile Qty card is read-only and points users to Inventory for count changes.
+- The old mobile Qty card was removed; total current bottles now appears in the `Bottles - N total` section header.
 - Inventory routes: `POST /wine/<id>/drink-one`, `POST /wine/<id>/lot/<lot_id>/adjust`, `POST /wine/<id>/lot/add-location`, `POST /wine/<id>/add-lot`, `POST /wine/<id>/lot/<lot_id>/move`, `POST /wine/<id>/lot/<lot_id>/receive`.
 - Re-buy detection / "Add bottles to existing wine" UI is not implemented yet. `/wine/<id>/add-lot` exists for that future flow.
 - Wine family/vertical grouping is not implemented yet.
-- Latest inventory commits on GitHub main include `233b7be`, `2fe0b17`, `142a59e`, and `76c1de4`.
+- Latest inventory/detail commits on GitHub main include `233b7be`, `2fe0b17`, `142a59e`, `76c1de4`, and `eb33c35`.
 
 Recent UI work already pushed:
 - Mobile Cards view redesigned.
@@ -75,13 +75,13 @@ Current mobile UI state as of Apr 28, 2026 (supersedes older mobile bullets belo
 - Mobile detail page has a sticky wine-cellar header matching the Main Cellar page: hamburger menu on the left, centered cellar title, and a square trash icon on the right. The trash icon opens the delete confirmation.
 - Detail hero shows the editable wine name first, then vintage/sticker. The type word and type sash were removed from the detail hero.
 - Detail page wines without images use the same dark `No photo` silhouette.
-- Detail page Inventory section uses per-location lot cards with `Drink one`, `Move`, and `Adjust` actions per lot. Not-shipped lots show a `Receive` button. The old Qty card in the priority grid is read-only. Drinking Window placeholder gives `e.g. 2024-2030` style guidance; expected format remains `YYYY-YYYY`.
+- Detail page uses a `Bottles - N total` section with per-location lot cards. Each available lot shows `Drink one` as the primary full-width action; `Move bottles` and `Correct count` live behind `Edit location/count`. Not-shipped lots show a `Receive` button. The old Qty card in the priority grid is removed. Drinking Window placeholder gives `e.g. 2024-2030` style guidance; expected format remains `YYYY-YYYY`.
 - Detail notes textarea starts short and auto-grows.
 - Detail bottom action bar is Back to Cellar, Previous Wine, Next Wine. Delete is only in the sticky header. Back uses `back_url`, not `history.back()`.
 - Previous/Next on detail preserve the filtered Main Cellar list: mobile card clicks pass `list=<filtered ids>` and `back=<current cellar URL>` query params to `GET /wine/<id>`.
 - `app.py -> wine_detail()` now passes `cellar_username`, `cellar_display_name`, `back_url`, `prev_wine_url`, and `next_wine_url` in addition to the detail picker lists.
 - Delete confirmation text is `Are you sure? This cannot be undone.` and posts to `/wine/<id>/delete` only after confirmation.
-- Recent relevant commits include `bd33cd2`, `e47502b`, `3317196`, `9c64bb2`, `5ccb08c`, `cfdf307`, `e50b04b`, and `d50c8d8`.
+- Recent relevant commits include `bd33cd2`, `e47502b`, `3317196`, `9c64bb2`, `5ccb08c`, `cfdf307`, `e50b04b`, `d50c8d8`, and `eb33c35`.
 
 Current mobile detail page context:
 - Separate page at `GET /wine/<id>`, rendered by `templates/detail.html`. Tapping a card in `index.html` navigates here via `data-detail-url`. Do not change the mobile Cards/List layout unless I explicitly ask.
@@ -89,9 +89,9 @@ Current mobile detail page context:
 - Mobile-only layout in the same template; desktop detail view is separate and should not be changed unless requested.
 - Current mobile detail layout:
   - Hero: bottle image in `.mobile-bottle-wrap` with diagonal type sash (same color scheme as card). Right: type · vintage kicker with sticker dot, editable wine name, flag+region row, grape+varietal row.
-  - Quick strip (2 tiles): Location (read-only, shows `wine.location_summary` e.g. "House 4 · Apt 2"; `loc-color-*` based on primary location), Drinking Window (editable, color-coded). Status tile removed.
-  - Inventory section: per-location lot cards. Each card: location name, bottle count, `Drink one` (rating/notes modal), `Move` (qty+destination modal), `Adjust` (inline stepper, last-bottle uses custom confirm modal). Not-shipped cards show `Receive`. Footer: Drank total + `+ Add here`.
-  - Main body (2×2 grid): Qty is read-only and points to Inventory for count changes. Source, Sticker, Rating follow, then full-width Notes. Sticker is 2 rows of 3: Green/Yellow/Orange then Red/Blue/None. Rating shows as large gold number (no star).
+  - Quick strip (1 tile): Drinking Window only (editable, color-coded). The Location quick tile was removed because bottle locations are shown in Bottles.
+  - Bottles section: header shows `Bottles - N total`. Per-location lot cards show location name and bottle count. `Drink one` is the primary full-width action; `Edit location/count` reveals `Move bottles` and `Correct count`. Not-shipped cards show `Receive`. Footer button is `Add bottles`.
+  - Main body: Source, Sticker, Rating, then full-width Notes. The old Qty card was removed. Sticker is 2 rows of 3: Green/Yellow/Orange then Red/Blue/None. Rating shows as large gold number (no star).
   - Collapsed sections with rotating ▾ chevron: "Wine details" (🍷 🍇 📍 🌍 🍾) and "Purchase" (🗓️ 💳 🏷️ 💰). Label column 100px; date input left-aligned.
   - Bottom bar: ← Back, ★ Rate, ✏️ Notes, ✓ Drank.
 - Naming: use `Location` (not `Storage`), `Source` (not `Retailer`).
@@ -120,6 +120,10 @@ Important workflow notes:
 - After GitHub `main` updates, Railway auto-deploys.
 - Because of the local `.git` issue, local `git status` or `ahead/behind` may be misleading when `origin/main` is stale. Treat GitHub `main` as the source of truth if this happens.
 - If PowerShell `Invoke-RestMethod` or Git HTTPS fails, use Node/fetch with the same token; that worked in the prior chat.
+
+Doc update workflow:
+- When updating CLAUDE.md, NEW_CHAT_PROMPT.md, or plan markdown files from Codex, use exact scripted line/prefix replacements when text includes emoji, smart punctuation, or mojibake. First print the target lines as JSON-escaped strings if needed, then replace exact lines or stable prefixes with Node or Python, verify with `rg`, and push only the markdown files that actually changed.
+- Avoid repeated broad manual patches against visually similar text; encoding differences can make them fail.
 
 Local dev command:
 ```powershell
