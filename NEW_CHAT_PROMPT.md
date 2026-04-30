@@ -28,12 +28,14 @@ Project context:
 - Flask app: `app.py`; DB helpers/migrations: `db.py`; main cellar: `templates/index.html`; wine detail: `templates/detail.html`.
 - Local database is SQLite `wines.db`; production is PostgreSQL.
 - Schema changes must go through `db.py -> migrate()`.
+- Latest production UI work: mobile Bottles panel has a `+ Add` header button, pencil SVG edit icon on cards (replaced `⋯`), zero-state CTA when inventory is empty, "View all" toggle for drink history beyond 4 rows, and larger location dots. Commit `ca6bf495de57`.
 
 Inventory truth:
 - Current inventory uses `wine_inventory_lots`, not individual bottle records.
 - `wines.quantity/status/storage_location/location_summary`, source/date/price fields, and total price are cached summaries synced by `db.sync_wine_summary()`.
 - Lots use only `in_collection` and `not_shipped`; `drank` is a derived wine summary state plus drink history.
 - Drink history lives in `wine_drink_history` and keeps a `storage_location` snapshot.
+- Mobile detail inventory changes should stay in `templates/detail.html` unless backend behavior is explicitly requested.
 
 Do not touch unless I explicitly ask:
 - `templates/index.html` mobile Cards/List layout.
