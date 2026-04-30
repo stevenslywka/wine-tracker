@@ -1362,6 +1362,11 @@
       .ledger-card.loc-color-4 { background: rgba(92,58,26,0.10); border-color: rgba(140,90,42,0.60); }
       .ledger-card.loc-color-4 .ledger-card-loc,
       .ledger-card.loc-color-4 .ledger-card-count { color: #e0a870; }
+      .ledger-cards > .ledger-card:only-child.loc-color-0 { background: rgba(26,58,92,0.10); border-color: rgba(42,106,156,0.60); }
+      .ledger-cards > .ledger-card:only-child.loc-color-1 { background: rgba(92,26,26,0.10); border-color: rgba(140,42,42,0.60); }
+      .ledger-cards > .ledger-card:only-child.loc-color-2 { background: rgba(26,58,42,0.10); border-color: rgba(42,106,58,0.60); }
+      .ledger-cards > .ledger-card:only-child.loc-color-3 { background: rgba(58,26,92,0.10); border-color: rgba(90,42,140,0.60); }
+      .ledger-cards > .ledger-card:only-child.loc-color-4 { background: rgba(92,58,26,0.10); border-color: rgba(140,90,42,0.60); }
       .manage-section {
         padding: 12px 0;
         border-top: 1px solid rgba(255,248,238,0.09);
@@ -1785,10 +1790,10 @@
         <div class="delete-confirm-title" id="drinkOneTitle">Drink one</div>
         <div class="delete-confirm-copy" id="drinkOneSubtitle"></div>
         <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
-          <div>
-            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Rating (optional, 0–5)</label>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;white-space:nowrap;">Rating <span style="font-weight:600;opacity:0.65;">(0–5, optional)</span></label>
             <input type="number" id="drinkRatingInput" min="0" max="5" step="0.5" inputmode="decimal" placeholder="—"
-                   style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;">
+                   style="width:72px;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;text-align:center;">
           </div>
           <div>
             <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Notes (optional)</label>
@@ -1816,41 +1821,48 @@
       <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="addBottleTitle">
         <div class="delete-confirm-title neutral-title" id="addBottleTitle">Add bottles</div>
         <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
-          <div>
-            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Quantity</label>
-            <div style="display:grid;grid-template-columns:36px 1fr 36px;gap:6px;align-items:center;">
-              <button type="button" id="addQtyMinus"
-                      style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(231,189,112,0.42);background:#211a13;color:var(--mobile-accent);font-size:1.1rem;font-weight:900;line-height:1;">&minus;</button>
-              <input type="number" id="addBottleQtyInput" min="1" value="1" inputmode="numeric"
-                     style="text-align:center;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px;">
-              <button type="button" id="addQtyPlus"
-                      style="width:36px;height:36px;border-radius:50%;border:1px solid rgba(231,189,112,0.42);background:#211a13;color:var(--mobile-accent);font-size:1.1rem;font-weight:900;line-height:1;">+</button>
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:end;">
+            <div>
+              <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Qty</label>
+              <div style="display:flex;align-items:center;gap:5px;">
+                <button type="button" id="addQtyMinus"
+                        style="width:32px;height:32px;flex-shrink:0;border-radius:50%;border:1px solid rgba(231,189,112,0.42);background:#211a13;color:var(--mobile-accent);font-size:1.1rem;font-weight:900;line-height:1;">&minus;</button>
+                <input type="number" id="addBottleQtyInput" min="1" value="1" inputmode="numeric"
+                       style="width:38px;text-align:center;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:6px 4px;">
+                <button type="button" id="addQtyPlus"
+                        style="width:32px;height:32px;flex-shrink:0;border-radius:50%;border:1px solid rgba(231,189,112,0.42);background:#211a13;color:var(--mobile-accent);font-size:1.1rem;font-weight:900;line-height:1;">+</button>
+              </div>
+            </div>
+            <div>
+              <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Location</label>
+              <select id="addBottleLocationSelect"
+                      style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:6px 10px;appearance:none;">
+                {% for location in user_locations %}
+                <option value="{{ location }}">{{ location }}</option>
+                {% endfor %}
+              </select>
             </div>
           </div>
           <div>
-            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Location</label>
-            <select id="addBottleLocationSelect"
-                    style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;appearance:none;">
-              {% for location in user_locations %}
-              <option value="{{ location }}">{{ location }}</option>
-              {% endfor %}
-            </select>
-          </div>
-          <div>
-            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Status</label>
-            <select id="addBottleStatusSelect"
-                    style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;appearance:none;">
-              <option value="in_collection">Available</option>
-              <option value="not_shipped">Not shipped</option>
-            </select>
+            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:6px;">Status</label>
+            <div style="display:flex;gap:8px;">
+              <button type="button" class="add-status-pill" data-status="in_collection"
+                      style="flex:1;padding:8px 4px;border-radius:999px;border:1px solid rgba(49,168,106,0.5);background:#214833;color:#8fd0a7;font-size:0.82rem;font-weight:900;cursor:pointer;">Available</button>
+              <button type="button" class="add-status-pill" data-status="not_shipped"
+                      style="flex:1;padding:8px 4px;border-radius:999px;border:1px solid rgba(255,248,238,0.14);background:#211a13;color:var(--mobile-muted);font-size:0.82rem;font-weight:900;cursor:pointer;">Not shipped</button>
+            </div>
+            <input type="hidden" id="addBottleStatusSelect" value="in_collection">
           </div>
           <details>
             <summary style="color:var(--mobile-muted);font-size:0.78rem;font-weight:900;cursor:pointer;list-style:none;">Purchase details</summary>
             <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;">
               <input type="text" id="addBottleSourceInput" placeholder="Source"
                      style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.9rem;font-weight:800;padding:8px 10px;">
-              <input type="date" id="addBottleDateInput"
-                     style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.9rem;font-weight:800;padding:8px 10px;">
+              <div>
+                <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Purchase date</label>
+                <input type="date" id="addBottleDateInput"
+                       style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.9rem;font-weight:800;padding:8px 10px;text-align:left;">
+              </div>
               <input type="number" id="addBottlePriceInput" min="0" step="0.01" inputmode="decimal" placeholder="Paid each"
                      style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.9rem;font-weight:800;padding:8px 10px;">
             </div>
@@ -2292,9 +2304,9 @@
         pendingLotQty = qty;
         pendingDrinkLocation = loc;
         const title = document.getElementById('drinkOneTitle');
-        if (title) title.textContent = `Drink from ${loc}`;
+        if (title) title.textContent = `Drink from ${loc} · ${qty} bottle${qty !== 1 ? 's' : ''} left`;
         const subtitle = document.getElementById('drinkOneSubtitle');
-        if (subtitle) subtitle.textContent = `From: ${loc} · ${qty} bottle${qty !== 1 ? 's' : ''} left`;
+        if (subtitle) subtitle.textContent = '';
         document.getElementById('drinkRatingInput').value = '';
         document.getElementById('drinkNotesInput').value = '';
         const dateRow = document.getElementById('drinkDateRow');
@@ -2364,20 +2376,33 @@
       });
 
       // ── Add bottles sheet ──
+      function setAddStatusPill(activeStatus) {
+        document.querySelectorAll('.add-status-pill').forEach(p => {
+          const active = p.dataset.status === activeStatus;
+          p.style.borderColor = active ? 'rgba(49,168,106,0.5)' : 'rgba(255,248,238,0.14)';
+          p.style.background = active ? '#214833' : '#211a13';
+          p.style.color = active ? '#8fd0a7' : 'var(--mobile-muted)';
+        });
+        const inp = document.getElementById('addBottleStatusSelect');
+        if (inp) inp.value = activeStatus;
+      }
+      document.querySelectorAll('.add-status-pill').forEach(pill => {
+        pill.addEventListener('click', () => setAddStatusPill(pill.dataset.status));
+      });
+
       function openAddBottleModal(location) {
         const qty = document.getElementById('addBottleQtyInput');
         const loc = document.getElementById('addBottleLocationSelect');
-        const status = document.getElementById('addBottleStatusSelect');
         const title = document.getElementById('addBottleTitle');
         if (title) title.textContent = location ? `Add to ${location}` : 'Add bottles';
         if (qty) qty.value = 1;
-        if (status) status.value = 'in_collection';
+        setAddStatusPill('in_collection');
         if (loc && location) loc.value = location;
         const source = document.getElementById('addBottleSourceInput');
         const date = document.getElementById('addBottleDateInput');
         const price = document.getElementById('addBottlePriceInput');
         if (source) source.value = '';
-        if (date) date.value = '';
+        if (date) date.value = new Date().toISOString().slice(0, 10);
         if (price) price.value = '';
         const modal = document.getElementById('addBottleModal');
         modal.classList.add('visible');
@@ -2430,9 +2455,9 @@
         pendingLocation = location;
         pendingLocationQty = quantity;
         const title = document.getElementById('locationEditTitle');
-        if (title) title.textContent = `Manage ${location}`;
+        if (title) title.textContent = `Manage ${location} · ${quantity} bottle${quantity !== 1 ? 's' : ''} left`;
         const subtitle = document.getElementById('locationEditSubtitle');
-        if (subtitle) subtitle.textContent = `${location} · ${quantity} bottle${quantity !== 1 ? 's' : ''} left`;
+        if (subtitle) subtitle.textContent = '';
         const correct = document.getElementById('correctLocationQtyInput');
         const moveQty = document.getElementById('moveLocationQtyInput');
         if (correct) correct.value = quantity;
