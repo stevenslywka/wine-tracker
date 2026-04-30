@@ -81,10 +81,10 @@ def render_detail(db, wine_app) -> str:
     if response.status_code != 200:
         fail(f"/wine/{wine['id']} returned HTTP {response.status_code}")
     html = response.get_data(as_text=True)
-    for marker in ("Bottle Ledger", "addBottleModal", "locationEditModal", "historyEditModal"):
+    for marker in ("Bottles", "addBottleModal", "locationEditModal", "historyEditModal"):
         if marker not in html:
             fail(f"Rendered detail page missing {marker}")
-    ok(f"Rendered /wine/{wine['id']} with Bottle Ledger markup")
+    ok(f"Rendered /wine/{wine['id']} with Bottles ledger markup")
     return html
 
 

@@ -1,4 +1,4 @@
-﻿# Wine Tracker - Codex Project Guide
+# Wine Tracker - Codex Project Guide
 
 Personal Flask wine cellar app replacing Vivino. Multi-user. Local dev uses SQLite; production uses PostgreSQL on Railway.
 
@@ -6,7 +6,7 @@ Personal Flask wine cellar app replacing Vivino. Multi-user. Local dev uses SQLi
 - Live site: `https://stevenwinecellar.up.railway.app/`
 - GitHub: `https://github.com/stevenslywka/wine-tracker`
 - Railway deploys automatically from GitHub `main`
-- Latest production commit noted in this guide: `2ef6997` (`Redesign mobile bottle ledger`)
+- Latest production work noted in this guide: mobile `Bottles` stock-card redesign.
 
 ## Current Truth
 
@@ -16,7 +16,7 @@ Trust this section first when older notes or local Git disagree.
 - `wines.quantity`, `wines.status`, `wines.storage_location`, `wines.location_summary`, source/date/price fields, and `wines.total_price` are cached summaries synced by `db.sync_wine_summary()`.
 - Lots use only `in_collection` and `not_shipped`. `drank` is a derived wine summary state plus drink history, not a lot status.
 - Drink history lives in `wine_drink_history`; `storage_location` snapshots where the bottle was consumed from, so history remains readable/editable even if lots are merged or deleted.
-- Mobile Wine Detail uses a compact `Bottle Ledger`: summary by location, per-location `- / left bought / + / ...`, incoming `Receive`, and tappable Drink History rows for edit/delete.
+- Mobile Wine Detail uses a compact `Bottles` stock-control panel: dotted location summary, two-column location cards with `- / + / ...`, incoming `Receive`, and tappable Drink History rows for edit/delete.
 - Detail-page `+ Add` adds bottles to an existing wine through `/wine/<id>/add-lot`; broader Add Wine re-buy detection is still future work.
 - Main Cellar mobile Cards/List and desktop views are separate work areas. Do not change them unless requested.
 
@@ -46,7 +46,7 @@ File: `templates/detail.html`; route: `GET /wine/<id>` from `app.py -> wine_deta
 - Sticky mobile header: menu left, centered cellar title, trash icon right.
 - Hero: image/no-photo placeholder, editable name, vintage/sticker, region/origin, varietal.
 - Quick strip: Drinking Window only.
-- Bottle Ledger: `Bottles - N total - N Apt - N House`; available rows show `Location`, `-`, `N left / M bought`, `+`, `...`; not-shipped rows show `Receive`.
+- Bottles panel: `N total` plus colored location dots; available inventory shows two-column location cards with count, `-`, `+`, and `...`; not-shipped lots show an incoming `Receive` strip.
 - `-` opens Drink one for that location with optional rating/notes/date.
 - `+` opens Add bottles, prefilled to that location, with optional purchase details.
 - `...` opens move/correct count controls; corrections do not create drink history.
@@ -153,7 +153,7 @@ The helper checks:
 - Python syntax for `app.py` and `db.py`.
 - `db.migrate()` against local SQLite.
 - Flask test-client render of a real `/wine/<id>` page.
-- Presence of Bottle Ledger and history edit markup.
+- Presence of Bottles ledger and history edit markup.
 - Inline script syntax by extracting the rendered `<script>` and checking it with Node when available.
 
 For production pushes, also verify:

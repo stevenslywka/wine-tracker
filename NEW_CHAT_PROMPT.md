@@ -1,4 +1,4 @@
-﻿# Wine Tracker New Chat Prompt
+# Wine Tracker New Chat Prompt
 
 Copy/paste this at the start of a new Codex chat:
 
@@ -21,7 +21,7 @@ Current truth:
 - `wines.quantity/status/storage_location/location_summary`, source/date/price, and total price are cached summaries synced by `db.sync_wine_summary()`.
 - Lots use `in_collection` and `not_shipped`; `drank` is derived from no available/incoming lots plus drink history.
 - Drink history lives in `wine_drink_history` and includes `storage_location` so rows can show/edit where a bottle was consumed from.
-- Mobile Wine Detail now uses compact Bottle Ledger rows: `Location`, `-`, `N left / M bought`, `+`, `...`; Drink History rows are tappable for edit/delete.
+- Mobile Wine Detail now uses a compact `Bottles` stock-control panel: dotted location summary, two-column location cards with `-`, `+`, and `...`; Drink History rows are tappable for edit/delete.
 - Detail-page `+ Add` uses `/wine/<id>/add-lot`; broader Add Wine re-buy detection is still future work.
 
 Do not touch unless I explicitly ask:
@@ -34,7 +34,7 @@ Current mobile Wine Detail shape:
 - Sticky header with menu, centered cellar title, trash icon.
 - Hero: image/no-photo, editable name, vintage/sticker, region/origin, varietal.
 - Quick strip: Drinking Window only.
-- Bottle Ledger: summary by location; `-` drinks one from that location; `+` opens Add bottles; `...` opens move/correct count; incoming rows show `Receive`; Drink History rows open edit/delete.
+- Bottles panel: summary by location; `-` drinks one from that location; `+` opens Add bottles; `...` opens move/correct count; incoming lots show `Receive`; Drink History rows open edit/delete.
 - Main body: Source, Sticker, Rating, Notes; then Wine details and Purchase sections.
 - Bottom action bar: Back to Cellar, Previous Wine, Next Wine.
 

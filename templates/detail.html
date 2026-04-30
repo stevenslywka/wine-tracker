@@ -1137,6 +1137,20 @@
         margin-top: 4px;
         overflow-wrap: anywhere;
       }
+      .ledger-summary-dot {
+        display: inline-block;
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        margin: 0 4px 0 8px;
+        vertical-align: 1px;
+        flex-shrink: 0;
+      }
+      .loc-dot-0 { background: #7eb8cb; }
+      .loc-dot-1 { background: #e08080; }
+      .loc-dot-2 { background: #7ecb9e; }
+      .loc-dot-3 { background: #c0a0e0; }
+      .loc-dot-4 { background: #e0a870; }
       .ledger-list {
         display: grid;
         gap: 7px;
@@ -1209,6 +1223,107 @@
         font-weight: 900;
         padding: 8px 12px;
         line-height: 1;
+      }
+      .ledger-cards {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 9px;
+        margin-top: 10px;
+      }
+      .ledger-card {
+        border: 1px solid rgba(255,248,238,0.12);
+        border-radius: 11px;
+        background: var(--mobile-panel);
+        padding: 11px 10px 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-height: 100px;
+      }
+      .ledger-cards > .ledger-card:only-child,
+      .ledger-cards > .ledger-card:last-child:nth-child(odd) {
+        grid-column: 1 / -1;
+      }
+      .ledger-card-loc {
+        color: var(--mobile-muted);
+        font-size: 0.65rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        align-self: flex-start;
+        margin-bottom: 6px;
+      }
+      .ledger-card-count {
+        font-size: 2.2rem;
+        font-weight: 900;
+        line-height: 1;
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--mobile-text);
+      }
+      .ledger-card-controls {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .ledger-card-step {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        border: 1px solid rgba(231,189,112,0.42);
+        background: #211a13;
+        color: var(--mobile-accent);
+        font-size: 1.15rem;
+        font-weight: 900;
+        line-height: 1;
+        padding: 0;
+        flex-shrink: 0;
+      }
+      .ledger-card-kebab {
+        border: 1px solid rgba(255,248,238,0.11);
+        border-radius: 999px;
+        background: transparent;
+        color: var(--mobile-muted);
+        font-size: 0.82rem;
+        font-weight: 900;
+        padding: 5px 9px;
+        line-height: 1;
+        opacity: 0.7;
+        flex-shrink: 0;
+      }
+      .ledger-card.loc-color-0 { background: #1a3a5c; border-color: #2a6a9c; }
+      .ledger-card.loc-color-0 .ledger-card-loc,
+      .ledger-card.loc-color-0 .ledger-card-count { color: #7eb8cb; }
+      .ledger-card.loc-color-1 { background: #5c1a1a; border-color: #8c2a2a; }
+      .ledger-card.loc-color-1 .ledger-card-loc,
+      .ledger-card.loc-color-1 .ledger-card-count { color: #e08080; }
+      .ledger-card.loc-color-2 { background: #1a3a2a; border-color: #2a6a3a; }
+      .ledger-card.loc-color-2 .ledger-card-loc,
+      .ledger-card.loc-color-2 .ledger-card-count { color: #7ecb9e; }
+      .ledger-card.loc-color-3 { background: #3a1a5c; border-color: #5a2a8c; }
+      .ledger-card.loc-color-3 .ledger-card-loc,
+      .ledger-card.loc-color-3 .ledger-card-count { color: #c0a0e0; }
+      .ledger-card.loc-color-4 { background: #5c3a1a; border-color: #8c5a2a; }
+      .ledger-card.loc-color-4 .ledger-card-loc,
+      .ledger-card.loc-color-4 .ledger-card-count { color: #e0a870; }
+      .ledger-incoming-strip {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: 9px;
+        padding: 9px 12px;
+        border: 1px solid rgba(231,189,112,0.22);
+        border-radius: 9px;
+        background: rgba(70,55,10,0.25);
+        color: var(--mobile-accent);
+        font-size: 0.84rem;
+        font-weight: 900;
       }
       .ledger-empty {
         color: var(--mobile-muted);
@@ -1358,51 +1473,49 @@
 
     <section class="ledger-section" id="bottleLedger">
       <div class="ledger-title-row">
-        <div class="ledger-title">Bottle Ledger</div>
-        {% if can_edit %}<button type="button" class="ledger-add-btn" id="openAddBottleSheet">+ Add</button>{% endif %}
+        <div class="ledger-title">Bottles</div>
       </div>
       <div class="ledger-summary">
-        Bottles · {{ wine.quantity or 0 }} total
-        {% for item in available_locations %} · {{ item.quantity }} {{ item.location }}{% endfor %}
+        {{ wine.quantity or 0 }} total
+        {% for item in available_locations %}
+        <span class="ledger-summary-dot loc-dot-{{ loop.index0 % 5 }}"></span>{{ item.quantity }} {{ item.location }}
+        {% endfor %}
       </div>
 
       <div class="ledger-list">
-        {% for item in available_locations %}
-        <div class="ledger-row {% if not can_edit %}readonly{% endif %}"
-             data-location="{{ item.location }}"
-             data-quantity="{{ item.quantity }}"
-             data-bought="{{ item.bought }}">
-          <div>
-            <div class="ledger-location">{{ item.location }}</div>
-            {% if item.summary %}<div class="inventory-meta">{{ item.summary }}</div>{% endif %}
+        <div class="ledger-cards">
+          {% for item in available_locations %}
+          {% set color_idx = loop.index0 % 5 %}
+          <div class="ledger-card {% if not can_edit %}readonly{% endif %} loc-color-{{ color_idx }}"
+               data-location="{{ item.location }}"
+               data-quantity="{{ item.quantity }}"
+               data-bought="{{ item.bought }}">
+            <div class="ledger-card-loc">{{ item.location }}</div>
+            <div class="ledger-card-count">{{ item.quantity }}</div>
+            <div class="ledger-card-controls">
+              {% if can_edit %}
+              <button type="button" class="ledger-card-step ledger-drink-btn"
+                      data-location="{{ item.location }}"
+                      data-quantity="{{ item.quantity }}"
+                      aria-label="Drink one from {{ item.location }}">&minus;</button>
+              <button type="button" class="ledger-card-step ledger-plus-btn"
+                      data-location="{{ item.location }}"
+                      aria-label="Add one to {{ item.location }}">+</button>
+              <button type="button" class="ledger-card-kebab ledger-edit-btn"
+                      data-location="{{ item.location }}"
+                      data-quantity="{{ item.quantity }}"
+                      aria-label="Edit {{ item.location }} bottles">&#8943;</button>
+              {% endif %}
+            </div>
           </div>
-          {% if can_edit %}
-          <button type="button" class="ledger-icon-btn ledger-drink-btn"
-                  data-location="{{ item.location }}"
-                  data-quantity="{{ item.quantity }}"
-                  aria-label="Drink one from {{ item.location }}">−</button>
-          {% endif %}
-          <div class="ledger-count">{{ item.quantity }} left / {{ item.bought }} bought</div>
-          {% if can_edit %}
-          <button type="button" class="ledger-icon-btn ledger-plus-btn"
-                  data-location="{{ item.location }}"
-                  aria-label="Add one to {{ item.location }}">+</button>
-          <button type="button" class="ledger-edit-btn"
-                  data-location="{{ item.location }}"
-                  data-quantity="{{ item.quantity }}"
-                  aria-label="Edit {{ item.location }} bottles">...</button>
-          {% endif %}
+          {% else %}
+          <div class="ledger-empty" style="grid-column:1/-1;">No bottles available</div>
+          {% endfor %}
         </div>
-        {% else %}
-        <div class="ledger-empty">No bottles available</div>
-        {% endfor %}
 
         {% for item in incoming_locations %}
-        <div class="ledger-row incoming">
-          <div>
-            <div class="ledger-location">Not shipped · {{ item.quantity }} incoming</div>
-            {% if item.summary %}<div class="inventory-meta">{{ item.summary }}</div>{% endif %}
-          </div>
+        <div class="ledger-incoming-strip">
+          <span>&#9873; {{ item.quantity }} incoming</span>
           {% if can_edit and item.lot_ids %}
           <button type="button" class="ledger-receive-btn"
                   data-lot-id="{{ item.lot_ids[0] }}"
