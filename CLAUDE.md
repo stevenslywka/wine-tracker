@@ -40,6 +40,9 @@ Latest inventory-lots work pushed to GitHub:
   - `2fe0b17` (`Preserve wine metadata during inventory sync`)
   - `142a59e` (`Add mobile inventory lot controls`)
   - `76c1de4` (`Clarify mobile inventory controls`)
+  - `26c01c5` (`Add move and receive inventory lot routes`)
+  - `afac831` (`Redesign mobile inventory UI: per-lot cards, Drink one modal, Move, Receive`)
+  - `6d49096` (`Replace last-bottle native confirm with custom modal`)
 
 Inventory model notes:
 - Use lots, not individual bottles. A lot is current inventory for one wine at one location/status/source/date/price.
@@ -84,7 +87,7 @@ Current mobile UI state as of Apr 28, 2026 (supersedes older mobile bullets belo
 - Mobile detail page has a sticky wine-cellar header matching the Main Cellar page: hamburger menu on the left, centered cellar title, and a square trash icon on the right. The trash icon opens the delete confirmation.
 - Detail hero shows the editable wine name first, then vintage/sticker. The type word and type sash were removed from the detail hero.
 - Detail page wines without images use the same dark `No photo` silhouette.
-- Detail page has a mobile Inventory section for bottle counts. The old Qty card is read-only. Drinking Window placeholder gives `e.g. 2024-2030` style guidance; expected format remains `YYYY-YYYY`.
+- Detail page Inventory section uses per-location lot cards with `Drink one`, `Move`, and `Adjust` actions per lot. Not-shipped lots show a `Receive` button. The old Qty card in the priority grid is read-only. Drinking Window placeholder gives `e.g. 2024-2030` style guidance; expected format remains `YYYY-YYYY`.
 - Detail notes textarea starts short and auto-grows.
 - Detail bottom action bar is Back to Cellar, Previous Wine, Next Wine. Delete is only in the sticky header. Back uses `back_url`, not `history.back()`.
 - Previous/Next on detail preserve the filtered Main Cellar list: mobile card clicks pass `list=<filtered ids>` and `back=<current cellar URL>` query params to `GET /wine/<id>`.
@@ -98,8 +101,8 @@ Mobile detail page — current state (templates/detail.html):
 - `app.py -> wine_detail()` passes `user_locations`, `wine_types`, `bottle_sizes`, `sticker_colors`, `inventory_lots`, `drink_history`, `drank_total`, and `not_shipped_count` into `detail.html`.
 - Mobile-only layout in the same template; desktop view is separate and should not be changed unless requested.
 - **Hero**: bottle image wrapped in `.mobile-bottle-wrap` with diagonal type sash (same color scheme as card sash). Right side: type · vintage kicker with sticker dot, editable wine name textarea, flag+region row, grape+varietal row.
-- **Quick strip** (3 pill badges, `.quick-tile`): Status (green/amber/burgundy tint per status), Location (loc-color-* scheme matching cards), Drinking Window (color-coded hold/ready/soon/overdue). Status and Location tile colors update live via JS when the select changes. Select text is center-aligned via `text-align-last: center`.
-- **Inventory section**: shows available quantity, `location_summary`, per-location lots, `Drank one`, `Add location`, and per-lot `[-]/[+]` Adjust count controls. `Drank one` writes drink history; `[-]/[+]` only correct inventory counts.
+- **Quick strip** (2 tiles): Location (read-only display of `wine.location_summary`, e.g. "House 4 · Apt 2"; `loc-color-*` class based on primary `wine.storage_location`), Drinking Window (editable, color-coded hold/ready/soon/overdue). Status tile removed — status is derived from inventory lots.
+- **Inventory section**: per-location lot cards (`.lot-card`), each showing location name, bottle count, and three action buttons: `Drink one` (opens modal for optional rating/notes, posts to `drink-one` route), `Move` (opens qty+destination modal, posts to `move` route), `Adjust` (expands inline −/count/+/Done controls; last bottle removal uses a custom confirm modal, not native `confirm()`). Not-shipped lots render as amber `.lot-card-incoming` cards with a `Receive` button (location selector modal, posts to `receive` route). Footer shows Drank total and `+ Add here` (existing add-location flow).
 - **Main body** (2×2 priority grid): Qty is read-only and points to Inventory for count changes. Source, Sticker, Rating follow; then full-width Notes. Sticker picker shows 6 dots in 2 rows of 3: Green/Yellow/Orange then Red/Blue/None. Rating shows as a large gold number (tap to edit); no star.
 - **Drink history**: collapsed section with recent drink rows and total drank count.
 - **Collapsed sections** (`<details>`): "Wine details" and "Purchase", each with a rotating ▾ chevron. All rows have emoji icon prefixes (🍷 🍇 📍 🌍 🍾 🗓️ 💳 🏷️ 💰). Label column is 100px wide so "🗓️ Order date" fits on one line. Date input is left-aligned with `padding-left: 4px`.
@@ -276,6 +279,8 @@ Compatibility note: mobile inventory counts should use the Inventory section con
 - `POST /wine/<id>/lot/<lot_id>/adjust` — inventory correction only, adjusts one lot by +/- 1; does not write drink history
 - `POST /wine/<id>/lot/add-location` — add current inventory to a saved location
 - `POST /wine/<id>/add-lot` — backend endpoint for future re-buy flow to add bottles to an existing wine
+- `POST /wine/<id>/lot/<lot_id>/move` — move qty bottles from a source in_collection lot to a destination user location; upserts destination lot, decrements/deletes source; verifies ownership and valid user location
+- `POST /wine/<id>/lot/<lot_id>/receive` — convert a not_shipped lot to in_collection at a chosen storage location; verifies ownership and valid user location
 - `POST /wine/add` — add single wine
 - `POST /wine/add-bulk` — add from receipt scan
 - `POST /wine/scan-batch-labels` — AI scan of one multi-bottle photo, returns editable batch candidates
@@ -343,7 +348,6 @@ Body is a CSS flexbox column (`flex: 1; min-height: 0` chain). Only `#tableScrol
 
 Inventory follow-ups to prioritize next:
 - Re-buy detection in Add Wine, using `POST /wine/<id>/add-lot`.
-- Receive shipment flow for not-shipped lots.
 - Expanded drink history when recent rows are not enough.
 - Wine family / vertical grouping across vintages.
 - Keep the current lots-only decision; do not add individual bottle tracking unless Steve changes direction.
