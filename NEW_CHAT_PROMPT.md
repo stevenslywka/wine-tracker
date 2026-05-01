@@ -18,6 +18,7 @@ Important workflow guardrails:
 - Treat `AGENTS.md` as the source of truth for project rules, schema, inventory behavior, verification, and deploy notes.
 - Local Git metadata may be stale or locked because some pushes are done through the GitHub API. If local Git disagrees with GitHub `main`, treat GitHub `main` as source of truth.
 - If local Git metadata writes fail, do not fight it. Use the GitHub API workflow in `AGENTS.md` only if I explicitly ask you to push.
+- When pushing behavior/UI changes that alter current project truth, update `AGENTS.md` and `NEW_CHAT_PROMPT.md` in the same push or in an immediate follow-up push.
 - Do not delete local files, push/transmit data, or use external network access unless I explicitly ask or approve.
 - Please explain steps in plain language.
 
@@ -28,14 +29,15 @@ Project context:
 - Flask app: `app.py`; DB helpers/migrations: `db.py`; main cellar: `templates/index.html`; wine detail: `templates/detail.html`.
 - Local database is SQLite `wines.db`; production is PostgreSQL.
 - Schema changes must go through `db.py -> migrate()`.
-- Latest production UI work: mobile Drink History is a collapsed tasting-journal section with one-line rows, an edit bottom sheet, and saved-location color mapping so House stays red even when it is the only visible location.
+- Latest production UI work: mobile Wine Detail polish for Add bottles, Manage bottles, Receive Shipment, Drink History rows, and collapsed section previews.
 
 Inventory truth:
 - Current inventory uses `wine_inventory_lots`, not individual bottle records.
 - `wines.quantity/status/storage_location/location_summary`, source/date/price fields, and total price are cached summaries synced by `db.sync_wine_summary()`.
 - Lots use only `in_collection` and `not_shipped`; `drank` is a derived wine summary state plus drink history.
 - Drink history lives in `wine_drink_history` and keeps a `storage_location` snapshot.
-- Mobile detail inventory changes should stay in `templates/detail.html` unless backend behavior is explicitly requested.
+- Mobile detail inventory changes usually stay in `templates/detail.html`; backend behavior is needed for inventory semantics such as partial Receive Shipment.
+- On mobile detail, Add bottles uses `Not Shipped` as a Location option that maps to lot status `not_shipped`; saved locations map to available inventory. Receive Shipment can partially receive incoming lots.
 
 Do not touch unless I explicitly ask:
 - `templates/index.html` mobile Cards/List layout.
