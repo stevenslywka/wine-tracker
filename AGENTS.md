@@ -6,7 +6,7 @@ Personal Flask wine cellar app replacing Vivino. Multi-user. Local dev uses SQLi
 - Live site: `https://stevenwinecellar.up.railway.app/`
 - GitHub: `https://github.com/stevenslywka/wine-tracker`
 - Railway deploys automatically from GitHub `main`
-- Latest production work noted in this guide: mobile Wine Detail collapsible Bottles/Cellar sections with compact previews, plus Add bottles, Manage bottles, Receive Shipment, Drink History rows, and collapsed section polish, pushed to GitHub `main` after local verification.
+- Latest production work noted in this guide: mobile Wine Detail line-item section order with standalone Drink History after Cellar, collapsible Bottles/Cellar sections with compact previews, plus Add bottles, Manage bottles, Receive Shipment, and collapsed section polish, pushed to GitHub `main` after local verification.
 
 ## Current Truth
 
@@ -16,7 +16,7 @@ Trust this section first when older notes or local Git disagree.
 - `wines.quantity`, `wines.status`, `wines.storage_location`, `wines.location_summary`, source/date/price fields, and `wines.total_price` are cached summaries synced by `db.sync_wine_summary()`.
 - Lots use only `in_collection` and `not_shipped`. `drank` is a derived wine summary state plus drink history, not a lot status.
 - Drink history lives in `wine_drink_history`; `storage_location` snapshots where the bottle was consumed from, so history remains readable/editable even if lots are merged or deleted.
-- Mobile Wine Detail uses compact collapsible sections for Bottles, Cellar, Drink History, Wine details, and Purchase. The Bottles section has a compact count preview, tinted two-column location stock cards with top-right manage (`...`) and a `- / count / +` stepper row, incoming `Receive Shipment`, compact Drink/Add/Manage sheets, and a collapsed Drink History tasting-journal section with tappable rows for edit/delete.
+- Mobile Wine Detail uses compact collapsible sections in this order: Bottles, Cellar, Drink History, Wine details, Purchase. The Bottles section has a compact count preview, tinted two-column location stock cards with top-right manage (`...`) and a `- / count / +` stepper row, incoming `Receive Shipment`, and compact Drink/Add/Manage sheets. Drink History is its own line item with tappable rows for edit/delete.
 - Detail-page `+ Add` adds bottles to an existing wine through `/wine/<id>/add-lot`; broader Add Wine re-buy detection is still future work.
 - Main Cellar mobile Cards/List and desktop views are separate work areas. Do not change them unless requested.
 
@@ -50,9 +50,9 @@ File: `templates/detail.html`; route: `GET /wine/<id>` from `app.py -> wine_deta
 - `+` opens Add bottles, prefilled to that location, with side-by-side Qty/Location controls. `Not Shipped` appears as a Location option and maps to lot status `not_shipped`; saved locations map to `in_collection`. Purchase details include Source, a left-aligned placeholder-driven Purchase Date field, and Paid each.
 - Pencil icon (SVG) opens a Manage sheet with a single-line location/count title, top-right X close button, and separate Move bottles and Correct count sections; corrections do not create drink history.
 - Not-shipped inventory appears as an incoming `Receive Shipment` strip. The Receive Shipment sheet uses Qty/Location controls and can partially receive an incoming lot, preserving the remainder as not shipped.
-- Drink History is collapsed by default with a `Drink History · N total` header. Expanded rows are one-line tasting-journal entries with `m/d/yy`, optional `×N`, saved-location color dot/name, inline optional rating, optional notes icon, and chevron. The first 4 rows show initially; a "View all N ›" button reveals the rest inline.
+- Drink History is its own collapsed section after Cellar and before Wine details, with an `N total` preview. Expanded rows are one-line tasting-journal entries with `m/d/yy`, optional `×N`, saved-location color dot/name, inline optional rating, optional notes icon, and chevron. The first 4 rows show initially; a "View all N ›" button reveals the rest inline.
 - Drink History rows open an edit bottom sheet titled with the formatted date and location. Save/delete handlers and row `data-*` attributes are intentionally preserved. Deleting restores the bottle to the selected/source location.
-- Cellar section is collapsed by default, with a preview of Rating, Drinking Window, Sticker Color, and Source. Expanded content contains Source, Sticker, Rating, Drinking Window, then full-width Notes.
+- Cellar section is collapsed by default, with a preview of Rating, Drinking Window, Sticker Color, and Source. Expanded content contains Source, Sticker, Rating, Drinking Window, then full-width Notes; Source and Drinking Window values are centered.
 - Collapsed sections: Wine details preview shows Region and Varietal only; Purchase preview is left-aligned. Purchase Order Date is left-aligned to match Paid each and Total paid.
 - Bottom bar: Back to Cellar, Previous Wine, Next Wine.
 

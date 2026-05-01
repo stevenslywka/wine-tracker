@@ -959,6 +959,9 @@
         text-align: left !important;
         padding-left: 0;
       }
+      #cellarFields .cellar-centered-field {
+        text-align: center !important;
+      }
       /* ── Lot cards (new inventory design) ── */
       .lot-card {
         border: 1px solid rgba(255,248,238,0.12);
@@ -1812,67 +1815,6 @@
         {% endfor %}
         {% endif %}
       </div>
-
-      <div class="ledger-history">
-        <button type="button" class="history-toggle" id="drinkHistoryToggle" {% if not drink_history %}disabled{% endif %} aria-expanded="false" aria-controls="drinkHistoryBody">
-          <span class="ledger-title">Drink History &middot; {% if drank_total %}{{ drank_total }} total{% else %}none{% endif %}</span>
-          {% if drink_history %}<span class="history-toggle-chevron" aria-hidden="true">&rsaquo;</span>{% endif %}
-        </button>
-        <div class="ledger-list history-body" id="drinkHistoryBody" hidden>
-          {% if drink_history %}
-            {% for drink in drink_history %}
-            {% set drink_loc = drink.storage_location or 'Location unknown' %}
-            {% set history_color = namespace(idx=loop.index0 % 5) %}
-            {% for location in user_locations %}
-              {% if location == drink_loc %}{% set history_color.idx = loop.index0 % 5 %}{% endif %}
-            {% endfor %}
-            {% set raw_date = drink.drank_date or drink.created_at[:10] %}
-            {% set date_parts = raw_date.split('-') %}
-            {% if date_parts|length == 3 %}
-              {% set display_date = (date_parts[1]|int) ~ '/' ~ (date_parts[2]|int) ~ '/' ~ date_parts[0][2:] %}
-            {% else %}
-              {% set display_date = raw_date %}
-            {% endif %}
-            {% if loop.index0 == 4 %}
-            <div id="historyExtra" hidden>
-            {% endif %}
-            <button type="button" class="history-row"
-                    data-history-id="{{ drink.id }}"
-                    data-date="{{ raw_date }}"
-                    data-location="{{ drink_loc }}"
-                    data-quantity="{{ drink.quantity or 1 }}"
-                    data-rating="{{ drink.rating if drink.rating is not none else '' }}"
-                    data-notes="{{ drink.notes or '' }}"
-                    data-display-title="{{ display_date }} &middot; {{ drink_loc }}"
-                    {% if not can_edit %}disabled{% endif %}>
-              <span class="history-date">{{ display_date }}{% if (drink.quantity or 1) > 1 %} &middot;&times;{{ drink.quantity or 1 }}{% endif %}</span>
-              <span class="history-location">
-                <span class="history-dot loc-dot-{{ history_color.idx }}"></span>
-                <span class="history-location-name">{{ drink_loc }}</span>
-                {% if drink.rating is not none %}<span class="history-rating">{{ "%g"|format(drink.rating) }}</span>{% endif %}
-                {% if drink.notes %}
-                <svg class="history-notes-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
-                {% endif %}
-              </span>
-              <span class="history-actions">
-                <span class="history-chevron">&rsaquo;</span>
-              </span>
-            </button>
-            {% if loop.last and drink_history|length > 4 %}
-            </div>
-            {% endif %}
-            {% endfor %}
-            {% if drink_history|length > 4 %}
-            <button type="button" id="showAllHistory"
-                    style="width:100%;background:transparent;border:0;color:var(--mobile-accent);font-size:0.82rem;font-weight:900;padding:8px 0;text-align:center;">
-              View all {{ drink_history|length }} &rsaquo;
-            </button>
-            {% endif %}
-          {% else %}
-          <div class="ledger-empty">No drink history yet.</div>
-          {% endif %}
-        </div>
-      </div>
     </details>
 
     {% set cellar_preview = [] %}
@@ -1886,8 +1828,8 @@
         <div class="field-card">
           <span class="edit-label">Source</span>
           {% if can_edit %}
-          <form data-detail-form action="/wine/{{ wine.id }}/retailer" method="post"><input class="mobile-input" name="retailer" type="text" value="{{ wine.retailer or '' }}" placeholder="Not set"></form>
-          {% else %}<div class="read-only-value" style="text-align:left;">{{ wine.retailer or 'Not set' }}</div>{% endif %}
+          <form data-detail-form action="/wine/{{ wine.id }}/retailer" method="post"><input class="mobile-input cellar-centered-field" name="retailer" type="text" value="{{ wine.retailer or '' }}" placeholder="Not set"></form>
+          {% else %}<div class="read-only-value cellar-centered-field">{{ wine.retailer or 'Not set' }}</div>{% endif %}
         </div>
         <div class="field-card">
           <span class="edit-label">Sticker</span>
@@ -1911,10 +1853,10 @@
           <span class="edit-label">Drinking Window</span>
           {% if can_edit %}
           <form data-detail-form action="/wine/{{ wine.id }}/drinking_window" method="post">
-            <input class="mobile-input mobile-drinking-window" name="drinking_window" id="drinkControl" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}" value="{{ wine.drinking_window or '' }}" placeholder="e.g. 2024-2030">
+            <input class="mobile-input mobile-drinking-window cellar-centered-field" name="drinking_window" id="drinkControl" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}" value="{{ wine.drinking_window or '' }}" placeholder="e.g. 2024-2030">
           </form>
           {% else %}
-          <div class="read-only-value mobile-drinking-window" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}">{{ wine.drinking_window or 'Not set' }}</div>
+          <div class="read-only-value mobile-drinking-window cellar-centered-field" data-value="{{ wine.drinking_window or '' }}" data-status="{{ wine.status or '' }}">{{ wine.drinking_window or 'Not set' }}</div>
           {% endif %}
         </div>
         <div class="field-card wide" id="notesFields">
@@ -1923,6 +1865,64 @@
           <form data-detail-form action="/wine/{{ wine.id }}/notes" method="post"><textarea class="mobile-textarea" id="notesInput" name="notes" rows="2" placeholder="Tasting notes, food pairings, when to drink...">{{ wine.notes or '' }}</textarea><div class="field-hint">Saved automatically</div></form>
           {% else %}<div class="read-only-value" style="text-align:left;">{{ wine.notes or 'No notes yet.' }}</div>{% endif %}
         </div>
+      </div>
+    </details>
+
+    <details class="mobile-details ledger-history" id="drinkHistorySection">
+      <summary>Drink History<span class="details-preview">{% if drank_total %}{{ drank_total }} total{% else %}none{% endif %}</span></summary>
+      <div class="ledger-list history-body" id="drinkHistoryBody">
+        {% if drink_history %}
+          {% for drink in drink_history %}
+          {% set drink_loc = drink.storage_location or 'Location unknown' %}
+          {% set history_color = namespace(idx=loop.index0 % 5) %}
+          {% for location in user_locations %}
+            {% if location == drink_loc %}{% set history_color.idx = loop.index0 % 5 %}{% endif %}
+          {% endfor %}
+          {% set raw_date = drink.drank_date or drink.created_at[:10] %}
+          {% set date_parts = raw_date.split('-') %}
+          {% if date_parts|length == 3 %}
+            {% set display_date = (date_parts[1]|int) ~ '/' ~ (date_parts[2]|int) ~ '/' ~ date_parts[0][2:] %}
+          {% else %}
+            {% set display_date = raw_date %}
+          {% endif %}
+          {% if loop.index0 == 4 %}
+          <div id="historyExtra" hidden>
+          {% endif %}
+          <button type="button" class="history-row"
+                  data-history-id="{{ drink.id }}"
+                  data-date="{{ raw_date }}"
+                  data-location="{{ drink_loc }}"
+                  data-quantity="{{ drink.quantity or 1 }}"
+                  data-rating="{{ drink.rating if drink.rating is not none else '' }}"
+                  data-notes="{{ drink.notes or '' }}"
+                  data-display-title="{{ display_date }} &middot; {{ drink_loc }}"
+                  {% if not can_edit %}disabled{% endif %}>
+            <span class="history-date">{{ display_date }}{% if (drink.quantity or 1) > 1 %} &middot;&times;{{ drink.quantity or 1 }}{% endif %}</span>
+            <span class="history-location">
+              <span class="history-dot loc-dot-{{ history_color.idx }}"></span>
+              <span class="history-location-name">{{ drink_loc }}</span>
+              {% if drink.rating is not none %}<span class="history-rating">{{ "%g"|format(drink.rating) }}</span>{% endif %}
+              {% if drink.notes %}
+              <svg class="history-notes-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
+              {% endif %}
+            </span>
+            <span class="history-actions">
+              <span class="history-chevron">&rsaquo;</span>
+            </span>
+          </button>
+          {% if loop.last and drink_history|length > 4 %}
+          </div>
+          {% endif %}
+          {% endfor %}
+          {% if drink_history|length > 4 %}
+          <button type="button" id="showAllHistory"
+                  style="width:100%;background:transparent;border:0;color:var(--mobile-accent);font-size:0.82rem;font-weight:900;padding:8px 0;text-align:center;">
+            View all {{ drink_history|length }} &rsaquo;
+          </button>
+          {% endif %}
+        {% else %}
+        <div class="ledger-empty">No drink history yet.</div>
+        {% endif %}
       </div>
     </details>
 
