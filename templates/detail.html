@@ -1745,7 +1745,7 @@
     </section>
 
     <details class="mobile-details ledger-section" id="bottleLedger">
-      <summary>Bottles<span class="details-preview">{{ wine.quantity or 0 }} total{% for item in available_locations %}, {{ item.quantity }} {{ item.location }}{% endfor %}</span></summary>
+      <summary>Bottles<span class="details-preview">{{ wine.quantity or 0 }} total{% for item in available_locations %} &middot; {{ item.quantity }} {{ item.location }}{% endfor %}</span></summary>
       <div class="ledger-title-row">
         <div></div>
         {% if can_edit %}

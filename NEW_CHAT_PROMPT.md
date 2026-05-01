@@ -38,7 +38,7 @@ Inventory truth:
 - Drink history lives in `wine_drink_history` and keeps a `storage_location` snapshot.
 - Mobile detail inventory changes usually stay in `templates/detail.html`; backend behavior is needed for inventory semantics such as partial Receive Shipment.
 - On mobile detail, Add bottles uses `Not Shipped` as a Location option that maps to lot status `not_shipped`; saved locations map to available inventory. Receive Shipment can partially receive incoming lots.
-- Mobile detail section order is Bottles, Cellar, Drink History, Wine Details, Purchase. Bottles and Cellar are collapsed by default; Bottles previews counts like `2 total, 1 Apt, 1 House`; Cellar previews Rating, Drinking Window, Sticker Color, and Source. Expanded Cellar Source and Drinking Window values are centered.
+- Mobile detail section order is Bottles, Cellar, Drink History, Wine Details, Purchase. Bottles and Cellar are collapsed by default; Bottles previews counts like `2 total · 1 Apt · 1 House`; Cellar previews Rating, Drinking Window, Sticker Color, and Source. Expanded Cellar Source and Drinking Window values are centered.
 
 Do not touch unless I explicitly ask:
 - `templates/index.html` mobile Cards/List layout.
