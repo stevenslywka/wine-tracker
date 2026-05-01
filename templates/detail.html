@@ -847,6 +847,20 @@
         grid-template-columns: 100px minmax(0, 1fr);
         min-height: 44px;
       }
+      #wineFields .long-scroll-row .mobile-input,
+      #wineFields .long-scroll-row .read-only-value {
+        overflow-x: auto;
+        overflow-y: hidden;
+        white-space: nowrap;
+        text-overflow: clip;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        touch-action: pan-x;
+      }
+      #wineFields .long-scroll-row .mobile-input::-webkit-scrollbar,
+      #wineFields .long-scroll-row .read-only-value::-webkit-scrollbar {
+        display: none;
+      }
       .notes-section { padding: 12px; }
       .mobile-note-block .edit-label { display: none; }
       .mobile-bottom-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -1626,11 +1640,12 @@
         font-size: 0.92rem;
         font-weight: 900;
         line-height: 1;
+        white-space: nowrap;
       }
       .history-notes-icon {
-        width: 15px;
-        height: 15px;
         color: var(--mobile-muted);
+        font-size: 0.9rem;
+        line-height: 1;
         flex: 0 0 auto;
       }
       .history-chevron {
@@ -1652,6 +1667,11 @@
         padding: 18px;
         box-shadow: 0 18px 44px rgba(0,0,0,0.52);
       }
+      #historyEditModal input,
+      #historyEditModal select,
+      #historyEditModal textarea {
+        box-sizing: border-box;
+      }
       .history-sheet-title {
         color: var(--mobile-text);
         font-size: 1.02rem;
@@ -1669,6 +1689,7 @@
       .history-sheet-field select,
       .history-sheet-field textarea {
         width: 100%;
+        box-sizing: border-box;
         background: #11100f;
         border: 1px solid rgba(255,248,238,0.14);
         border-radius: 8px;
@@ -1868,7 +1889,7 @@
     </details>
 
     <details class="mobile-details detail-section" id="cellarFields">
-      <summary>Cellar<span class="details-preview">{% set sep = joiner(' &middot; ') %}{% if wine.my_rating is not none %}{{ sep() }}&#9733; {{ "%g"|format(wine.my_rating) }}{% endif %}{% if wine.drinking_window %}{{ sep() }}{{ wine.drinking_window }}{% endif %}{% if wine.color_code %}{{ sep() }}{{ wine.color_code }}{% endif %}{% if wine.retailer %}{{ sep() }}{{ wine.retailer }}{% endif %}</span></summary>
+      <summary>Cellar<span class="details-preview">{% set sep = joiner(' · ') %}{% if wine.my_rating is not none %}{{ sep() }}&#9733; {{ "%g"|format(wine.my_rating) }}{% endif %}{% if wine.drinking_window %}{{ sep() }}{{ wine.drinking_window }}{% endif %}{% if wine.color_code %}{{ sep() }}{{ wine.color_code }}{% endif %}{% if wine.retailer %}{{ sep() }}{{ wine.retailer }}{% endif %}</span></summary>
       <div class="priority-grid">
         <div class="field-card">
           <span class="edit-label">Source</span>
@@ -1914,7 +1935,7 @@
     </details>
 
     <details class="mobile-details ledger-history" id="drinkHistorySection">
-      <summary>Drink History<span class="details-preview">{% if drank_total and drink_history %}{% set last = drink_history[0] %}{% set raw_date = last.drank_date or last.created_at[:10] %}{% set dp = raw_date.split('-') %}{% if dp|length == 3 %}{% set disp = (dp[1]|int) ~ '/' ~ (dp[2]|int) ~ '/' ~ dp[0][2:] %}{% else %}{% set disp = raw_date %}{% endif %}Last {{ disp }}{% if last.rating is not none %} &middot; {{ "%g"|format(last.rating) }}{% endif %}{% else %}none{% endif %}</span></summary>
+      <summary>Drink History<span class="details-preview">{% if drank_total and drink_history %}{% set last = drink_history[0] %}{% set raw_date = last.drank_date or last.created_at[:10] %}{% set dp = raw_date.split('-') %}{% if dp|length == 3 %}{% set disp = (dp[1]|int) ~ '/' ~ (dp[2]|int) ~ '/' ~ dp[0][2:] %}{% else %}{% set disp = raw_date %}{% endif %}Last {{ disp }}{% if last.rating is not none %} · {{ "%g"|format(last.rating) }}{% endif %}{% else %}none{% endif %}</span></summary>
       <div class="ledger-list history-body" id="drinkHistoryBody">
         {% if drink_history %}
           {% for drink in drink_history %}
@@ -1940,15 +1961,15 @@
                   data-quantity="{{ drink.quantity or 1 }}"
                   data-rating="{{ drink.rating if drink.rating is not none else '' }}"
                   data-notes="{{ drink.notes or '' }}"
-                  data-display-title="{{ display_date }} &middot; {{ drink_loc }}"
+                  data-display-title="Drink History · {{ display_date }} · {{ drink_loc }}"
                   {% if not can_edit %}disabled{% endif %}>
-            <span class="history-date">{{ display_date }}{% if (drink.quantity or 1) > 1 %} &middot;&times;{{ drink.quantity or 1 }}{% endif %}</span>
+            <span class="history-date">{{ display_date }}{% if (drink.quantity or 1) > 1 %} · &times;{{ drink.quantity or 1 }}{% endif %}</span>
             <span class="history-location">
               <span class="history-dot loc-dot-{{ history_color.idx }}"></span>
               <span class="history-location-name">{{ drink_loc }}</span>
-              {% if drink.rating is not none %}<span class="history-rating">{{ "%g"|format(drink.rating) }}</span>{% endif %}
+              {% if drink.rating is not none %}<span class="history-rating">&#9733; {{ "%g"|format(drink.rating) }}</span>{% endif %}
               {% if drink.notes %}
-              <svg class="history-notes-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
+              <span class="history-notes-icon" aria-hidden="true">&#128221;</span>
               {% endif %}
             </span>
             <span class="history-actions">
@@ -1976,7 +1997,7 @@
       <summary>Wine details<span class="details-preview">{{ wine.region or '' }}{{ ' · ' + wine_det_varietal if wine.region and wine_det_varietal else wine_det_varietal }}</span></summary>
       <div class="edit-row"><div class="edit-label">🍷 Type</div>{% if can_edit %}<form data-detail-form action="/wine/{{ wine.id }}/type" method="post"><select class="mobile-select" name="wine_type"><option value="">Wine</option>{% for type in wine_types %}<option value="{{ type }}" {% if wine.wine_type == type %}selected{% endif %}>{{ type }}</option>{% endfor %}</select></form>{% else %}<div class="read-only-value">{{ wine.wine_type or 'Wine' }}</div>{% endif %}</div>
       {% for field, label, value, input_type, icon in [('vintage', 'Vintage', wine.vintage, 'number', '📅'), ('varietal', 'Varietal', wine.varietal, 'text', '🍇'), ('region', 'Region', wine.region, 'text', '📍'), ('origin', 'Origin', wine.origin, 'text', '🌍')] %}
-      <div class="edit-row"><div class="edit-label">{{ icon }} {{ label }}</div>{% if can_edit %}<form data-detail-form action="/wine/{{ wine.id }}/{{ field }}" method="post"><input class="mobile-input" name="{{ field }}" type="{{ input_type }}" value="{{ value or '' }}" placeholder="Not set"></form>{% else %}<div class="read-only-value">{{ value or 'Not set' }}</div>{% endif %}</div>
+      <div class="edit-row {% if field in ['varietal', 'region'] %}long-scroll-row{% endif %}"><div class="edit-label">{{ icon }} {{ label }}</div>{% if can_edit %}<form data-detail-form action="/wine/{{ wine.id }}/{{ field }}" method="post"><input class="mobile-input" name="{{ field }}" type="{{ input_type }}" value="{{ value or '' }}" placeholder="Not set"></form>{% else %}<div class="read-only-value">{{ value or 'Not set' }}</div>{% endif %}</div>
       {% endfor %}
       <div class="edit-row"><div class="edit-label">🍾 Size</div>{% if can_edit %}<form data-detail-form action="/wine/{{ wine.id }}/size" method="post"><select class="mobile-select" name="size_ml"><option value="">Not set</option>{% for size in bottle_sizes %}<option value="{{ size }}" {% if wine.size_ml == size %}selected{% endif %}>{{ size }} ml</option>{% endfor %}</select></form>{% else %}<div class="read-only-value">{{ wine.size_ml or 'Not set' }}{% if wine.size_ml %} ml{% endif %}</div>{% endif %}</div>
     </details>
