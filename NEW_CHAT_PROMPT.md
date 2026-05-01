@@ -29,7 +29,7 @@ Project context:
 - Flask app: `app.py`; DB helpers/migrations: `db.py`; main cellar: `templates/index.html`; wine detail: `templates/detail.html`.
 - Local database is SQLite `wines.db`; production is PostgreSQL.
 - Schema changes must go through `db.py -> migrate()`.
-- Latest production UI work: mobile Wine Detail polish for Add bottles, Manage bottles, Receive Shipment, Drink History rows, and collapsed section previews.
+- Latest production UI work: mobile Wine Detail collapsible Bottles/Cellar sections with compact previews, plus Add bottles, Manage bottles, Receive Shipment, Drink History rows, and collapsed section polish.
 
 Inventory truth:
 - Current inventory uses `wine_inventory_lots`, not individual bottle records.
@@ -38,6 +38,7 @@ Inventory truth:
 - Drink history lives in `wine_drink_history` and keeps a `storage_location` snapshot.
 - Mobile detail inventory changes usually stay in `templates/detail.html`; backend behavior is needed for inventory semantics such as partial Receive Shipment.
 - On mobile detail, Add bottles uses `Not Shipped` as a Location option that maps to lot status `not_shipped`; saved locations map to available inventory. Receive Shipment can partially receive incoming lots.
+- Bottles and Cellar are collapsed mobile detail sections by default. Bottles previews counts like `2 total, 1 Apt, 1 House`; Cellar previews Rating, Drinking Window, Sticker Color, and Source.
 
 Do not touch unless I explicitly ask:
 - `templates/index.html` mobile Cards/List layout.

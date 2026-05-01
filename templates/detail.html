@@ -1741,22 +1741,13 @@
       </div>
     </section>
 
-    <section class="ledger-section" id="bottleLedger">
+    <details class="mobile-details ledger-section" id="bottleLedger">
+      <summary>Bottles<span class="details-preview">{{ wine.quantity or 0 }} total{% for item in available_locations %}, {{ item.quantity }} {{ item.location }}{% endfor %}</span></summary>
       <div class="ledger-title-row">
-        <div class="ledger-title">Bottles</div>
+        <div></div>
         {% if can_edit %}
         <button type="button" class="ledger-add-btn" id="openAddBottleSheet">+ Add</button>
         {% endif %}
-      </div>
-      <div class="ledger-summary">
-        {{ wine.quantity or 0 }} total
-        {% for item in available_locations %}
-        {% set summary_color = namespace(idx=loop.index0 % 5) %}
-        {% for location in user_locations %}
-          {% if location == item.location %}{% set summary_color.idx = loop.index0 % 5 %}{% endif %}
-        {% endfor %}
-        <span class="ledger-summary-dot loc-dot-{{ summary_color.idx }}"></span>{{ item.quantity }} {{ item.location }}
-        {% endfor %}
       </div>
 
       <div class="ledger-list">
@@ -1882,10 +1873,15 @@
           {% endif %}
         </div>
       </div>
-    </section>
+    </details>
 
-    <section class="detail-section" id="cellarFields">
-      <div class="section-title">Cellar</div>
+    {% set cellar_preview = [] %}
+    {% if wine.my_rating is not none %}{% set _ = cellar_preview.append("%g"|format(wine.my_rating)) %}{% endif %}
+    {% if wine.drinking_window %}{% set _ = cellar_preview.append(wine.drinking_window) %}{% endif %}
+    {% if wine.color_code %}{% set _ = cellar_preview.append(wine.color_code) %}{% endif %}
+    {% if wine.retailer %}{% set _ = cellar_preview.append(wine.retailer) %}{% endif %}
+    <details class="mobile-details detail-section" id="cellarFields">
+      <summary>Cellar<span class="details-preview">{{ cellar_preview|join(' · ') }}</span></summary>
       <div class="priority-grid">
         <div class="field-card">
           <span class="edit-label">Source</span>
@@ -1928,7 +1924,7 @@
           {% else %}<div class="read-only-value" style="text-align:left;">{{ wine.notes or 'No notes yet.' }}</div>{% endif %}
         </div>
       </div>
-    </section>
+    </details>
 
     {% set wine_det_varietal = 'Blend' if wine.varietal and ',' in wine.varietal else (wine.varietal or '') %}
     <details class="mobile-details" id="wineFields">
