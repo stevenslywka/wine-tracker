@@ -29,7 +29,7 @@ Project context:
 - Flask app: `app.py`; DB helpers/migrations: `db.py`; main cellar: `templates/index.html`; wine detail: `templates/detail.html`.
 - Local database is SQLite `wines.db`; production is PostgreSQL.
 - Schema changes must go through `db.py -> migrate()`.
-- Latest production UI work: mobile Wine Detail line-item section order with standalone Drink History after Cellar, collapsible Bottles/Cellar sections with compact previews, plus Add bottles, Manage bottles, Receive Shipment, and collapsed section polish.
+- Latest production UI work: mobile Wine Detail hero/header polish with wine-name sticky header, bottle/location/drinking-window hero row, centered Drink History edit dialog, hidden redundant Bottles `+ Add` when inventory exists, Set Count zero-confirm safety, purchase-detail chevron, and collapsed-section polish.
 
 Inventory truth:
 - Current inventory uses `wine_inventory_lots`, not individual bottle records.
@@ -38,7 +38,7 @@ Inventory truth:
 - Drink history lives in `wine_drink_history` and keeps a `storage_location` snapshot.
 - Mobile detail inventory changes usually stay in `templates/detail.html`; backend behavior is needed for inventory semantics such as partial Receive Shipment.
 - On mobile detail, Add bottles uses `Not Shipped` as a Location option that maps to lot status `not_shipped`; saved locations map to available inventory. Receive Shipment can partially receive incoming lots.
-- Mobile detail section order is Bottles, Cellar, Drink History, Wine Details, Purchase. Bottles and Cellar are collapsed by default; Bottles previews counts like `2 total · 1 Apt · 1 House`; Cellar previews Rating, Drinking Window, Sticker Color, and Source. Expanded Cellar Source and Drinking Window values are centered.
+- Mobile detail section order is Bottles, Cellar, Drink History, Wine Details, Purchase. Bottles and Cellar are collapsed by default; Bottles previews counts like `2 total · 1 Apt · 1 House`; Cellar previews starred Rating, Drinking Window, Sticker Color, and Source. The hero shows bottle/location/drinking-window context, the sticky header shows the wine name, delete lives in the hamburger menu, and Set Count to 0 requires confirmation. Expanded Cellar Source and Drinking Window values are centered.
 
 Do not touch unless I explicitly ask:
 - `templates/index.html` mobile Cards/List layout.
