@@ -798,6 +798,9 @@
         text-transform: none;
         letter-spacing: 0;
         margin-left: 8px;
+        flex: 1;
+        min-width: 0;
+        text-align: left;
       }
       .mobile-details[open] .details-preview { display: none; }
       .mobile-details .edit-row {
@@ -844,7 +847,6 @@
       /* Rating display */
       .field-card .rating-input {
         border: 0;
-        border-bottom: 1px solid rgba(231,189,112,0.3);
         background: transparent;
         color: var(--mobile-accent);
         font-size: 1.6rem;
@@ -1440,16 +1442,24 @@
         border-color: #2a6a9c;
         color: #9ecfe0;
       }
-      .manage-done-btn {
-        width: 100%;
-        margin-top: 12px;
-        border-radius: 999px;
+      .manage-sheet-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .manage-close-btn {
+        width: 28px;
+        height: 28px;
+        flex-shrink: 0;
+        border-radius: 50%;
         border: 1px solid rgba(255,248,238,0.14);
         background: transparent;
         color: var(--mobile-muted);
-        font-size: 0.86rem;
+        font-size: 1rem;
         font-weight: 900;
-        padding: 10px 8px;
+        line-height: 1;
+        padding: 0 0 2px;
       }
       .ledger-incoming-strip {
         display: flex;
@@ -1464,6 +1474,11 @@
         color: var(--mobile-accent);
         font-size: 0.84rem;
         font-weight: 900;
+      }
+      .ledger-incoming-strip span {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
       }
       .ledger-empty {
         color: var(--mobile-muted);
@@ -1532,7 +1547,7 @@
         min-width: 0;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 7px;
         color: var(--mobile-muted);
         font-size: 0.8rem;
         font-weight: 850;
@@ -1560,13 +1575,13 @@
       }
       .history-rating {
         color: var(--mobile-accent);
-        font-size: 0.8rem;
+        font-size: 0.92rem;
         font-weight: 900;
         line-height: 1;
       }
       .history-notes-icon {
-        width: 12px;
-        height: 12px;
+        width: 15px;
+        height: 15px;
         color: var(--mobile-muted);
         flex: 0 0 auto;
       }
@@ -1800,7 +1815,7 @@
           {% if can_edit and item.lot_ids %}
           <button type="button" class="ledger-receive-btn"
                   data-lot-id="{{ item.lot_ids[0] }}"
-                  data-lot-qty="{{ item.quantity }}">Receive</button>
+                  data-lot-qty="{{ item.receive_quantity or item.quantity }}">Receive Shipment</button>
           {% endif %}
         </div>
         {% endfor %}
@@ -1843,12 +1858,12 @@
               <span class="history-location">
                 <span class="history-dot loc-dot-{{ history_color.idx }}"></span>
                 <span class="history-location-name">{{ drink_loc }}</span>
-              </span>
-              <span class="history-actions">
                 {% if drink.rating is not none %}<span class="history-rating">{{ "%g"|format(drink.rating) }}</span>{% endif %}
                 {% if drink.notes %}
                 <svg class="history-notes-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"/></svg>
                 {% endif %}
+              </span>
+              <span class="history-actions">
                 <span class="history-chevron">&rsaquo;</span>
               </span>
             </button>
@@ -1917,7 +1932,7 @@
 
     {% set wine_det_varietal = 'Blend' if wine.varietal and ',' in wine.varietal else (wine.varietal or '') %}
     <details class="mobile-details" id="wineFields">
-      <summary>Wine details<span class="details-preview">{{ wine.wine_type or '' }}{{ ' · ' + wine.region if wine.region else '' }}{{ ' · ' + wine_det_varietal if wine_det_varietal else '' }}</span></summary>
+      <summary>Wine details<span class="details-preview">{{ wine.region or '' }}{{ ' · ' + wine_det_varietal if wine.region and wine_det_varietal else wine_det_varietal }}</span></summary>
       <div class="edit-row"><div class="edit-label">🍷 Type</div>{% if can_edit %}<form data-detail-form action="/wine/{{ wine.id }}/type" method="post"><select class="mobile-select" name="wine_type"><option value="">Wine</option>{% for type in wine_types %}<option value="{{ type }}" {% if wine.wine_type == type %}selected{% endif %}>{{ type }}</option>{% endfor %}</select></form>{% else %}<div class="read-only-value">{{ wine.wine_type or 'Wine' }}</div>{% endif %}</div>
       {% for field, label, value, input_type, icon in [('vintage', 'Vintage', wine.vintage, 'number', '📅'), ('varietal', 'Varietal', wine.varietal, 'text', '🍇'), ('region', 'Region', wine.region, 'text', '📍'), ('origin', 'Origin', wine.origin, 'text', '🌍')] %}
       <div class="edit-row"><div class="edit-label">{{ icon }} {{ label }}</div>{% if can_edit %}<form data-detail-form action="/wine/{{ wine.id }}/{{ field }}" method="post"><input class="mobile-input" name="{{ field }}" type="{{ input_type }}" value="{{ value or '' }}" placeholder="Not set"></form>{% else %}<div class="read-only-value">{{ value or 'Not set' }}</div>{% endif %}</div>
@@ -1995,29 +2010,17 @@
                 {% for location in user_locations %}
                 <option value="{{ location }}">{{ location }}</option>
                 {% endfor %}
+                <option value="__not_shipped__">Not Shipped</option>
               </select>
             </div>
-          </div>
-          <div>
-            <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:6px;">Status</label>
-            <div style="display:flex;gap:8px;">
-              <button type="button" class="add-status-pill" data-status="in_collection"
-                      style="flex:1;padding:8px 4px;border-radius:999px;border:1px solid rgba(49,168,106,0.5);background:#214833;color:#8fd0a7;font-size:0.82rem;font-weight:900;cursor:pointer;">Available</button>
-              <button type="button" class="add-status-pill" data-status="not_shipped"
-                      style="flex:1;padding:8px 4px;border-radius:999px;border:1px solid rgba(255,248,238,0.14);background:#211a13;color:var(--mobile-muted);font-size:0.82rem;font-weight:900;cursor:pointer;">Not shipped</button>
-            </div>
-            <input type="hidden" id="addBottleStatusSelect" value="in_collection">
           </div>
           <details>
             <summary style="color:var(--mobile-muted);font-size:0.78rem;font-weight:900;cursor:pointer;list-style:none;">Purchase details</summary>
             <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;">
               <input type="text" id="addBottleSourceInput" placeholder="Source"
                      style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.9rem;font-weight:800;padding:8px 10px;">
-              <div>
-                <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Purchase date</label>
-                <input type="date" id="addBottleDateInput"
-                       style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.9rem;font-weight:800;padding:8px 10px;text-align:left;">
-              </div>
+              <input type="text" id="addBottleDateInput" placeholder="Purchase Date" inputmode="none"
+                     style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.9rem;font-weight:800;padding:8px 10px;text-align:left;">
               <input type="number" id="addBottlePriceInput" min="0" step="0.01" inputmode="decimal" placeholder="Paid each"
                      style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.9rem;font-weight:800;padding:8px 10px;">
             </div>
@@ -2034,8 +2037,13 @@
     <!-- Location edit sheet -->
     <div class="delete-confirm-backdrop" id="locationEditModal" aria-hidden="true">
       <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="locationEditTitle">
-        <div class="delete-confirm-title neutral-title" id="locationEditTitle">Manage bottles</div>
-        <div class="delete-confirm-copy" id="locationEditSubtitle"></div>
+        <div class="manage-sheet-head">
+          <div>
+            <div class="delete-confirm-title neutral-title" id="locationEditTitle">Manage bottles</div>
+            <div class="delete-confirm-copy" id="locationEditSubtitle"></div>
+          </div>
+          <button type="button" id="cancelLocationEdit" class="manage-close-btn" aria-label="Close">&times;</button>
+        </div>
         <div class="manage-section">
           <div class="manage-section-label">Move bottles</div>
           <div class="manage-move-row">
@@ -2060,7 +2068,6 @@
             <button type="button" id="confirmCorrectLocation" class="manage-action-btn">Save</button>
           </div>
         </div>
-        <button type="button" id="cancelLocationEdit" class="manage-done-btn">Done</button>
       </div>
     </div>
 
@@ -2145,19 +2152,34 @@
       <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="receiveTitle">
         <div class="delete-confirm-title neutral-title" id="receiveTitle">Receive shipment</div>
         <div class="delete-confirm-copy" id="receiveSubtitle"></div>
-        <div style="margin-bottom:16px;">
-          <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Receive into location</label>
-          <select id="receiveLocationSelect"
-                  style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:8px 10px;appearance:none;">
-            {% for location in user_locations %}
-            <option value="{{ location }}">{{ location }}</option>
-            {% endfor %}
-          </select>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
+          <div style="display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:end;">
+            <div>
+              <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Qty</label>
+              <div style="display:flex;align-items:center;gap:5px;">
+                <button type="button" id="receiveQtyMinus"
+                        style="width:32px;height:32px;flex-shrink:0;border-radius:50%;border:1px solid rgba(231,189,112,0.42);background:#211a13;color:var(--mobile-accent);font-size:1.1rem;font-weight:900;line-height:1;">&minus;</button>
+                <input type="number" id="receiveQtyInput" min="1" value="1" inputmode="numeric"
+                       style="width:38px;text-align:center;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:6px 4px;">
+                <button type="button" id="receiveQtyPlus"
+                        style="width:32px;height:32px;flex-shrink:0;border-radius:50%;border:1px solid rgba(231,189,112,0.42);background:#211a13;color:var(--mobile-accent);font-size:1.1rem;font-weight:900;line-height:1;">+</button>
+              </div>
+            </div>
+            <div>
+              <label style="color:var(--mobile-muted);font-size:0.78rem;font-weight:800;display:block;margin-bottom:5px;">Location</label>
+              <select id="receiveLocationSelect"
+                      style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.96rem;font-weight:800;padding:6px 10px;appearance:none;">
+                {% for location in user_locations %}
+                <option value="{{ location }}">{{ location }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
         </div>
         <div class="delete-confirm-actions">
           <button type="button" id="cancelReceive">Cancel</button>
           <button type="button" id="confirmReceive"
-                  style="background:#214833;border-color:#31a86a;color:#8fd0a7;border-radius:999px;border:1px solid;font-weight:900;font-size:0.86rem;padding:10px 8px;">Receive all</button>
+                  style="background:#214833;border-color:#31a86a;color:#8fd0a7;border-radius:999px;border:1px solid;font-weight:900;font-size:0.86rem;padding:10px 8px;">Receive</button>
         </div>
       </div>
     </div>
@@ -2532,19 +2554,7 @@
       });
 
       // ── Add bottles sheet ──
-      function setAddStatusPill(activeStatus) {
-        document.querySelectorAll('.add-status-pill').forEach(p => {
-          const active = p.dataset.status === activeStatus;
-          p.style.borderColor = active ? 'rgba(49,168,106,0.5)' : 'rgba(255,248,238,0.14)';
-          p.style.background = active ? '#214833' : '#211a13';
-          p.style.color = active ? '#8fd0a7' : 'var(--mobile-muted)';
-        });
-        const inp = document.getElementById('addBottleStatusSelect');
-        if (inp) inp.value = activeStatus;
-      }
-      document.querySelectorAll('.add-status-pill').forEach(pill => {
-        pill.addEventListener('click', () => setAddStatusPill(pill.dataset.status));
-      });
+      const notShippedLocationValue = '__not_shipped__';
 
       function openAddBottleModal(location) {
         const qty = document.getElementById('addBottleQtyInput');
@@ -2552,13 +2562,17 @@
         const title = document.getElementById('addBottleTitle');
         if (title) title.textContent = location ? `Add to ${location}` : 'Add bottles';
         if (qty) qty.value = 1;
-        setAddStatusPill('in_collection');
         if (loc && location) loc.value = location;
+        if (loc && !location && loc.options.length) loc.selectedIndex = 0;
         const source = document.getElementById('addBottleSourceInput');
         const date = document.getElementById('addBottleDateInput');
         const price = document.getElementById('addBottlePriceInput');
         if (source) source.value = '';
-        if (date) date.value = new Date().toISOString().slice(0, 10);
+        if (date) {
+          date.type = 'text';
+          date.value = '';
+          date.placeholder = 'Purchase Date';
+        }
         if (price) price.value = '';
         const modal = document.getElementById('addBottleModal');
         modal.classList.add('visible');
@@ -2576,6 +2590,12 @@
       document.getElementById('addBottleModal')?.addEventListener('click', e => {
         if (e.target === e.currentTarget) closeAddBottleModal();
       });
+      document.getElementById('addBottleDateInput')?.addEventListener('focus', e => {
+        e.currentTarget.type = 'date';
+        if (typeof e.currentTarget.showPicker === 'function') {
+          e.currentTarget.showPicker();
+        }
+      });
       document.getElementById('addQtyMinus')?.addEventListener('click', () => {
         const inp = document.getElementById('addBottleQtyInput');
         if (inp) inp.value = Math.max(1, (parseInt(inp.value, 10) || 1) - 1);
@@ -2588,9 +2608,10 @@
         const btn = document.getElementById('confirmAddBottle');
         btn.disabled = true;
         const quantity = Math.max(1, parseInt(document.getElementById('addBottleQtyInput')?.value || '1', 10) || 1);
-        const location = document.getElementById('addBottleLocationSelect')?.value || '';
-        const status = document.getElementById('addBottleStatusSelect')?.value || 'in_collection';
-        if (!location) { btn.disabled = false; return; }
+        const selectedLocation = document.getElementById('addBottleLocationSelect')?.value || '';
+        const status = selectedLocation === notShippedLocationValue ? 'not_shipped' : 'in_collection';
+        const location = status === 'not_shipped' ? '' : selectedLocation;
+        if (!selectedLocation) { btn.disabled = false; return; }
         const body = new URLSearchParams({ quantity: String(quantity), storage_location: location, status });
         const source = document.getElementById('addBottleSourceInput')?.value?.trim() || '';
         const date = document.getElementById('addBottleDateInput')?.value || '';
@@ -2829,10 +2850,17 @@
       });
 
       // ── Receive modal ──
+      let receiveMaxQty = 1;
       function openReceiveModal(lotId, qty) {
         pendingLotId = lotId;
+        receiveMaxQty = Math.max(1, qty || 1);
         const subtitle = document.getElementById('receiveSubtitle');
         if (subtitle) subtitle.textContent = `${qty} bottle${qty !== 1 ? 's' : ''} incoming`;
+        const qtyIn = document.getElementById('receiveQtyInput');
+        if (qtyIn) {
+          qtyIn.value = receiveMaxQty;
+          qtyIn.max = receiveMaxQty;
+        }
         const modal = document.getElementById('receiveModal');
         modal.classList.add('visible');
         modal.setAttribute('aria-hidden', 'false');
@@ -2845,13 +2873,22 @@
       document.getElementById('receiveModal')?.addEventListener('click', e => {
         if (e.target === e.currentTarget) closeReceiveModal();
       });
+      document.getElementById('receiveQtyMinus')?.addEventListener('click', () => {
+        const inp = document.getElementById('receiveQtyInput');
+        if (inp) inp.value = Math.max(1, (parseInt(inp.value, 10) || 1) - 1);
+      });
+      document.getElementById('receiveQtyPlus')?.addEventListener('click', () => {
+        const inp = document.getElementById('receiveQtyInput');
+        if (inp) inp.value = Math.min(receiveMaxQty, (parseInt(inp.value, 10) || 1) + 1);
+      });
       document.getElementById('confirmReceive')?.addEventListener('click', async () => {
         if (!pendingLotId) return;
         const btn = document.getElementById('confirmReceive');
         btn.disabled = true;
         const loc = document.getElementById('receiveLocationSelect').value;
         if (!loc) { btn.disabled = false; return; }
-        const body = new URLSearchParams({ storage_location: loc });
+        const quantity = Math.max(1, Math.min(receiveMaxQty, parseInt(document.getElementById('receiveQtyInput')?.value || '1', 10) || 1));
+        const body = new URLSearchParams({ storage_location: loc, quantity: String(quantity) });
         closeReceiveModal();
         const data = await postInventory(`/wine/{{ wine.id }}/lot/${pendingLotId}/receive`, body);
         btn.disabled = false;

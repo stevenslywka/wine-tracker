@@ -629,6 +629,7 @@ def wine_detail(wine_id):
                 target[location] = {
                     "location": location,
                     "quantity": 0,
+                    "receive_quantity": lot["quantity"] or 0,
                     "lot_ids": [],
                     "retailers": [],
                     "order_dates": [],
@@ -1271,6 +1272,7 @@ def receive_inventory_lot(wine_id, lot_id):
     storage_location = request.form.get("storage_location", "").strip()
     if not storage_location:
         return ("", 400)
+    raw_receive_qty = request.form.get("quantity", "").strip()
 
     p = ph()
     conn = get_db()
@@ -1295,12 +1297,26 @@ def receive_inventory_lot(wine_id, lot_id):
         conn.close()
         return ("", 400)
 
-    cur.execute(
-        f"DELETE FROM wine_inventory_lots WHERE id = {p} AND wine_id = {p}",
-        (lot_id, wine_id)
-    )
+    try:
+        receive_qty = max(1, int(raw_receive_qty)) if raw_receive_qty else lot["quantity"]
+    except ValueError:
+        receive_qty = lot["quantity"]
+    receive_qty = min(receive_qty, lot["quantity"])
+    if receive_qty >= lot["quantity"]:
+        cur.execute(
+            f"DELETE FROM wine_inventory_lots WHERE id = {p} AND wine_id = {p}",
+            (lot_id, wine_id)
+        )
+    else:
+        cur.execute(
+            f"""UPDATE wine_inventory_lots
+                SET quantity = quantity - {p},
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = {p} AND wine_id = {p}""",
+            (receive_qty, lot_id, wine_id)
+        )
     upsert_inventory_lot(
-        conn, wine_id, lot["quantity"], "in_collection", storage_location,
+        conn, wine_id, receive_qty, "in_collection", storage_location,
         lot["retailer"], lot["order_date"], lot["unit_price"], lot["notes"]
     )
     conn.commit()
