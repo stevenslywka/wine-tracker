@@ -169,7 +169,7 @@
       }
       .mobile-hero {
         display: grid;
-        grid-template-columns: 112px minmax(0, 1fr);
+        grid-template-columns: 120px minmax(0, 1fr);
         gap: 16px;
         padding: 14px 14px 16px;
         border: 1px solid rgba(255,248,238,0.12);
@@ -180,8 +180,9 @@
         box-shadow: 0 14px 34px rgba(0,0,0,0.28);
       }
       .mobile-bottle {
-        width: 112px;
-        height: 158px;
+        width: 120px;
+        height: 100%;
+        min-height: 160px;
         border-radius: 8px;
         object-fit: cover;
         background: #0c0907;
@@ -214,8 +215,10 @@
       .mobile-bottle-wrap {
         position: relative;
         overflow: hidden;
-        width: 112px;
-        height: 158px;
+        width: 120px;
+        height: auto;
+        min-height: 160px;
+        align-self: stretch;
         border-radius: 8px;
         flex-shrink: 0;
       }
@@ -254,7 +257,8 @@
         font-weight: 900;
         padding: 0;
         resize: none;
-        min-height: 2.6em;
+        overflow: hidden;
+        min-height: 1.3em;
       }
       .hero-name:focus { outline: 0; color: #fff; }
       .hero-meta {
@@ -513,6 +517,35 @@
       .hero-icon-text {
         min-width: 0;
         overflow-wrap: anywhere;
+      }
+      .hero-bottles-row {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 8px;
+        font-size: 0.78rem;
+        font-weight: 850;
+        color: var(--mobile-muted);
+        line-height: 1.3;
+      }
+      .hero-loc-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+      .hero-loc-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        display: inline-block;
+      }
+      .hero-sep {
+        color: var(--mobile-muted);
+        opacity: 0.5;
       }
       .quick-strip {
         display: grid;
@@ -791,6 +824,13 @@
         transition: transform 0.18s;
       }
       .mobile-details[open] summary::after { transform: rotate(180deg); }
+      .mobile-details[open] > :not(summary) {
+        animation: detailsReveal 0.18s ease;
+      }
+      @keyframes detailsReveal {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
       .details-preview {
         color: var(--mobile-muted);
         font-size: 0.72rem;
@@ -1390,7 +1430,7 @@
         display: flex;
         align-items: center;
         gap: 7px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
       }
       .manage-stepper-btn {
         width: 32px;
@@ -1415,6 +1455,12 @@
         font-size: 0.96rem;
         font-weight: 800;
         padding: 6px 4px;
+        -webkit-appearance: none;
+        -moz-appearance: textfield;
+      }
+      .manage-stepper-input::-webkit-inner-spin-button,
+      .manage-stepper-input::-webkit-outer-spin-button {
+        display: none;
       }
       .manage-select {
         flex: 1;
@@ -1492,7 +1538,6 @@
       .ledger-history {
         margin-top: 15px;
         border-top: 1px solid rgba(255,248,238,0.1);
-        padding-top: 12px;
       }
       .history-toggle {
         width: 100%;
@@ -1594,34 +1639,18 @@
         line-height: 1;
       }
       .history-sheet-backdrop {
-        align-items: flex-end;
+        align-items: center;
         justify-content: center;
-        padding: 0;
+        padding: 18px;
       }
       .history-sheet-dialog {
-        width: 100%;
-        max-width: 480px;
-        max-height: 85vh;
-        overflow-y: auto;
+        width: min(330px, 100%);
         border: 1px solid rgba(255,248,238,0.14);
-        border-bottom: 0;
-        border-radius: 18px 18px 0 0;
-        background: #1a1410;
+        border-radius: 12px;
+        background: #18130f;
         color: var(--mobile-text);
-        padding: 10px 18px calc(18px + env(safe-area-inset-bottom));
-        box-shadow: 0 -18px 44px rgba(0,0,0,0.52);
-        transform: translateY(100%);
-        transition: transform 0.2s ease;
-      }
-      .history-sheet-backdrop.visible .history-sheet-dialog {
-        transform: translateY(0);
-      }
-      .history-sheet-handle {
-        width: 32px;
-        height: 4px;
-        border-radius: 999px;
-        background: rgba(255,248,238,0.24);
-        margin: 0 auto 14px;
+        padding: 18px;
+        box-shadow: 0 18px 44px rgba(0,0,0,0.52);
       }
       .history-sheet-title {
         color: var(--mobile-text);
@@ -1682,16 +1711,14 @@
           {% if can_edit %}
           <li><hr class="dropdown-divider" style="border-color:#5a2d0c;margin:4px 0;"></li>
           <li><a class="dropdown-item" href="{{ url_for('settings_locations') }}">Storage Locations</a></li>
+          <li><hr class="dropdown-divider" style="border-color:#5a2d0c;margin:4px 0;"></li>
+          <li><a class="dropdown-item" href="#" id="deleteWineAction" style="color:#ffd4d4;">Delete wine</a></li>
           {% endif %}
           <li><a class="dropdown-item" href="/export/csv">Export CSV</a></li>
         </ul>
       </div>
-      <div class="mobile-detail-title">🍷 {{ cellar_display_name }}'s wine cellar</div>
-      {% if can_edit %}
-      <button type="button" class="mobile-header-delete" id="deleteWineAction" aria-label="Delete wine">🗑</button>
-      {% else %}
+      <div class="mobile-detail-title">{{ wine.wine_name or 'Wine Detail' }}</div>
       <span></span>
-      {% endif %}
     </nav>
     {% set origin_key = (wine.origin or '')|lower|trim %}
     {% set flag_map = {
@@ -1741,6 +1768,29 @@
           <div class="hero-icons"><span class="hero-icon">{{ country_flag }}</span><span class="hero-icon-text">{{ wine.region or wine.origin or 'Region unknown' }}</span></div>
           <div class="hero-icons"><span class="hero-icon">🍇</span><span class="hero-icon-text">{{ wine.varietal or 'Varietal unknown' }}</span></div>
         </div>
+        {% if available_locations or wine.drinking_window %}
+        <div class="hero-bottles-row">
+          {% if wine.quantity %}
+          <span>{{ wine.quantity }} btl</span>
+          {% endif %}
+          {% for item in available_locations %}
+          {% set chip_color = namespace(idx=loop.index0 % 5) %}
+          {% for loc in user_locations %}
+            {% if loc == item.location %}{% set chip_color.idx = loop.index0 % 5 %}{% endif %}
+          {% endfor %}
+          <span class="hero-sep">&middot;</span>
+          <span class="hero-loc-chip">
+            <span class="hero-loc-dot loc-dot-{{ chip_color.idx }}"></span>{{ item.quantity }} {{ item.location }}
+          </span>
+          {% endfor %}
+          {% if wine.drinking_window %}
+          <span class="hero-sep">&middot;</span>
+          <span class="mobile-drinking-window hero-window-val"
+                data-value="{{ wine.drinking_window }}"
+                data-status="{{ wine.status or '' }}">{{ wine.drinking_window }}</span>
+          {% endif %}
+        </div>
+        {% endif %}
       </div>
     </section>
 
@@ -1748,7 +1798,7 @@
       <summary>Bottles<span class="details-preview">{{ wine.quantity or 0 }} total{% for item in available_locations %} &middot; {{ item.quantity }} {{ item.location }}{% endfor %}</span></summary>
       <div class="ledger-title-row">
         <div></div>
-        {% if can_edit %}
+        {% if can_edit and not available_locations and not incoming_locations %}
         <button type="button" class="ledger-add-btn" id="openAddBottleSheet">+ Add</button>
         {% endif %}
       </div>
@@ -1817,13 +1867,8 @@
       </div>
     </details>
 
-    {% set cellar_preview = [] %}
-    {% if wine.my_rating is not none %}{% set _ = cellar_preview.append("%g"|format(wine.my_rating)) %}{% endif %}
-    {% if wine.drinking_window %}{% set _ = cellar_preview.append(wine.drinking_window) %}{% endif %}
-    {% if wine.color_code %}{% set _ = cellar_preview.append(wine.color_code) %}{% endif %}
-    {% if wine.retailer %}{% set _ = cellar_preview.append(wine.retailer) %}{% endif %}
     <details class="mobile-details detail-section" id="cellarFields">
-      <summary>Cellar<span class="details-preview">{{ cellar_preview|join(' · ') }}</span></summary>
+      <summary>Cellar<span class="details-preview">{% set sep = joiner(' &middot; ') %}{% if wine.my_rating is not none %}{{ sep() }}&#9733; {{ "%g"|format(wine.my_rating) }}{% endif %}{% if wine.drinking_window %}{{ sep() }}{{ wine.drinking_window }}{% endif %}{% if wine.color_code %}{{ sep() }}{{ wine.color_code }}{% endif %}{% if wine.retailer %}{{ sep() }}{{ wine.retailer }}{% endif %}</span></summary>
       <div class="priority-grid">
         <div class="field-card">
           <span class="edit-label">Source</span>
@@ -1869,7 +1914,7 @@
     </details>
 
     <details class="mobile-details ledger-history" id="drinkHistorySection">
-      <summary>Drink History<span class="details-preview">{% if drank_total %}{{ drank_total }} total{% else %}none{% endif %}</span></summary>
+      <summary>Drink History<span class="details-preview">{% if drank_total and drink_history %}{% set last = drink_history[0] %}{% set raw_date = last.drank_date or last.created_at[:10] %}{% set dp = raw_date.split('-') %}{% if dp|length == 3 %}{% set disp = (dp[1]|int) ~ '/' ~ (dp[2]|int) ~ '/' ~ dp[0][2:] %}{% else %}{% set disp = raw_date %}{% endif %}Last {{ disp }}{% if last.rating is not none %} &middot; {{ "%g"|format(last.rating) }}{% endif %}{% else %}none{% endif %}</span></summary>
       <div class="ledger-list history-body" id="drinkHistoryBody">
         {% if drink_history %}
           {% for drink in drink_history %}
@@ -2010,8 +2055,8 @@
               </select>
             </div>
           </div>
-          <details>
-            <summary style="color:var(--mobile-muted);font-size:0.78rem;font-weight:900;cursor:pointer;list-style:none;">Purchase details</summary>
+          <details class="add-purchase-details">
+            <summary style="color:var(--mobile-muted);font-size:0.78rem;font-weight:900;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;">Purchase details <span class="add-purchase-chevron" style="font-size:0.9rem;transition:transform 0.18s;">&#9662;</span></summary>
             <div style="display:flex;flex-direction:column;gap:10px;margin-top:10px;">
               <input type="text" id="addBottleSourceInput" placeholder="Source"
                      style="width:100%;background:#11100f;border:1px solid rgba(255,248,238,0.14);border-radius:8px;color:var(--mobile-text);font-size:0.9rem;font-weight:800;padding:8px 10px;">
@@ -2056,7 +2101,7 @@
           </div>
         </div>
         <div class="manage-section">
-          <div class="manage-section-label">Correct count</div>
+          <div class="manage-section-label">Set count</div>
           <div class="manage-correct-row">
             <span style="color:var(--mobile-muted);font-size:0.82rem;font-weight:800;">Set to</span>
             <input type="number" id="correctLocationQtyInput" min="0" inputmode="numeric" class="manage-stepper-input">
@@ -2070,7 +2115,6 @@
     <!-- Drink history edit sheet -->
     <div class="delete-confirm-backdrop history-sheet-backdrop" id="historyEditModal" aria-hidden="true">
       <div class="history-sheet-dialog" role="dialog" aria-modal="true" aria-labelledby="historyEditTitle">
-        <div class="history-sheet-handle" aria-hidden="true"></div>
         <div class="history-sheet-title" id="historyEditTitle">Edit drink history</div>
         <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px;">
           <div>
@@ -2199,6 +2243,17 @@
         <div class="delete-confirm-actions">
           <button type="button" id="cancelDeleteAction">Cancel</button>
           <button type="button" class="danger" id="confirmDeleteAction">Yes, delete</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="delete-confirm-backdrop" id="zeroCorrectConfirmDialog" aria-hidden="true">
+      <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="zeroCorrectTitle">
+        <div class="delete-confirm-title" id="zeroCorrectTitle">Set count to 0?</div>
+        <div class="delete-confirm-copy">This removes all bottles at this location without logging a drink.</div>
+        <div class="delete-confirm-actions">
+          <button type="button" id="cancelZeroCorrect">Cancel</button>
+          <button type="button" class="danger" id="confirmZeroCorrect">Yes, set to 0</button>
         </div>
       </div>
     </div>
@@ -2399,6 +2454,13 @@
       textarea.addEventListener('input', () => autosizeTextarea(textarea));
     });
 
+    const heroNameEl = document.querySelector('textarea.hero-name');
+    if (heroNameEl) {
+      heroNameEl.style.overflow = 'hidden';
+      autosizeTextarea(heroNameEl);
+      heroNameEl.addEventListener('input', () => autosizeTextarea(heroNameEl));
+    }
+
     if (canEditMobile) {
       try {
         document.querySelectorAll('[data-detail-form]').forEach(form => {
@@ -2426,6 +2488,41 @@
           });
         });
       } catch (e) {}
+
+      const orderDateInput = document.querySelector('#purchaseFields input[name="order_date"]');
+      if (orderDateInput) {
+        function formatOrderDateDisplay(isoVal) {
+          if (!isoVal) return '';
+          const d = new Date(isoVal + 'T12:00:00');
+          return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+        orderDateInput._isoValue = orderDateInput.value;
+        if (orderDateInput.value) {
+          orderDateInput.type = 'text';
+          orderDateInput.value = formatOrderDateDisplay(orderDateInput._isoValue);
+          orderDateInput.style.textAlign = 'left';
+        } else {
+          orderDateInput.type = 'text';
+          orderDateInput.style.textAlign = 'left';
+        }
+        orderDateInput.addEventListener('focus', function () {
+          this.type = 'date';
+          this.value = this._isoValue || '';
+          this.style.textAlign = 'left';
+          if (typeof this.showPicker === 'function') {
+            try { this.showPicker(); } catch (e) {}
+          }
+        });
+        orderDateInput.addEventListener('blur', function () {
+          this._isoValue = this.value;
+          const iso = this.value;
+          setTimeout(() => {
+            this.type = 'text';
+            this.value = formatOrderDateDisplay(iso);
+            this.style.textAlign = 'left';
+          }, 0);
+        });
+      }
 
       document.getElementById('drinkControl')?.addEventListener('input', event => {
         document.querySelectorAll('.mobile-drinking-window').forEach(cell => {
@@ -2579,6 +2676,10 @@
         document.getElementById('addBottleModal').setAttribute('aria-hidden', 'true');
       }
       document.getElementById('openAddBottleSheet')?.addEventListener('click', () => openAddBottleModal());
+      document.querySelector('.add-purchase-details')?.addEventListener('toggle', function() {
+        const ch = this.querySelector('.add-purchase-chevron');
+        if (ch) ch.style.transform = this.open ? 'rotate(180deg)' : '';
+      });
       document.querySelectorAll('.ledger-plus-btn').forEach(btn => {
         btn.addEventListener('click', () => openAddBottleModal(btn.dataset.location || ''));
       });
@@ -2671,16 +2772,51 @@
         const inp = document.getElementById('moveLocationQtyInput');
         if (inp) inp.value = Math.min(pendingLocationQty || 1, (parseInt(inp.value, 10) || 1) + 1);
       });
-      document.getElementById('confirmCorrectLocation')?.addEventListener('click', async () => {
-        if (!pendingLocation) return;
-        const btn = document.getElementById('confirmCorrectLocation');
-        btn.disabled = true;
-        const quantity = Math.max(0, parseInt(document.getElementById('correctLocationQtyInput')?.value || '0', 10) || 0);
-        const body = new URLSearchParams({ storage_location: pendingLocation, quantity: String(quantity) });
-        closeLocationEditModal();
+      let pendingZeroCorrectLocation = null;
+
+      async function doCorrectLocation(location, quantity) {
+        const body = new URLSearchParams({ storage_location: location, quantity: String(quantity) });
         const data = await postInventory('/wine/{{ wine.id }}/location/correct', body);
-        btn.disabled = false;
         if (data?.ok) window.location.reload();
+      }
+
+      document.getElementById('confirmCorrectLocation')?.addEventListener('click', () => {
+        if (!pendingLocation) return;
+        const quantity = Math.max(0, parseInt(document.getElementById('correctLocationQtyInput')?.value || '0', 10) || 0);
+        const location = pendingLocation;
+        closeLocationEditModal();
+        if (quantity === 0) {
+          pendingZeroCorrectLocation = location;
+          const dlg = document.getElementById('zeroCorrectConfirmDialog');
+          dlg?.classList.add('visible');
+          dlg?.setAttribute('aria-hidden', 'false');
+        } else {
+          doCorrectLocation(location, quantity);
+        }
+      });
+
+      document.getElementById('cancelZeroCorrect')?.addEventListener('click', () => {
+        document.getElementById('zeroCorrectConfirmDialog')?.classList.remove('visible');
+        document.getElementById('zeroCorrectConfirmDialog')?.setAttribute('aria-hidden', 'true');
+        pendingZeroCorrectLocation = null;
+      });
+      document.getElementById('zeroCorrectConfirmDialog')?.addEventListener('click', e => {
+        if (e.target === e.currentTarget) {
+          document.getElementById('zeroCorrectConfirmDialog').classList.remove('visible');
+          document.getElementById('zeroCorrectConfirmDialog').setAttribute('aria-hidden', 'true');
+          pendingZeroCorrectLocation = null;
+        }
+      });
+      document.getElementById('confirmZeroCorrect')?.addEventListener('click', async () => {
+        if (!pendingZeroCorrectLocation) return;
+        const btn = document.getElementById('confirmZeroCorrect');
+        btn.disabled = true;
+        const loc = pendingZeroCorrectLocation;
+        document.getElementById('zeroCorrectConfirmDialog')?.classList.remove('visible');
+        document.getElementById('zeroCorrectConfirmDialog')?.setAttribute('aria-hidden', 'true');
+        pendingZeroCorrectLocation = null;
+        await doCorrectLocation(loc, 0);
+        btn.disabled = false;
       });
       document.getElementById('confirmMoveLocation')?.addEventListener('click', async () => {
         if (!pendingLocation) return;
@@ -2996,7 +3132,8 @@
         deleteDialog?.classList.remove('visible');
         deleteDialog?.setAttribute('aria-hidden', 'true');
       }
-      deleteButton?.addEventListener('click', () => {
+      deleteButton?.addEventListener('click', event => {
+        event.preventDefault();
         deleteDialog?.classList.add('visible');
         deleteDialog?.setAttribute('aria-hidden', 'false');
       });
