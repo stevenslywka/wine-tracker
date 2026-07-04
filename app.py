@@ -101,6 +101,10 @@ def replace_wine_inventory_lot(conn, wine_id, quantity=None, status=None,
     )
 
 
+def wine_family_key(wine_name):
+    return _db_module.wine_family_key(wine_name)
+
+
 def lastrowid(conn, cursor):
     import db as db_module
     if db_module.is_postgres():
@@ -563,6 +567,8 @@ def wine_detail(wine_id):
     not_shipped_count = 0
     cellar_username = ""
     cellar_display_name = ""
+    family_siblings = []
+    family_link_candidates = []
     if wine:
         cur.execute(f"SELECT name FROM user_locations WHERE user_id = {p} ORDER BY sort_order", (wine["user_id"],))
         user_locations = [r["name"] for r in cur.fetchall()]
@@ -651,6 +657,30 @@ def wine_detail(wine_id):
         for location, item in sorted(incoming_by_location.items(), key=lambda kv: kv[0]):
             item["summary"] = " · ".join((item["retailers"] + item["order_dates"])[:2])
             incoming_locations.append(item)
+
+        family_key = wine["family_key"]
+        if family_key:
+            cur.execute(
+                f"""SELECT id, wine_name, vintage, quantity, status
+                    FROM wines
+                    WHERE user_id = {p}
+                      AND family_key = {p}
+                      AND id != {p}
+                    ORDER BY (vintage IS NULL), vintage DESC, id DESC""",
+                (wine["user_id"], family_key, wine_id)
+            )
+            family_siblings = cur.fetchall()
+        if wine["user_id"] == session.get("user_id"):
+            cur.execute(
+                f"""SELECT id, wine_name, vintage
+                    FROM wines
+                    WHERE user_id = {p}
+                      AND id != {p}
+                      AND (family_key IS NULL OR family_key != COALESCE({p}, ''))
+                    ORDER BY wine_name, (vintage IS NULL), vintage DESC""",
+                (wine["user_id"], wine_id, family_key)
+            )
+            family_link_candidates = cur.fetchall()
     conn.close()
     if not wine:
         return "Wine not found", 404
@@ -685,6 +715,8 @@ def wine_detail(wine_id):
                            available_locations=available_locations,
                            incoming_locations=incoming_locations,
                            drink_history=drink_history,
+                           family_siblings=family_siblings,
+                           family_link_candidates=family_link_candidates,
                            drank_total=drank_total,
                            not_shipped_count=not_shipped_count,
                            cellar_username=cellar_username,
@@ -1695,9 +1727,58 @@ def update_wine_name(wine_id):
     if not value:
         return ("", 400)
     p = ph(); conn = get_db(); cur = conn.cursor()
+    cur.execute(f"SELECT wine_name, family_key FROM wines WHERE id = {p}", (wine_id,))
+    current = cur.fetchone()
     cur.execute(f"UPDATE wines SET wine_name = {p} WHERE id = {p}", (value, wine_id))
+    # Re-derive the family key only while it is still the auto-assigned one;
+    # manual link/unlink assignments survive renames.
+    if current is not None:
+        old_key = current["family_key"]
+        if old_key is None or old_key == wine_family_key(current["wine_name"]):
+            cur.execute(f"UPDATE wines SET family_key = {p} WHERE id = {p}",
+                        (wine_family_key(value), wine_id))
     conn.commit(); conn.close()
     return ("", 204)
+
+
+@app.route("/wine/<int:wine_id>/family/link", methods=["POST"])
+@login_required
+def link_wine_family(wine_id):
+    """Manually link this wine into another wine's vintage family."""
+    if not owns_wine(wine_id):
+        return jsonify({"error": "Not allowed"}), 403
+    raw_target = request.form.get("target_wine_id", "").strip()
+    if not raw_target.isdigit():
+        return jsonify({"error": "Missing target wine"}), 400
+    target_id = int(raw_target)
+    if target_id == wine_id:
+        return jsonify({"error": "Cannot link a wine to itself"}), 400
+    if not owns_wine(target_id):
+        return jsonify({"error": "Not allowed"}), 403
+    p = ph(); conn = get_db(); cur = conn.cursor()
+    cur.execute(f"SELECT wine_name, family_key FROM wines WHERE id = {p}", (target_id,))
+    target = cur.fetchone()
+    if not target:
+        conn.close()
+        return jsonify({"error": "Target wine not found"}), 404
+    shared_key = target["family_key"] or wine_family_key(target["wine_name"]) or f"wine:{target_id}"
+    cur.execute(f"UPDATE wines SET family_key = {p} WHERE id = {p}", (shared_key, target_id))
+    cur.execute(f"UPDATE wines SET family_key = {p} WHERE id = {p}", (shared_key, wine_id))
+    conn.commit(); conn.close()
+    return jsonify({"ok": True, "family_key": shared_key})
+
+
+@app.route("/wine/<int:wine_id>/family/unlink", methods=["POST"])
+@login_required
+def unlink_wine_family(wine_id):
+    """Remove this wine from its vintage family; the unique key survives re-migration."""
+    if not owns_wine(wine_id):
+        return jsonify({"error": "Not allowed"}), 403
+    p = ph(); conn = get_db(); cur = conn.cursor()
+    cur.execute(f"UPDATE wines SET family_key = {p} WHERE id = {p}",
+                (f"wine:{wine_id}", wine_id))
+    conn.commit(); conn.close()
+    return jsonify({"ok": True})
 
 
 @app.route("/wine/<int:wine_id>/vintage", methods=["POST"])
@@ -1798,6 +1879,7 @@ def add_wine():
     size_ml   = infer_size(wine_name)
     drinking_window = scan_drinking_window or lookup_drinking_window(wine_name, vintage, varietal, region, retail_price=unit_price, size_ml=size_ml)
     dw_source = "manual" if scan_drinking_window else ("auto" if drinking_window else None)
+    family_key = wine_family_key(wine_name)
 
     user_id = session["user_id"]
     p = ph()
@@ -1809,11 +1891,11 @@ def add_wine():
             INSERT INTO wines
                 (wine_name, vintage, unit_price, total_price, quantity, notes,
                  varietal, region, origin, wine_type, size_ml,
-                 retailer, order_date, status, storage_location, color_code, drinking_window, drinking_window_source, user_id)
-            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
+                 retailer, order_date, status, storage_location, color_code, drinking_window, drinking_window_source, family_key, user_id)
+            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
             RETURNING id
         """, (wine_name, vintage, unit_price, total_price, quantity, notes,
-              varietal, region, origin, wine_type, size_ml, retailer, order_date, status, storage_location, color_code, drinking_window, dw_source, user_id))
+              varietal, region, origin, wine_type, size_ml, retailer, order_date, status, storage_location, color_code, drinking_window, dw_source, family_key, user_id))
         row = cur.fetchone()
         wine_id = row["id"] if row else None
     else:
@@ -1821,10 +1903,10 @@ def add_wine():
             INSERT INTO wines
                 (wine_name, vintage, unit_price, total_price, quantity, notes,
                  varietal, region, origin, wine_type, size_ml,
-                 retailer, order_date, status, storage_location, color_code, drinking_window, drinking_window_source, user_id)
-            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
+                 retailer, order_date, status, storage_location, color_code, drinking_window, drinking_window_source, family_key, user_id)
+            VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p})
         """, (wine_name, vintage, unit_price, total_price, quantity, notes,
-              varietal, region, origin, wine_type, size_ml, retailer, order_date, status, storage_location, color_code, drinking_window, dw_source, user_id))
+              varietal, region, origin, wine_type, size_ml, retailer, order_date, status, storage_location, color_code, drinking_window, dw_source, family_key, user_id))
         wine_id = cur.lastrowid
 
     if wine_id:
@@ -2017,9 +2099,7 @@ BATCH_SCAN_PROMPT = (
 
 
 def _normalize_wine_match_text(value):
-    import re
-    value = (value or "").lower()
-    return re.sub(r"[^a-z0-9]+", " ", value).strip()
+    return _db_module.normalize_wine_match_text(value)
 
 
 def _looks_like_same_wine(scanned_name, existing_name):
@@ -2242,21 +2322,22 @@ def add_bulk_wines():
         size_ml   = infer_size(wine_name)
         drinking_window = lookup_drinking_window(wine_name, vintage, varietal, region, retail_price=unit_price, size_ml=size_ml)
         dw_source = "auto" if drinking_window else None
+        family_key = wine_family_key(wine_name)
         if is_postgres():
             cur.execute(f"""INSERT INTO wines (wine_name, vintage, unit_price, total_price, quantity,
-                varietal, region, origin, wine_type, size_ml, retailer, order_date, status, storage_location, drinking_window, drinking_window_source, user_id)
-                VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'in_collection','Cellar',{p},{p},{p})
+                varietal, region, origin, wine_type, size_ml, retailer, order_date, status, storage_location, drinking_window, drinking_window_source, family_key, user_id)
+                VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'in_collection','Cellar',{p},{p},{p},{p})
                 RETURNING id""",
                 (wine_name, vintage, unit_price, total_price, quantity,
-                 varietal, region, origin, wine_type, size_ml, retailer, order_date, drinking_window, dw_source, user_id))
+                 varietal, region, origin, wine_type, size_ml, retailer, order_date, drinking_window, dw_source, family_key, user_id))
             row = cur.fetchone()
             wine_id = row["id"] if row else None
         else:
             cur.execute(f"""INSERT INTO wines (wine_name, vintage, unit_price, total_price, quantity,
-                varietal, region, origin, wine_type, size_ml, retailer, order_date, status, storage_location, drinking_window, drinking_window_source, user_id)
-                VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'in_collection','Cellar',{p},{p},{p})""",
+                varietal, region, origin, wine_type, size_ml, retailer, order_date, status, storage_location, drinking_window, drinking_window_source, family_key, user_id)
+                VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},{p},'in_collection','Cellar',{p},{p},{p},{p})""",
                 (wine_name, vintage, unit_price, total_price, quantity,
-                 varietal, region, origin, wine_type, size_ml, retailer, order_date, drinking_window, dw_source, user_id))
+                 varietal, region, origin, wine_type, size_ml, retailer, order_date, drinking_window, dw_source, family_key, user_id))
             wine_id = cur.lastrowid
         if wine_id:
             upsert_inventory_lot(conn, wine_id, quantity, "in_collection", "Cellar", retailer, order_date, unit_price)
@@ -2327,6 +2408,7 @@ def add_batch_scan():
             retail_price=unit_price, size_ml=size_ml
         ) or ai_window
         dw_source = "auto" if drinking_window else None
+        family_key = wine_family_key(wine_name)
 
         if is_postgres():
             cur.execute(
@@ -2334,14 +2416,14 @@ def add_batch_scan():
                     (wine_name, vintage, unit_price, total_price, quantity,
                      varietal, region, origin, wine_type, size_ml,
                      retailer, order_date, status, storage_location, color_code,
-                     drinking_window, drinking_window_source, user_id)
+                     drinking_window, drinking_window_source, family_key, user_id)
                     VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},
-                            {p},{p},{p},{p},{p},{p},{p},{p})
+                            {p},{p},{p},{p},{p},{p},{p},{p},{p})
                     RETURNING id""",
                 (wine_name, vintage, unit_price, total_price, quantity,
                  varietal, region, origin, wine_type, size_ml,
                  retailer, order_date, status, storage_location, color_code,
-                 drinking_window, dw_source, user_id)
+                 drinking_window, dw_source, family_key, user_id)
             )
             row = cur.fetchone()
             wine_id = row["id"] if row else None
@@ -2351,13 +2433,13 @@ def add_batch_scan():
                     (wine_name, vintage, unit_price, total_price, quantity,
                      varietal, region, origin, wine_type, size_ml,
                      retailer, order_date, status, storage_location, color_code,
-                     drinking_window, drinking_window_source, user_id)
+                     drinking_window, drinking_window_source, family_key, user_id)
                     VALUES ({p},{p},{p},{p},{p},{p},{p},{p},{p},{p},
-                            {p},{p},{p},{p},{p},{p},{p},{p})""",
+                            {p},{p},{p},{p},{p},{p},{p},{p},{p})""",
                 (wine_name, vintage, unit_price, total_price, quantity,
                  varietal, region, origin, wine_type, size_ml,
                  retailer, order_date, status, storage_location, color_code,
-                 drinking_window, dw_source, user_id)
+                 drinking_window, dw_source, family_key, user_id)
             )
             wine_id = cur.lastrowid
         if wine_id:

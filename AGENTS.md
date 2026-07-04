@@ -6,7 +6,7 @@ Personal Flask wine cellar app replacing Vivino. Multi-user. Local dev uses SQLi
 - Live site: `https://stevenwinecellar.up.railway.app/`
 - GitHub: `https://github.com/stevenslywka/wine-tracker`
 - Railway deploys automatically from GitHub `main`
-- Latest production work noted in this guide: mobile Wine Detail polish follow-up with fixed Cellar preview separators, horizontally scrollable long Region/Varietal values, starred Drink History ratings with notepad note marker, improved Drink History edit title/date sizing, and capitalized main cellar header, pushed to GitHub `main` after local verification.
+- Latest production work noted in this guide: wine-family grouping across vintages (`wines.family_key`, auto-assigned and backfilled via `db.migrate()`, manual link/unlink routes, mobile "Other vintages" strip), pushed to GitHub `main` after local verification.
 
 ## Current Truth
 
@@ -18,6 +18,7 @@ Trust this section first when older notes or local Git disagree.
 - Drink history lives in `wine_drink_history`; `storage_location` snapshots where the bottle was consumed from, so history remains readable/editable even if lots are merged or deleted.
 - Mobile Wine Detail uses compact collapsible sections in this order: Bottles, Cellar, Drink History, Wine details, Purchase. The hero shows a stretched bottle image, editable auto-growing wine name, bottle count/location chips, and drinking window. The sticky header shows the wine name and delete lives in the hamburger menu. The Bottles section has a compact count preview, tinted two-column location stock cards with top-right manage (`...`) and a `- / count / +` stepper row, incoming `Receive Shipment`, compact Drink/Add/Manage sheets, and only shows the top-level `+ Add` button in the zero-inventory state. Drink History is its own line item with tappable rows for edit/delete in a centered dialog.
 - Detail-page `+ Add` adds bottles to an existing wine through `/wine/<id>/add-lot`; broader Add Wine re-buy detection is still future work.
+- Wine-family grouping: `wines.family_key` (nullable TEXT) groups the same wine across vintages. Auto-assigned from `db.wine_family_key()` (normalized name via `normalize_wine_match_text`, standalone 19xx/20xx tokens stripped); `db.migrate()` backfills only NULL keys so manual assignments survive. Manual link adopts the target's key (`POST /wine/<id>/family/link`); unlink sets a unique `wine:<id>` key (`POST /wine/<id>/family/unlink`). Renaming a wine re-derives the key only if it was still the auto-assigned one. Mobile detail shows an "Other vintages" strip under the hero; Link/Unlink live in the hamburger menu. Cellar sort/filter is unchanged.
 - Main Cellar mobile Cards/List and desktop views are separate work areas. Do not change them unless requested.
 
 ## Startup Workflow
@@ -54,6 +55,7 @@ File: `templates/detail.html`; route: `GET /wine/<id>` from `app.py -> wine_deta
 - Drink History rows open a centered edit dialog titled `Drink History · date · location`. Save/delete handlers and row `data-*` attributes are intentionally preserved. Deleting restores the bottle to the selected/source location.
 - Cellar section is collapsed by default, with a preview of starred Rating, Drinking Window, Sticker Color, and Source. Expanded content contains Source, Sticker, Rating, Drinking Window, then full-width Notes; Source and Drinking Window values are centered.
 - Collapsed sections: Wine details preview shows Region and Varietal only; long Region/Varietal values inside Wine details can be dragged horizontally on mobile. Purchase preview is left-aligned. Purchase Order Date is left-aligned to match Paid each and Total paid.
+- "Other vintages" strip sits between the hero and the Bottles section when the wine has family siblings: vintage chips (with `×N` bottle counts) linking to sibling detail pages, preserving the `back` param. `Link vintages` (id `linkVintagesAction`) in the hamburger menu opens a searchable dialog (`familyLinkModal`) of the user's other wines; `Unlink this vintage` (id `unlinkVintageAction`) appears only when siblings exist and asks for confirmation.
 - Bottom bar: Back to Cellar, Previous Wine, Next Wine.
 
 ## Inventory Rules
@@ -70,7 +72,9 @@ File: `templates/detail.html`; route: `GET /wine/<id>` from `app.py -> wine_deta
 
 ### `wines`
 
-`id, wine_name, vintage, varietal, region, origin, wine_type, size_ml, unit_price, retail_price, total_price, quantity, retailer, order_date, status, storage_location, location_summary, color_code, drinking_window, drinking_window_source, notes, image_url, user_id`
+`id, wine_name, vintage, varietal, region, origin, wine_type, size_ml, unit_price, retail_price, total_price, quantity, retailer, order_date, status, storage_location, location_summary, color_code, drinking_window, drinking_window_source, notes, image_url, family_key, user_id`
+
+`family_key` is a nullable text grouping key for the same wine across vintages; `wine:<id>` marks a manually unlinked wine.
 
 Status values: `in_collection`, `not_shipped`, `drank`.
 
@@ -120,6 +124,8 @@ For migrations, handle PostgreSQL and SQLite separately with `information_schema
 - `POST /wine/<id>/location/correct` - Bottle Ledger location-level correction
 - `POST /wine/<id>/drink-history/<history_id>/update` - edit drink history
 - `POST /wine/<id>/drink-history/<history_id>/delete` - delete drink history and restore bottle
+- `POST /wine/<id>/family/link` - link this wine into another wine's vintage family (form `target_wine_id`)
+- `POST /wine/<id>/family/unlink` - remove this wine from its vintage family
 
 ### Other important routes
 
@@ -197,10 +203,57 @@ Rules:
 
 For `AGENTS.md` and `NEW_CHAT_PROMPT.md`, prefer scripted stable-prefix replacements or a deliberate full rewrite. Avoid repeated fragile `apply_patch` attempts against prose containing emoji/mojibake. Verify with `rg`.
 
+## Current Build - Mobile Enhancements (in progress)
+
+Build these four sections in order, one at a time. Fully finish a section (code
+plus `scripts/verify_detail.py` passing) then stop and report before starting the
+next; do not run ahead across sections. Follow "Inventory Rules", "Schema Changes",
+and "Do Not Touch Unless Asked" above. Do not commit, push, or deploy unless
+explicitly asked. This is the agreed plan; the "Future Work" items below are
+deferred and out of scope for this build unless asked.
+
+1. DONE (2026-07-04, pushed to production). Wine-family grouping across vintages (do first; hardest). Group the same wine
+   across vintages: add a nullable grouping key to `wines` via `db.migrate()`
+   (Postgres and SQLite), auto-assign by normalized name ignoring vintage (reuse
+   `_normalize_wine_match_text`), allow manual link/unlink, and show an "Other
+   vintages" strip on mobile detail linking to siblings. Confirm before changing
+   cellar sort/filter; do not change desktop or `index.html` card/list layout
+   beyond what grouping requires.
+
+2. Scan -> identify -> re-buy. Merge `scan-label` and `scan-batch-labels` into one
+   helper with a single model constant (keep the current runtime model - this is
+   product runtime, not the build model). Add cellar matching to the single-scan
+   path (reuse `_looks_like_same_wine` plus vintage). On match, deep-link to
+   `/wine/<id>` with an "Add another bottle?" action calling `/wine/<id>/add-lot`;
+   on no match, prefill Add Wine.
+
+3. Geolocation location default. Add nullable `latitude` and `longitude` to
+   `user_locations` via `db.migrate()` (Postgres and SQLite), seeded with the
+   coordinates below. At add-bottle time, request device location and pre-select
+   the nearest saved location only when within 300 m AND the reading's reported
+   accuracy is good enough; the user can override; on permission denied or missing
+   coordinates, fall back silently to the current default. Position is used to
+   choose and then discarded, never stored. Design columns and logic to support a
+   later "Set location here" button and per-location manual entry for other users.
+
+   Seed coordinates (address-level geocodes):
+   - Apt   (170 Amsterdam Ave, New York, NY 10023):     lat 40.7760223, lon -73.9839230
+   - House (109 Boice Mill Road, Kerhonkson, NY 12446): lat 41.7911949, lon -74.2810933
+
+4. Tap-to-add photo and photo polish. Factor the image-upload block out of
+   `add_wine` into a shared helper; add `POST /wine/<id>/photo` (ownership-checked)
+   that updates `wines.image_url`. Make the "No photo" placeholder and the existing
+   image tappable (a `<label>` wrapping a hidden
+   `<input type="file" accept="image/*" capture="environment">`), auto-submit with
+   an uploading state, and downscale the image client-side before upload. Note:
+   live-site photo persistence requires Cloudinary env vars (`CLOUDINARY_*`) on
+   Railway; without them uploads save to `static/uploads` and are lost on redeploy.
+   Confirm Cloudinary is configured before relying on live uploads.
+
 ## Future Work
 
-- Re-buy detection in Add Wine, using existing `/wine/<id>/add-lot`.
+Deferred - not part of the current build above:
+
 - Expanded/all drink history view if recent rows are not enough.
-- Wine family / vertical grouping across vintages.
 - Friends permissions beyond current view-only behavior.
 - Optional mobile column visibility improvements.

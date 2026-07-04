@@ -1543,6 +1543,79 @@
         align-items: center;
         gap: 7px;
       }
+      .family-strip {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 10px 0 2px;
+        padding: 9px 12px;
+        border: 1px solid rgba(255,248,238,0.12);
+        border-radius: 9px;
+        background: rgba(38,30,22,0.55);
+      }
+      .family-strip-label {
+        color: var(--mobile-muted);
+        font-size: 0.74rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .family-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 11px;
+        border: 1px solid rgba(231,189,112,0.42);
+        border-radius: 999px;
+        background: #211a13;
+        color: var(--mobile-accent);
+        font-size: 0.84rem;
+        font-weight: 900;
+        text-decoration: none;
+      }
+      .family-chip-count {
+        color: var(--mobile-muted);
+        font-weight: 800;
+      }
+      .family-link-search {
+        width: 100%;
+        margin-bottom: 10px;
+        background: #11100f;
+        border: 1px solid rgba(255,248,238,0.14);
+        border-radius: 8px;
+        color: var(--mobile-text);
+        font-size: 0.92rem;
+        font-weight: 800;
+        padding: 8px 10px;
+      }
+      .family-link-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 44vh;
+        overflow-y: auto;
+      }
+      .family-link-option {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        width: 100%;
+        text-align: left;
+        border: 1px solid rgba(255,248,238,0.12);
+        border-radius: 9px;
+        background: #211a13;
+        color: var(--mobile-text);
+        font-size: 0.88rem;
+        font-weight: 800;
+        padding: 9px 11px;
+      }
+      .family-link-vintage {
+        color: var(--mobile-muted);
+        font-weight: 900;
+        white-space: nowrap;
+      }
       .ledger-empty {
         color: var(--mobile-muted);
         font-size: 0.84rem;
@@ -1732,6 +1805,10 @@
           {% if can_edit %}
           <li><hr class="dropdown-divider" style="border-color:#5a2d0c;margin:4px 0;"></li>
           <li><a class="dropdown-item" href="{{ url_for('settings_locations') }}">Storage Locations</a></li>
+          <li><a class="dropdown-item" href="#" id="linkVintagesAction">Link vintages</a></li>
+          {% if family_siblings %}
+          <li><a class="dropdown-item" href="#" id="unlinkVintageAction">Unlink this vintage</a></li>
+          {% endif %}
           <li><hr class="dropdown-divider" style="border-color:#5a2d0c;margin:4px 0;"></li>
           <li><a class="dropdown-item" href="#" id="deleteWineAction" style="color:#ffd4d4;">Delete wine</a></li>
           {% endif %}
@@ -1814,6 +1891,17 @@
         {% endif %}
       </div>
     </section>
+
+    {% if family_siblings %}
+    <div class="family-strip">
+      <span class="family-strip-label">Other vintages</span>
+      {% for sibling in family_siblings %}
+      <a class="family-chip" href="{{ url_for('wine_detail', wine_id=sibling.id) }}?back={{ back_url|urlencode }}">
+        {{ sibling.vintage or 'NV' }}{% if sibling.quantity %}<span class="family-chip-count">&times;{{ sibling.quantity }}</span>{% endif %}
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
 
     <details class="mobile-details ledger-section" id="bottleLedger">
       <summary>Bottles<span class="details-preview">{{ wine.quantity or 0 }} total{% for item in available_locations %} &middot; {{ item.quantity }} {{ item.location }}{% endfor %}</span></summary>
@@ -2172,6 +2260,35 @@
         <button type="button" id="cancelHistoryEdit" style="width:100%;margin-top:8px;border-radius:999px;border:1px solid rgba(255,248,238,0.14);background:#211a13;color:var(--mobile-text);font-size:0.86rem;font-weight:900;padding:10px 8px;">Cancel</button>
       </div>
     </div>
+
+    <!-- Link vintages modal -->
+    {% if can_edit %}
+    <div class="delete-confirm-backdrop" id="familyLinkModal" aria-hidden="true">
+      <div class="delete-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="familyLinkTitle">
+        <div class="manage-sheet-head">
+          <div>
+            <div class="delete-confirm-title neutral-title" id="familyLinkTitle">Link vintages</div>
+            <div class="delete-confirm-copy">Pick the wine this bottle belongs with.</div>
+          </div>
+          <button type="button" id="cancelFamilyLink" class="manage-close-btn" aria-label="Close">&times;</button>
+        </div>
+        <input type="search" id="familyLinkSearch" class="family-link-search" placeholder="Search wines..." autocomplete="off">
+        <div class="family-link-list" id="familyLinkList">
+          {% for candidate in family_link_candidates %}
+          <button type="button" class="family-link-option"
+                  data-wine-id="{{ candidate.id }}"
+                  data-search="{{ (candidate.wine_name or '')|lower }} {{ candidate.vintage or '' }}">
+            <span>{{ candidate.wine_name }}</span>
+            <span class="family-link-vintage">{{ candidate.vintage or 'NV' }}</span>
+          </button>
+          {% endfor %}
+          {% if not family_link_candidates %}
+          <div class="ledger-empty">No other wines to link.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
 
     <!-- Move modal -->
     <div class="delete-confirm-backdrop" id="moveModal" aria-hidden="true">
@@ -3142,6 +3259,46 @@
         if (!location) return;
         const body = new URLSearchParams({ storage_location: location, quantity: String(quantity) });
         const data = await postInventory('/wine/{{ wine.id }}/lot/add-location', body);
+        if (data?.ok) window.location.reload();
+      });
+
+      // ── Vintage family link/unlink ──
+      const familyModal = document.getElementById('familyLinkModal');
+      function closeFamilyModal() {
+        familyModal?.classList.remove('visible');
+        familyModal?.setAttribute('aria-hidden', 'true');
+      }
+      document.getElementById('linkVintagesAction')?.addEventListener('click', event => {
+        event.preventDefault();
+        familyModal?.classList.add('visible');
+        familyModal?.setAttribute('aria-hidden', 'false');
+      });
+      document.getElementById('cancelFamilyLink')?.addEventListener('click', closeFamilyModal);
+      familyModal?.addEventListener('click', event => {
+        if (event.target === familyModal) closeFamilyModal();
+      });
+      document.getElementById('familyLinkSearch')?.addEventListener('input', event => {
+        const query = event.target.value.trim().toLowerCase();
+        familyModal?.querySelectorAll('.family-link-option').forEach(option => {
+          option.style.display = !query || (option.dataset.search || '').includes(query) ? '' : 'none';
+        });
+      });
+      familyModal?.querySelectorAll('.family-link-option').forEach(option => {
+        option.addEventListener('click', async () => {
+          option.disabled = true;
+          const body = new URLSearchParams({ target_wine_id: option.dataset.wineId || '' });
+          const data = await postInventory('/wine/{{ wine.id }}/family/link', body);
+          if (data?.ok) {
+            window.location.reload();
+          } else {
+            option.disabled = false;
+          }
+        });
+      });
+      document.getElementById('unlinkVintageAction')?.addEventListener('click', async event => {
+        event.preventDefault();
+        if (!window.confirm('Unlink this vintage from its family?')) return;
+        const data = await postInventory('/wine/{{ wine.id }}/family/unlink', new URLSearchParams());
         if (data?.ok) window.location.reload();
       });
 

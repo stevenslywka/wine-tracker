@@ -29,7 +29,7 @@ Project context:
 - Flask app: `app.py`; DB helpers/migrations: `db.py`; main cellar: `templates/index.html`; wine detail: `templates/detail.html`.
 - Local database is SQLite `wines.db`; production is PostgreSQL.
 - Schema changes must go through `db.py -> migrate()`.
-- Latest production UI work: mobile Wine Detail polish follow-up with fixed Cellar preview separators, horizontally scrollable long Region/Varietal values, starred Drink History ratings with notepad note marker, improved Drink History edit title/date sizing, and capitalized main cellar header.
+- Latest production UI work: wine-family grouping across vintages — `wines.family_key`, auto-assigned/backfilled in `db.migrate()`, manual link/unlink routes, and a mobile "Other vintages" strip on Wine Detail.
 
 Inventory truth:
 - Current inventory uses `wine_inventory_lots`, not individual bottle records.
@@ -38,6 +38,7 @@ Inventory truth:
 - Drink history lives in `wine_drink_history` and keeps a `storage_location` snapshot.
 - Mobile detail inventory changes usually stay in `templates/detail.html`; backend behavior is needed for inventory semantics such as partial Receive Shipment.
 - On mobile detail, Add bottles uses `Not Shipped` as a Location option that maps to lot status `not_shipped`; saved locations map to available inventory. Receive Shipment can partially receive incoming lots.
+- Wine-family grouping: `wines.family_key` (nullable) groups the same wine across vintages, auto-assigned from the normalized name ignoring vintage-year tokens. Mobile detail shows an "Other vintages" chip strip under the hero; Link vintages / Unlink this vintage live in the hamburger menu (`POST /wine/<id>/family/link` and `/family/unlink`). Unlinked wines get a unique `wine:<id>` key so migration backfill never re-links them.
 - Mobile detail section order is Bottles, Cellar, Drink History, Wine Details, Purchase. Bottles and Cellar are collapsed by default; Bottles previews counts like `2 total · 1 Apt · 1 House`; Cellar previews starred Rating, Drinking Window, Sticker Color, and Source. The hero shows bottle/location/drinking-window context, the sticky header shows the wine name, delete lives in the hamburger menu, and Set Count to 0 requires confirmation. Expanded Cellar Source and Drinking Window values are centered; long Region/Varietal values can be dragged horizontally on mobile.
 
 Do not touch unless I explicitly ask:

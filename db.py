@@ -72,6 +72,28 @@ def _lot_status_for_inventory(status):
     return status if status in ("in_collection", "not_shipped") else None
 
 
+def normalize_wine_match_text(value):
+    """Lowercase and collapse punctuation so wine names can be compared loosely."""
+    import re
+    value = (value or "").lower()
+    return re.sub(r"[^a-z0-9]+", " ", value).strip()
+
+
+def wine_family_key(wine_name):
+    """Grouping key for the same wine across vintages.
+
+    Normalized name with standalone vintage-year tokens (19xx/20xx) removed,
+    so '2019 Ridge Monte Bello' and 'Ridge Monte Bello 2021' share a family.
+    Returns None when nothing usable remains.
+    """
+    normalized = normalize_wine_match_text(wine_name)
+    tokens = [
+        t for t in normalized.split()
+        if not (len(t) == 4 and t.isdigit() and t[:2] in ("19", "20"))
+    ]
+    return " ".join(tokens) or None
+
+
 def _fetch_wine_for_lot_defaults(cur, wine_id):
     p = get_placeholder()
     cur.execute(
@@ -358,6 +380,28 @@ def migrate():
         cols = {r['name'] for r in cur.fetchall()}
         if 'location_summary' not in cols:
             cur.execute("ALTER TABLE wines ADD COLUMN location_summary TEXT")
+
+    # --- Add wine-family grouping key (same wine across vintages) ---
+    if pg:
+        cur.execute("ALTER TABLE wines ADD COLUMN IF NOT EXISTS family_key TEXT")
+    else:
+        cur.execute("PRAGMA table_info(wines)")
+        cols = {r['name'] for r in cur.fetchall()}
+        if 'family_key' not in cols:
+            cur.execute("ALTER TABLE wines ADD COLUMN family_key TEXT")
+
+    # Backfill only NULL keys so manual link/unlink assignments are preserved.
+    p_fam = "%s" if pg else "?"
+    cur.execute("SELECT id, wine_name FROM wines WHERE family_key IS NULL")
+    for row in cur.fetchall():
+        row_id = row["id"] if isinstance(row, dict) else row[0]
+        row_name = row["wine_name"] if isinstance(row, dict) else row[1]
+        key = wine_family_key(row_name)
+        if key:
+            cur.execute(
+                f"UPDATE wines SET family_key = {p_fam} WHERE id = {p_fam}",
+                (key, row_id)
+            )
 
     # --- Create user_locations table ---
     if pg:
