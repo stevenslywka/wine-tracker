@@ -79,14 +79,36 @@ def normalize_wine_match_text(value):
     return re.sub(r"[^a-z0-9]+", " ", value).strip()
 
 
-def wine_family_key(wine_name):
-    """Grouping key for the same wine across vintages.
+# Bottle-size wording to ignore when grouping; vocabulary mirrors
+# enrich_wines.SIZE_PATTERNS but matches the normalized (lowercase,
+# punctuation-stripped) text, where '1.5L' becomes '1 5l'.
+_FAMILY_SIZE_RE = None
 
-    Normalized name with standalone vintage-year tokens (19xx/20xx) removed,
-    so '2019 Ridge Monte Bello' and 'Ridge Monte Bello 2021' share a family.
+
+def _strip_family_size_tokens(normalized):
+    global _FAMILY_SIZE_RE
+    if _FAMILY_SIZE_RE is None:
+        import re
+        _FAMILY_SIZE_RE = re.compile(
+            r"\b(?:"
+            r"(?:double\s+)?magnum|jeroboam|"
+            r"(?:half|quarter)\s+bottle|"
+            r"\d+(?:\s+\d+)?\s*(?:ml|cl|l)"
+            r")\b"
+        )
+    return _FAMILY_SIZE_RE.sub(" ", normalized)
+
+
+def wine_family_key(wine_name):
+    """Grouping key for the same wine across vintages and bottle sizes.
+
+    Normalized name with standalone vintage-year tokens (19xx/20xx) and
+    bottle-size wording (Magnum, 375ml, 1.5L, half bottle, ...) removed, so
+    '2019 Ridge Monte Bello' , 'Ridge Monte Bello 2021', and
+    'Ridge Monte Bello Magnum' all share a family.
     Returns None when nothing usable remains.
     """
-    normalized = normalize_wine_match_text(wine_name)
+    normalized = _strip_family_size_tokens(normalize_wine_match_text(wine_name))
     tokens = [
         t for t in normalized.split()
         if not (len(t) == 4 and t.isdigit() and t[:2] in ("19", "20"))
@@ -401,6 +423,23 @@ def migrate():
             cur.execute(
                 f"UPDATE wines SET family_key = {p_fam} WHERE id = {p_fam}",
                 (key, row_id)
+            )
+
+    # Re-normalize existing keys when the key algorithm evolves (e.g. size
+    # tokens are now stripped). Rewriting whole key groups keeps manually
+    # linked families together; 'wine:<id>' unlink markers are left alone.
+    # Idempotent: wine_family_key() on an already-clean key returns it as is.
+    cur.execute("""
+        SELECT DISTINCT family_key FROM wines
+        WHERE family_key IS NOT NULL AND family_key NOT LIKE 'wine:%'
+    """)
+    for row in cur.fetchall():
+        old_key = row["family_key"] if isinstance(row, dict) else row[0]
+        new_key = wine_family_key(old_key)
+        if new_key and new_key != old_key:
+            cur.execute(
+                f"UPDATE wines SET family_key = {p_fam} WHERE family_key = {p_fam}",
+                (new_key, old_key)
             )
 
     # --- Create user_locations table ---

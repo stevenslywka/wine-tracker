@@ -567,7 +567,8 @@ def wine_detail(wine_id):
     not_shipped_count = 0
     cellar_username = ""
     cellar_display_name = ""
-    family_siblings = []
+    family_members = []
+    family_vintage_count = 0
     family_link_candidates = []
     if wine:
         cur.execute(f"SELECT name FROM user_locations WHERE user_id = {p} ORDER BY sort_order", (wine["user_id"],))
@@ -661,15 +662,41 @@ def wine_detail(wine_id):
         family_key = wine["family_key"]
         if family_key:
             cur.execute(
-                f"""SELECT id, wine_name, vintage, quantity, status
-                    FROM wines
-                    WHERE user_id = {p}
-                      AND family_key = {p}
-                      AND id != {p}
-                    ORDER BY (vintage IS NULL), vintage DESC, id DESC""",
-                (wine["user_id"], family_key, wine_id)
+                f"""SELECT w.id, w.vintage, w.size_ml, w.quantity, w.status, w.location_summary,
+                           COALESCE((SELECT SUM(h.quantity) FROM wine_drink_history h
+                                     WHERE h.wine_id = w.id), 0) AS drank_count,
+                           COALESCE((SELECT SUM(l.quantity) FROM wine_inventory_lots l
+                                     WHERE l.wine_id = w.id
+                                       AND l.status = 'not_shipped'
+                                       AND l.quantity > 0), 0) AS incoming_count
+                    FROM wines w
+                    WHERE w.user_id = {p}
+                      AND w.family_key = {p}
+                    ORDER BY (w.vintage IS NULL), w.vintage DESC, w.size_ml DESC, w.id DESC""",
+                (wine["user_id"], family_key)
             )
-            family_siblings = cur.fetchall()
+            member_rows = cur.fetchall()
+            if len(member_rows) > 1:
+                size_labels = {187: "Quarter bottle", 375: "Half bottle", 1000: "1L",
+                               1500: "Magnum", 3000: "Double magnum", 6000: "6L"}
+                for row in member_rows:
+                    size_ml = row["size_ml"]
+                    quantity = row["quantity"] or 0
+                    parts = []
+                    if quantity > 0:
+                        parts.append(row["location_summary"] or f"{quantity} btl")
+                    if row["incoming_count"]:
+                        parts.append(f"{row['incoming_count']} incoming")
+                    if row["drank_count"]:
+                        parts.append(f"Drank ×{row['drank_count']}")
+                    family_members.append({
+                        "id": row["id"],
+                        "vintage_label": str(row["vintage"]) if row["vintage"] else "NV",
+                        "size_label": size_labels.get(size_ml, f"{size_ml}ml") if size_ml and size_ml != 750 else None,
+                        "info": " · ".join(parts) or "No bottles",
+                        "is_current": row["id"] == wine_id,
+                    })
+                family_vintage_count = len({m["vintage_label"] for m in family_members})
         if wine["user_id"] == session.get("user_id"):
             cur.execute(
                 f"""SELECT id, wine_name, vintage
@@ -715,7 +742,8 @@ def wine_detail(wine_id):
                            available_locations=available_locations,
                            incoming_locations=incoming_locations,
                            drink_history=drink_history,
-                           family_siblings=family_siblings,
+                           family_members=family_members,
+                           family_vintage_count=family_vintage_count,
                            family_link_candidates=family_link_candidates,
                            drank_total=drank_total,
                            not_shipped_count=not_shipped_count,

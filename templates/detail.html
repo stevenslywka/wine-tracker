@@ -1543,40 +1543,60 @@
         align-items: center;
         gap: 7px;
       }
-      .family-strip {
+      .vintage-list {
+        display: flex;
+        flex-direction: column;
+      }
+      .vintage-row {
         display: flex;
         align-items: center;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin: 10px 0 2px;
-        padding: 9px 12px;
-        border: 1px solid rgba(255,248,238,0.12);
-        border-radius: 9px;
-        background: rgba(38,30,22,0.55);
-      }
-      .family-strip-label {
+        gap: 10px;
+        border-top: 1px solid rgba(255,248,238,0.08);
+        padding: 9px 0;
+        min-height: 36px;
         color: var(--mobile-muted);
-        font-size: 0.74rem;
+        text-decoration: none;
+      }
+      .vintage-row:first-child { border-top: 0; }
+      .vintage-year {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: baseline;
+        gap: 7px;
+        color: var(--mobile-text);
+        font-size: 0.9rem;
+        font-weight: 900;
+        white-space: nowrap;
+      }
+      .vintage-size {
+        color: var(--mobile-muted);
+        font-size: 0.78rem;
+        font-weight: 800;
+      }
+      .vintage-info {
+        flex: 1;
+        min-width: 0;
+        text-align: right;
+        color: var(--mobile-muted);
+        font-size: 0.8rem;
+        font-weight: 800;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .vintage-chevron {
+        flex: 0 0 auto;
+        color: var(--mobile-muted);
+        font-size: 1.1rem;
+        line-height: 1;
+      }
+      .vintage-current-tag {
+        flex: 0 0 auto;
+        color: var(--mobile-accent);
+        font-size: 0.68rem;
         font-weight: 900;
         text-transform: uppercase;
         letter-spacing: 0.05em;
-      }
-      .family-chip {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 11px;
-        border: 1px solid rgba(231,189,112,0.42);
-        border-radius: 999px;
-        background: #211a13;
-        color: var(--mobile-accent);
-        font-size: 0.84rem;
-        font-weight: 900;
-        text-decoration: none;
-      }
-      .family-chip-count {
-        color: var(--mobile-muted);
-        font-weight: 800;
       }
       .family-link-search {
         width: 100%;
@@ -1806,7 +1826,7 @@
           <li><hr class="dropdown-divider" style="border-color:#5a2d0c;margin:4px 0;"></li>
           <li><a class="dropdown-item" href="{{ url_for('settings_locations') }}">Storage Locations</a></li>
           <li><a class="dropdown-item" href="#" id="linkVintagesAction">Link vintages</a></li>
-          {% if family_siblings %}
+          {% if family_members|length > 1 %}
           <li><a class="dropdown-item" href="#" id="unlinkVintageAction">Unlink this vintage</a></li>
           {% endif %}
           <li><hr class="dropdown-divider" style="border-color:#5a2d0c;margin:4px 0;"></li>
@@ -1892,15 +1912,27 @@
       </div>
     </section>
 
-    {% if family_siblings %}
-    <div class="family-strip">
-      <span class="family-strip-label">Other vintages</span>
-      {% for sibling in family_siblings %}
-      <a class="family-chip" href="{{ url_for('wine_detail', wine_id=sibling.id) }}?back={{ back_url|urlencode }}">
-        {{ sibling.vintage or 'NV' }}{% if sibling.quantity %}<span class="family-chip-count">&times;{{ sibling.quantity }}</span>{% endif %}
-      </a>
-      {% endfor %}
-    </div>
+    {% if family_members|length > 1 %}
+    <details class="mobile-details" id="vintagesSection">
+      <summary>Vintages<span class="details-preview">{{ family_vintage_count }} different vintage{{ 's' if family_vintage_count != 1 else '' }}</span></summary>
+      <div class="vintage-list">
+        {% for member in family_members %}
+        {% if member.is_current %}
+        <div class="vintage-row">
+          <span class="vintage-year">{{ member.vintage_label }}{% if member.size_label %}<span class="vintage-size">{{ member.size_label }}</span>{% endif %}</span>
+          <span class="vintage-info">{{ member.info }}</span>
+          <span class="vintage-current-tag">Viewing</span>
+        </div>
+        {% else %}
+        <a class="vintage-row" href="{{ url_for('wine_detail', wine_id=member.id) }}?back={{ back_url|urlencode }}">
+          <span class="vintage-year">{{ member.vintage_label }}{% if member.size_label %}<span class="vintage-size">{{ member.size_label }}</span>{% endif %}</span>
+          <span class="vintage-info">{{ member.info }}</span>
+          <span class="vintage-chevron">&rsaquo;</span>
+        </a>
+        {% endif %}
+        {% endfor %}
+      </div>
+    </details>
     {% endif %}
 
     <details class="mobile-details ledger-section" id="bottleLedger">
