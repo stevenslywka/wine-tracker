@@ -2100,6 +2100,25 @@ def lookup_receipt(image_data, media_type):
         return None
 
 
+# Product runtime model for label scanning; used by both scan routes.
+SCAN_MODEL = "claude-sonnet-4-6"
+
+LABEL_SCAN_PROMPT = (
+    "Look at this wine label and extract information. Read all text EXACTLY as it "
+    "appears on the label — do not guess or correct spelling. For varietal, location, "
+    "and drinking_window, use your wine knowledge to fill them in even if not printed "
+    "on the label. Return ONLY a JSON object with these exact keys (use null for "
+    "anything you cannot determine):\n"
+    '{"wine_name": "producer + wine name exactly as written", "vintage": 2019, '
+    '"region": "appellation + broader region when applicable, e.g. Chateauneuf-du-Pape, Rhone '
+    'or Saint-Emilion, Bordeaux or just Napa Valley if no sub-appellation", '
+    '"varietal": "grape variety or blend (infer from appellation if needed)", '
+    '"wine_type": "one of: Red, White, Rose, Sparkling, Dessert, Fortified, Orange", '
+    '"location": "country (e.g. France, Italy, USA)", '
+    '"drinking_window": "estimated drinking window e.g. 2025-2032 or Now-2030"}\n'
+    "Return only the JSON, no other text."
+)
+
 BATCH_SCAN_PROMPT = (
     "Look at this photo and identify every distinct wine bottle visible. "
     "For each bottle, read the label as carefully as possible and extract the "
@@ -2145,44 +2164,69 @@ def _looks_like_same_wine(scanned_name, existing_name):
     return overlap >= min(4, len(scanned_tokens), len(existing_tokens))
 
 
-@app.route("/wine/scan-batch-labels", methods=["POST"])
-@login_required
-def scan_batch_labels():
+def _scan_image_with_ai(uploaded, prompt, max_tokens):
+    """Send an uploaded label photo to the scan model and parse its JSON reply.
+
+    Returns (parsed, error_response); exactly one is non-None.
+    """
     import anthropic, base64, json as json_lib
-    uploaded = request.files.get("image")
     if not uploaded or not uploaded.filename:
-        return jsonify({"error": "No image provided"}), 400
+        return None, (jsonify({"error": "No image provided"}), 400)
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
-        return jsonify({"error": "ANTHROPIC_API_KEY not configured"}), 500
-
+        return None, (jsonify({"error": "ANTHROPIC_API_KEY not configured"}), 500)
     image_data = base64.standard_b64encode(uploaded.read()).decode("utf-8")
     media_type = uploaded.content_type or "image/jpeg"
     client = anthropic.Anthropic(api_key=api_key)
     message = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=2048,
+        model=SCAN_MODEL,
+        max_tokens=max_tokens,
         messages=[{
             "role": "user",
             "content": [
                 {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_data}},
-                {"type": "text", "text": BATCH_SCAN_PROMPT}
+                {"type": "text", "text": prompt}
             ]
         }]
     )
-
     try:
         raw = message.content[0].text.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1]
             if raw.startswith("json"):
                 raw = raw[4:]
-        results = json_lib.loads(raw.strip())
-        if not isinstance(results, list):
-            raise ValueError("Expected JSON array")
+        return json_lib.loads(raw.strip()), None
     except Exception as e:
-        print("scan-batch-labels parse error:", e)
+        print("label scan parse error:", e)
         print("raw response:", message.content[0].text)
+        return None, (jsonify({"error": "Could not parse AI response"}), 500)
+
+
+def _match_scanned_wine(existing_wines, scanned_name, scanned_vintage):
+    """Find the user's wine that looks like the scanned label (vintage-aware)."""
+    for existing in existing_wines:
+        existing_vintage = existing["vintage"]
+        if scanned_vintage and existing_vintage and scanned_vintage != existing_vintage:
+            continue
+        if _looks_like_same_wine(scanned_name, existing["wine_name"]):
+            return existing
+    return None
+
+
+def _parse_scanned_vintage(value):
+    try:
+        return int(value) if value else None
+    except Exception:
+        return None
+
+
+@app.route("/wine/scan-batch-labels", methods=["POST"])
+@login_required
+def scan_batch_labels():
+    results, error = _scan_image_with_ai(request.files.get("image"), BATCH_SCAN_PROMPT, 2048)
+    if error:
+        return error
+    if not isinstance(results, list):
         return jsonify({"error": "Could not parse AI response"}), 500
 
     p = ph()
@@ -2195,19 +2239,11 @@ def scan_batch_labels():
     for item in results:
         if not isinstance(item, dict):
             continue
-        scanned_name = (item.get("wine_name") or "").strip()
-        try:
-            scanned_vintage = int(item["vintage"]) if item.get("vintage") else None
-        except Exception:
-            scanned_vintage = None
-        match = None
-        for existing in existing_wines:
-            existing_vintage = existing["vintage"]
-            if scanned_vintage and existing_vintage and scanned_vintage != existing_vintage:
-                continue
-            if _looks_like_same_wine(scanned_name, existing["wine_name"]):
-                match = existing
-                break
+        match = _match_scanned_wine(
+            existing_wines,
+            (item.get("wine_name") or "").strip(),
+            _parse_scanned_vintage(item.get("vintage"))
+        )
         item["duplicate_warning"] = bool(match)
         item["existing_id"] = match["id"] if match else None
 
@@ -2599,38 +2635,41 @@ def recommend_wine():
 @app.route("/wine/scan-label", methods=["POST"])
 @login_required
 def scan_label():
-    import anthropic, base64, json as json_lib
-    uploaded = request.files.get("image")
-    if not uploaded or not uploaded.filename:
-        return jsonify({"error": "No image provided"}), 400
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        return jsonify({"error": "ANTHROPIC_API_KEY not configured"}), 500
-    image_data = base64.standard_b64encode(uploaded.read()).decode("utf-8")
-    media_type = uploaded.content_type or "image/jpeg"
-    client = anthropic.Anthropic(api_key=api_key)
-    message = client.messages.create(
-        model="claude-sonnet-4-6",
-        max_tokens=512,
-        messages=[{
-            "role": "user",
-            "content": [
-                {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": image_data}},
-                {"type": "text", "text": "Look at this wine label and extract information. Read all text EXACTLY as it appears on the label — do not guess or correct spelling. For varietal, location, and drinking_window, use your wine knowledge to fill them in even if not printed on the label. Return ONLY a JSON object with these exact keys (use null for anything you cannot determine):\n{\"wine_name\": \"producer + wine name exactly as written\", \"vintage\": 2019, \"region\": \"appellation + broader region when applicable, e.g. Chateauneuf-du-Pape, Rhone or Saint-Emilion, Bordeaux or just Napa Valley if no sub-appellation\", \"varietal\": \"grape variety or blend (infer from appellation if needed)\", \"wine_type\": \"one of: Red, White, Rose, Sparkling, Dessert, Fortified, Orange\", \"location\": \"country (e.g. France, Italy, USA)\", \"drinking_window\": \"estimated drinking window e.g. 2025-2032 or Now-2030\"}\nReturn only the JSON, no other text."}
-            ]
-        }]
-    )
-    try:
-        raw = message.content[0].text.strip()
-        if raw.startswith("```"):
-            raw = raw.split("```")[1]
-            if raw.startswith("json"):
-                raw = raw[4:]
-        result = json_lib.loads(raw.strip())
-    except Exception as e:
-        print("scan-label parse error:", e)
-        print("raw response:", message.content[0].text)
+    result, error = _scan_image_with_ai(request.files.get("image"), LABEL_SCAN_PROMPT, 512)
+    if error:
+        return error
+    if not isinstance(result, dict):
         return jsonify({"error": "Could not parse AI response"}), 500
+
+    # Re-buy detection: match the scanned label against the user's cellar.
+    p = ph()
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        f"""SELECT id, wine_name, vintage, quantity, status, location_summary
+            FROM wines WHERE user_id = {p}""",
+        (session["user_id"],)
+    )
+    existing_wines = cur.fetchall()
+    conn.close()
+
+    match = _match_scanned_wine(
+        existing_wines,
+        (result.get("wine_name") or "").strip(),
+        _parse_scanned_vintage(result.get("vintage"))
+    )
+    if match:
+        result["match"] = {
+            "id": match["id"],
+            "wine_name": match["wine_name"],
+            "vintage": match["vintage"],
+            "quantity": match["quantity"] or 0,
+            "status": match["status"],
+            "location_summary": match["location_summary"],
+            "url": url_for("wine_detail", wine_id=match["id"]) + "?rebuy=1",
+        }
+    else:
+        result["match"] = None
     return jsonify(result)
 
 

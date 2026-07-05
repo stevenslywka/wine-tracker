@@ -6,7 +6,7 @@ Personal Flask wine cellar app replacing Vivino. Multi-user. Local dev uses SQLi
 - Live site: `https://stevenwinecellar.up.railway.app/`
 - GitHub: `https://github.com/stevenslywka/wine-tracker`
 - Railway deploys automatically from GitHub `main`
-- Latest production work noted in this guide: wine-family grouping rework — size-blind `family_key` (bottle-size wording ignored), collapsible mobile "Vintages" section listing every family member with availability/incoming/drank info, pushed to GitHub `main` after local verification.
+- Latest production work noted in this guide: scan re-buy detection — merged label-scan AI helper with `SCAN_MODEL` constant, `/wine/scan-label` cellar matching with `match` payload, "Already in your cellar" banner in Add Wine scan UIs, and `/wine/<id>?rebuy=1` deep link that opens the mobile Add bottles sheet, pushed to GitHub `main` after local verification.
 
 ## Current Truth
 
@@ -17,7 +17,8 @@ Trust this section first when older notes or local Git disagree.
 - Lots use only `in_collection` and `not_shipped`. `drank` is a derived wine summary state plus drink history, not a lot status.
 - Drink history lives in `wine_drink_history`; `storage_location` snapshots where the bottle was consumed from, so history remains readable/editable even if lots are merged or deleted.
 - Mobile Wine Detail uses compact collapsible sections in this order: Bottles, Cellar, Drink History, Wine details, Purchase. The hero shows a stretched bottle image, editable auto-growing wine name, bottle count/location chips, and drinking window. The sticky header shows the wine name and delete lives in the hamburger menu. The Bottles section has a compact count preview, tinted two-column location stock cards with top-right manage (`...`) and a `- / count / +` stepper row, incoming `Receive Shipment`, compact Drink/Add/Manage sheets, and only shows the top-level `+ Add` button in the zero-inventory state. Drink History is its own line item with tappable rows for edit/delete in a centered dialog.
-- Detail-page `+ Add` adds bottles to an existing wine through `/wine/<id>/add-lot`; broader Add Wine re-buy detection is still future work.
+- Detail-page `+ Add` adds bottles to an existing wine through `/wine/<id>/add-lot`.
+- Scan re-buy detection: both scan routes share `_scan_image_with_ai()` and the `SCAN_MODEL` constant (`claude-sonnet-4-6`, product runtime model). `POST /wine/scan-label` matches the scanned label against the user's cellar (`_match_scanned_wine`, `_looks_like_same_wine` plus vintage) and returns a `match` object (`id`, name, vintage, quantity, status, `location_summary`, `url`) or `match: null`. On match the Add Wine scan UIs show an "Already in your cellar" banner with "Add another bottle" deep-linking to `/wine/<id>?rebuy=1`, which auto-opens the mobile Add bottles sheet (add-lot flow) and strips the param from the URL; "Add as new wine" keeps the prefilled Add Wine flow. Batch scan keeps its `duplicate_warning`/`existing_id` response shape.
 - Wine-family grouping: `wines.family_key` (nullable TEXT) groups the same wine across vintages and bottle sizes. Auto-assigned from `db.wine_family_key()` (normalized name via `normalize_wine_match_text`, standalone 19xx/20xx year tokens and bottle-size wording like Magnum/375ml/1.5L stripped); `db.migrate()` backfills only NULL keys and re-normalizes existing key groups whole when the algorithm evolves, so manual assignments survive. Manual link adopts the target's key (`POST /wine/<id>/family/link`); unlink sets a unique `wine:<id>` key (`POST /wine/<id>/family/unlink`). Renaming a wine re-derives the key only if it was still the auto-assigned one. Mobile detail shows a collapsible "Vintages" section under the hero (preview `X different vintages`, one row per family member including the current wine); Link/Unlink live in the hamburger menu. Cellar sort/filter is unchanged.
 - Main Cellar mobile Cards/List and desktop views are separate work areas. Do not change them unless requested.
 
@@ -220,7 +221,7 @@ deferred and out of scope for this build unless asked.
    cellar sort/filter; do not change desktop or `index.html` card/list layout
    beyond what grouping requires.
 
-2. Scan -> identify -> re-buy. Merge `scan-label` and `scan-batch-labels` into one
+2. DONE (2026-07-04, pushed to production). Scan -> identify -> re-buy. Merge `scan-label` and `scan-batch-labels` into one
    helper with a single model constant (keep the current runtime model - this is
    product runtime, not the build model). Add cellar matching to the single-scan
    path (reuse `_looks_like_same_wine` plus vintage). On match, deep-link to

@@ -2871,6 +2871,17 @@
         const inp = document.getElementById('addBottleQtyInput');
         if (inp) inp.value = Math.max(1, (parseInt(inp.value, 10) || 1) + 1);
       });
+
+      // ── Re-buy deep link: /wine/<id>?rebuy=1 opens the Add bottles sheet ──
+      (() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('rebuy') !== '1') return;
+        params.delete('rebuy');
+        const cleaned = window.location.pathname + (params.toString() ? '?' + params.toString() : '');
+        window.history.replaceState(null, '', cleaned);
+        const mobilePage = document.querySelector('.mobile-detail-page');
+        if (mobilePage && mobilePage.offsetParent !== null) openAddBottleModal();
+      })();
       document.getElementById('confirmAddBottle')?.addEventListener('click', async () => {
         const btn = document.getElementById('confirmAddBottle');
         btn.disabled = true;

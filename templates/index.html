@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ cellar_display_name }}'s Wine Cellar — Wine Tracker</title>
+  <title>{{ cellar_display_name }}'s Cellar — Wine Tracker</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <style>
     html { height: 100%; }
@@ -1648,6 +1648,14 @@
             </div>
             <img id="labelScanPreview" src="" alt="" style="display:none;max-height:200px;border-radius:4px;object-fit:contain;margin:0 auto;">
             <div id="labelScanStatus" style="display:none;text-align:center;font-size:0.9rem;color:#c9a96e;"></div>
+            <div id="labelScanMatch" style="display:none;background:#1a0a00;border:1px solid #c9a96e;border-radius:8px;padding:12px;">
+              <div style="color:#c9a96e;font-weight:bold;margin-bottom:4px;">Already in your cellar</div>
+              <div id="labelScanMatchInfo" style="color:#f5e6d3;font-size:0.9rem;margin-bottom:10px;"></div>
+              <div class="d-flex gap-2">
+                <a id="labelScanMatchLink" href="#" class="btn btn-wine btn-sm flex-fill">Add another bottle &rarr;</a>
+                <button type="button" class="btn btn-secondary btn-sm flex-fill" onclick="document.getElementById('labelScanMatch').style.display='none';">Add as new wine</button>
+              </div>
+            </div>
             <!-- Filled by scan, editable before submitting -->
             <form id="labelScanForm" method="POST" action="/wine/add" enctype="multipart/form-data" style="display:none;" onsubmit="this.querySelector('[type=submit]').disabled=true; this.querySelector('[type=submit]').textContent='Adding…';">
               <input type="hidden" name="scan_varietal" id="lsVarietal">
@@ -2156,6 +2164,7 @@
       status.style.display = 'block';
       status.style.color = '#c9a96e';
       status.textContent = 'Scanning label…';
+      document.getElementById('labelScanMatch').style.display = 'none';
       const formData = new FormData();
       formData.append('image', input.files[0]);
       fetch('/wine/scan-label', { method: 'POST', body: formData })
@@ -2175,6 +2184,20 @@
           document.getElementById('lsImageProxy').files = dt.files;
           status.textContent = 'Label scanned! Review and adjust below.';
           status.style.color = '#7ecb7e';
+          const matchBox = document.getElementById('labelScanMatch');
+          if (data.match) {
+            const m = data.match;
+            const bits = [];
+            bits.push(`${m.wine_name || 'This wine'}${m.vintage ? ' ' + m.vintage : ''}`);
+            if (m.quantity > 0) bits.push(`${m.quantity} bottle${m.quantity !== 1 ? 's' : ''}${m.location_summary ? ' · ' + m.location_summary : ''}`);
+            else if (m.status === 'not_shipped') bits.push('incoming shipment');
+            else bits.push('previously drank');
+            document.getElementById('labelScanMatchInfo').textContent = bits.join(' — ');
+            document.getElementById('labelScanMatchLink').href = m.url;
+            matchBox.style.display = 'block';
+          } else {
+            matchBox.style.display = 'none';
+          }
           document.getElementById('labelScanForm').style.display = 'block';
         })
         .catch(() => { status.textContent = 'Scan failed — try again.'; });
@@ -2522,8 +2545,14 @@
           if (data.wine_type) document.getElementById('scanWineType').value = data.wine_type;
           if (data.location)         document.getElementById('scanLocation').value = data.location;
           if (data.drinking_window)  document.getElementById('scanDrinkingWindow').value = data.drinking_window;
-          status.textContent = 'Label scanned! Review the fields below and adjust if needed.';
-          status.style.color = '#7ecb7e';
+          if (data.match) {
+            const m = data.match;
+            status.innerHTML = `Already in your cellar: <strong>${escapeHtml(m.wine_name || '')}${m.vintage ? ' ' + m.vintage : ''}</strong> &mdash; <a href="${escapeHtml(m.url)}" style="color:#c9a96e;font-weight:bold;">Add another bottle &rarr;</a><br>Or review the fields below to add it as a new wine.`;
+            status.style.color = '#c9a96e';
+          } else {
+            status.textContent = 'Label scanned! Review the fields below and adjust if needed.';
+            status.style.color = '#7ecb7e';
+          }
         })
         .catch(() => { status.textContent = 'Scan failed — fill in manually.'; });
     }
