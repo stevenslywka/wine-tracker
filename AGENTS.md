@@ -6,7 +6,7 @@ Personal Flask wine cellar app replacing Vivino. Multi-user. Local dev uses SQLi
 - Live site: `https://stevenwinecellar.up.railway.app/`
 - GitHub: `https://github.com/stevenslywka/wine-tracker`
 - Railway deploys automatically from GitHub `main`
-- Latest production work noted in this guide: tap-to-add photo — mobile hero photo/placeholder is tappable for the owner with client-side downscale and an uploading overlay, ownership-checked `POST /wine/<id>/photo` via shared `_store_wine_image()`; Cloudinary env vars confirmed configured on the Railway web service, so live uploads persist. Pushed to GitHub `main` after local verification. This completed all four Mobile Enhancements sections.
+- Latest production work noted in this guide: location-aware cellar default — the owner's mobile cellar auto-filters to the residence you're standing in (300 m / 200 m gates, pin chip with session-scoped dismissal, explicit filters never overridden, coordinates owner-only), pushed to GitHub `main` after local verification.
 
 ## Current Truth
 
@@ -19,6 +19,7 @@ Trust this section first when older notes or local Git disagree.
 - Mobile Wine Detail uses compact collapsible sections in this order: Bottles, Cellar, Drink History, Wine details, Purchase. The hero shows a stretched bottle image, editable auto-growing wine name, bottle count/location chips, and drinking window. The sticky header shows the wine name and delete lives in the hamburger menu. The Bottles section has a compact count preview, tinted two-column location stock cards with top-right manage (`...`) and a `- / count / +` stepper row, incoming `Receive Shipment`, compact Drink/Add/Manage sheets, and only shows the top-level `+ Add` button in the zero-inventory state. Drink History is its own line item with tappable rows for edit/delete in a centered dialog.
 - Detail-page `+ Add` adds bottles to an existing wine through `/wine/<id>/add-lot`.
 - Tap-to-add photo: the mobile hero image and "No photo" placeholder are tappable for the owner (a `<label>` wrapping a hidden `<input type="file" accept="image/*" capture="environment">`). Selection auto-uploads with an "Uploading…" overlay after best-effort client-side downscale (canvas, max 1600 px, JPEG 0.85). `POST /wine/<id>/photo` (ownership-checked) stores the file via the shared `_store_wine_image()` helper (also used by `add_wine`) and updates `wines.image_url`. Cloudinary env vars (`CLOUDINARY_*`) on Railway are required for live-site persistence; without them uploads land in `static/uploads` and are lost on redeploy.
+- Location-aware cellar default: when the owner opens their own cellar on mobile (<= 767 px) with no `storage_location` in the URL, the page geolocates (same 300 m / 200 m accuracy gates) and reloads with `storage_location=<residence>&geoloc=1`. The active-filters row shows the filter as a pin chip (📍 Apt); its ✕ removes both params and sets `sessionStorage.geoLocDismissed` so the auto-filter stays off for the rest of the browser session. Explicit filters are never overridden; away from both residences or on permission denial the cellar is unfiltered. Coordinates render for the owner only; position is used client-side and discarded. Bottles still labeled `Cellar` (legacy catch-all) only appear in the unfiltered view.
 - Geolocation add-bottle default: when the mobile Add bottles sheet opens without an explicit location, the page asks the browser for position and pre-selects the nearest saved location only if reported accuracy is <= 200 m AND distance <= 300 m; a manual selection is never overridden, and denied/unavailable position falls back silently. Coordinates are rendered into the page for the owner only (`user_location_coords`); the device position is used client-side and discarded, never stored or sent to the server. The `+` on a location card still prefills that card's location explicitly.
 - Scan re-buy detection: both scan routes share `_scan_image_with_ai()` and the `SCAN_MODEL` constant (`claude-sonnet-4-6`, product runtime model). `POST /wine/scan-label` matches the scanned label against the user's cellar (`_match_scanned_wine`, `_looks_like_same_wine` plus vintage) and returns a `match` object (`id`, name, vintage, quantity, status, `location_summary`, `url`) or `match: null`. On match the Add Wine scan UIs show an "Already in your cellar" banner with "Add another bottle" deep-linking to `/wine/<id>?rebuy=1`, which auto-opens the mobile Add bottles sheet (add-lot flow) and strips the param from the URL; "Add as new wine" keeps the prefilled Add Wine flow. Batch scan keeps its `duplicate_warning`/`existing_id` response shape.
 - Wine-family grouping: `wines.family_key` (nullable TEXT) groups the same wine across vintages and bottle sizes. Auto-assigned from `db.wine_family_key()` (normalized name via `normalize_wine_match_text`, standalone 19xx/20xx year tokens and bottle-size wording like Magnum/375ml/1.5L stripped); `db.migrate()` backfills only NULL keys and re-normalizes existing key groups whole when the algorithm evolves, so manual assignments survive. Manual link adopts the target's key (`POST /wine/<id>/family/link`); unlink sets a unique `wine:<id>` key (`POST /wine/<id>/family/unlink`). Renaming a wine re-derives the key only if it was still the auto-assigned one. Mobile detail shows a collapsible "Vintages" section under the hero (preview `X different vintages`, one row per family member including the current wine); Link/Unlink live in the hamburger menu. Cellar sort/filter is unchanged.
@@ -207,14 +208,48 @@ Rules:
 
 For `AGENTS.md` and `NEW_CHAT_PROMPT.md`, prefer scripted stable-prefix replacements or a deliberate full rewrite. Avoid repeated fragile `apply_patch` attempts against prose containing emoji/mojibake. Verify with `rg`.
 
-## Current Build - Mobile Enhancements (in progress)
+## Current Build - Cellar Usability (in progress)
 
-Build these four sections in order, one at a time. Fully finish a section (code
+Build these three sections in order, one at a time. Fully finish a section (code
 plus `scripts/verify_detail.py` passing) then stop and report before starting the
 next; do not run ahead across sections. Follow "Inventory Rules", "Schema Changes",
 and "Do Not Touch Unless Asked" above. Do not commit, push, or deploy unless
-explicitly asked. This is the agreed plan; the "Future Work" items below are
-deferred and out of scope for this build unless asked.
+explicitly asked. Overriding design rule from Steve: keep the mobile UI very
+clean, uncluttered, and easy to figure out — prefer fewer, clearer controls.
+
+1. DONE (2026-07-05, pushed to production). Location-aware cellar default. When the owner opens their own cellar on
+   mobile with no explicit location filter in the URL, geolocate (same client
+   pattern and gates as the detail-page add-bottle default: accuracy <= 200 m,
+   distance <= 300 m, silent fallback, position used then discarded, coordinates
+   rendered for the owner only) and default the view to that residence's
+   bottles, with a clearly visible, dismissible chip showing the active
+   location filter. Away from both residences, or on permission denied, show
+   the normal unfiltered cellar. Never override an explicit user-chosen filter.
+   Do not restructure the existing cards/list/desktop layouts.
+
+2. Home-screen app feel (PWA). Add a web app manifest (name, icons 192/512,
+   theme/background colors, `display: standalone`, start URL `/`), an
+   apple-touch-icon plus iOS meta tags, and link them from the main templates
+   (login, index, detail, analytics). No service worker / offline support in
+   this pass. Verify "Add to Home Screen" produces a full-screen app with icon
+   on iOS Safari.
+
+3. Packing list / bulk move between residences. Mobile flow for moving 6-12
+   bottles at once (today's per-wine Move flow is the pain point): choose
+   source and destination locations, build the list by tapping wines from
+   source-location inventory AND optionally by photographing the packed
+   bottles - reuse `scan-batch-labels` plus `_match_scanned_wine` to
+   pre-select matched wines (unmatched scan results are simply ignored, with
+   a count shown). Per-wine quantity steppers, single Confirm. Backend: new
+   ownership-checked bulk endpoint (e.g. `POST /wines/move-bulk` with JSON
+   `{from_location, to_location, items: [{wine_id, quantity}]}`) that applies
+   the existing location-level move semantics per wine in one transaction and
+   runs `sync_wine_summary` for each affected wine; reject same-location moves
+   frontend and backend; partial-quantity moves allowed.
+
+## Completed Build - Mobile Enhancements (all four sections pushed 2026-07-04/05)
+
+Kept for reference; current behavior is summarized in "Current Truth" above.
 
 1. DONE (2026-07-04, pushed to production). Wine-family grouping across vintages (do first; hardest). Group the same wine
    across vintages: add a nullable grouping key to `wines` via `db.migrate()`
@@ -254,10 +289,26 @@ deferred and out of scope for this build unless asked.
    Railway; without them uploads save to `static/uploads` and are lost on redeploy.
    Confirm Cloudinary is configured before relying on live uploads.
 
+## Recommendation System (current, for future "Tonight picker" work)
+
+`POST /wine/recommend` already exists: takes a free-text mood/occasion prompt
+plus optional `storage_location`, `wine_type`, and `stickers` filters, loads up
+to 100 matching in-collection wines, and has an AI sommelier (Haiku model)
+return 1-3 picks as JSON with one-line reasons. Color stickers are the
+price-band/occasion axis and their meanings are documented in the route's
+system prompt: Green = everyday, Yellow = solid/reliable, Orange =
+quality/higher-end for guests, Red = very special/expensive, Blue =
+sentimental (orange/red quality with personal meaning), no sticker = unknown.
+A future mobile "What should we drink tonight?" UI should wrap this route
+(chips for mood/body and occasion, geolocation-scoped location filter) rather
+than build new recommendation machinery. Deferred until Steve asks.
+
 ## Future Work
 
 Deferred - not part of the current build above:
 
+- Mobile "What should we drink tonight?" picker wrapping `/wine/recommend` (see above).
+- Duplicate-wine merge tool (combine lots + drink history; duplicates are now visible in the Vintages section).
 - Expanded/all drink history view if recent rows are not enough.
 - Friends permissions beyond current view-only behavior.
 - Optional mobile column visibility improvements.

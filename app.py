@@ -487,8 +487,17 @@ def cellar(username):
     regions = [r["region"] for r in cur.fetchall()]
     cur.execute(f"SELECT DISTINCT origin FROM wines WHERE user_id = {p} AND origin IS NOT NULL ORDER BY origin", (cellar_user["id"],))
     origins = [r["origin"] for r in cur.fetchall()]
-    cur.execute(f"SELECT name FROM user_locations WHERE user_id = {p} ORDER BY sort_order", (cellar_user["id"],))
-    user_locations = [r["name"] for r in cur.fetchall()]
+    cur.execute(f"SELECT name, latitude, longitude FROM user_locations WHERE user_id = {p} ORDER BY sort_order", (cellar_user["id"],))
+    cellar_location_rows = cur.fetchall()
+    user_locations = [r["name"] for r in cellar_location_rows]
+    # Coordinates go to the page only for the owner (used client-side to
+    # default the cellar view to the residence you are standing in).
+    user_location_coords = []
+    if can_edit:
+        user_location_coords = [
+            {"name": r["name"], "latitude": r["latitude"], "longitude": r["longitude"]}
+            for r in cellar_location_rows
+        ]
     cur.execute(f"""
         SELECT l.storage_location, SUM(l.quantity) as cnt
         FROM wine_inventory_lots l
@@ -531,6 +540,7 @@ def cellar(username):
                            sort=sort, order=order,
                            varietals=varietals, regions=regions,
                            origins=origins, user_locations=user_locations,
+                           user_location_coords=user_location_coords,
                            location_counts=location_counts,
                            not_shipped_count=not_shipped_count,
                            drank_count=drank_count,
