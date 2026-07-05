@@ -29,7 +29,7 @@ Project context:
 - Flask app: `app.py`; DB helpers/migrations: `db.py`; main cellar: `templates/index.html`; wine detail: `templates/detail.html`.
 - Local database is SQLite `wines.db`; production is PostgreSQL.
 - Schema changes must go through `db.py -> migrate()`.
-- Latest production UI work: location-aware cellar default — the owner's mobile cellar auto-filters to the residence you're standing in, shown as a dismissible pin chip; part of the in-progress Cellar Usability build (see AGENTS.md).
+- Latest production UI work: home-screen PWA (manifest, icons, standalone mode, 90-day sessions) and an Analytics page crash fix; part of the in-progress Cellar Usability build (see AGENTS.md).
 
 Inventory truth:
 - Current inventory uses `wine_inventory_lots`, not individual bottle records.
@@ -39,6 +39,7 @@ Inventory truth:
 - Mobile detail inventory changes usually stay in `templates/detail.html`; backend behavior is needed for inventory semantics such as partial Receive Shipment.
 - On mobile detail, Add bottles uses `Not Shipped` as a Location option that maps to lot status `not_shipped`; saved locations map to available inventory. Receive Shipment can partially receive incoming lots.
 - Tap-to-add photo: the mobile hero image/placeholder is tappable for the owner and auto-uploads (client-side downscale) via ownership-checked `POST /wine/<id>/photo`; `_store_wine_image()` is shared with `add_wine`. Live persistence needs `CLOUDINARY_*` env vars on Railway; otherwise uploads land in `static/uploads` and vanish on redeploy.
+- Home-screen app: `static/manifest.json` + `static/icons/` and PWA/iOS meta tags in every template head; standalone display, no service worker; login sessions are permanent (90 days) so the installed app stays signed in.
 - Location-aware cellar default: the owner's mobile cellar auto-filters to the residence you're standing in (`storage_location=<loc>&geoloc=1`, pin chip with ✕ that sets `sessionStorage.geoLocDismissed`); explicit filters never overridden, silent fallback elsewhere.
 - Geolocation default: `user_locations` has nullable `latitude`/`longitude` (steven's Apt/House seeded via `db.migrate()`). The mobile Add bottles sheet pre-selects the nearest saved location when opened without an explicit one (accuracy <= 200 m, distance <= 300 m, owner only, silent fallback); position is used client-side and discarded, never stored.
 - Scan re-buy: `POST /wine/scan-label` matches the scanned label against the cellar and returns `match` with a `/wine/<id>?rebuy=1` deep link that auto-opens the mobile Add bottles sheet; the Add Wine scan UIs show an "Already in your cellar" banner with "Add another bottle" / "Add as new wine". Both scan routes share one AI helper and the `SCAN_MODEL` constant.

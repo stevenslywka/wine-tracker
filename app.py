@@ -4,7 +4,7 @@ Then open http://localhost:5000 in your browser.
 """
 
 import os
-from datetime import date
+from datetime import date, timedelta
 from dotenv import load_dotenv
 load_dotenv()
 from functools import wraps
@@ -16,6 +16,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "dev-secret-key-change-in-prod")
 app.config["PREFERRED_URL_SCHEME"] = "https"
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(days=90)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 # Run DB migrations on startup
@@ -183,6 +184,8 @@ def login():
             if user:
                 from werkzeug.security import check_password_hash
                 if check_password_hash(user["password_hash"], password):
+                    # Persistent session so the home-screen app stays logged in
+                    session.permanent = True
                     session["user_id"] = user["id"]
                     session["username"] = user["username"]
                     session["display_name"] = user["display_name"]
