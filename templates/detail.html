@@ -2819,6 +2819,49 @@
       // ── Add bottles sheet ──
       const notShippedLocationValue = '__not_shipped__';
 
+      // Geolocation default: pre-select the nearest saved location when the
+      // sheet opens without an explicit one. The position is used for this
+      // pre-selection only and immediately discarded — never stored or sent.
+      const savedLocationCoords = {{ user_location_coords|tojson }};
+      const GEO_MAX_ACCURACY_M = 200;
+      const GEO_MAX_DISTANCE_M = 300;
+      let addLocationTouched = false;
+
+      function distanceMeters(lat1, lon1, lat2, lon2) {
+        const R = 6371000;
+        const toRad = deg => deg * Math.PI / 180;
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a = Math.sin(dLat / 2) ** 2 +
+                  Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(a));
+      }
+
+      function preselectNearestLocation() {
+        if (!navigator.geolocation) return;
+        const candidates = savedLocationCoords.filter(l => l.latitude != null && l.longitude != null);
+        if (!candidates.length) return;
+        navigator.geolocation.getCurrentPosition(pos => {
+          const { latitude, longitude, accuracy } = pos.coords;
+          if (latitude == null || longitude == null) return;
+          if (accuracy == null || accuracy > GEO_MAX_ACCURACY_M) return;
+          let best = null;
+          candidates.forEach(candidate => {
+            const d = distanceMeters(latitude, longitude, candidate.latitude, candidate.longitude);
+            if (!best || d < best.d) best = { name: candidate.name, d };
+          });
+          if (!best || best.d > GEO_MAX_DISTANCE_M) return;
+          const select = document.getElementById('addBottleLocationSelect');
+          const modal = document.getElementById('addBottleModal');
+          if (!select || addLocationTouched) return;
+          if (!modal || !modal.classList.contains('visible')) return;
+          if ([...select.options].some(option => option.value === best.name)) {
+            select.value = best.name;
+          }
+        }, () => { /* denied or unavailable: keep the current default */ },
+        { timeout: 5000, maximumAge: 120000 });
+      }
+
       function openAddBottleModal(location) {
         const qty = document.getElementById('addBottleQtyInput');
         const loc = document.getElementById('addBottleLocationSelect');
@@ -2827,6 +2870,8 @@
         if (qty) qty.value = 1;
         if (loc && location) loc.value = location;
         if (loc && !location && loc.options.length) loc.selectedIndex = 0;
+        addLocationTouched = false;
+        if (!location) preselectNearestLocation();
         const source = document.getElementById('addBottleSourceInput');
         const date = document.getElementById('addBottleDateInput');
         const price = document.getElementById('addBottlePriceInput');
@@ -2854,6 +2899,9 @@
         btn.addEventListener('click', () => openAddBottleModal(btn.dataset.location || ''));
       });
       document.getElementById('cancelAddBottle')?.addEventListener('click', closeAddBottleModal);
+      document.getElementById('addBottleLocationSelect')?.addEventListener('change', () => {
+        addLocationTouched = true;
+      });
       document.getElementById('addBottleModal')?.addEventListener('click', e => {
         if (e.target === e.currentTarget) closeAddBottleModal();
       });

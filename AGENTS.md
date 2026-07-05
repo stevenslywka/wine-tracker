@@ -6,7 +6,7 @@ Personal Flask wine cellar app replacing Vivino. Multi-user. Local dev uses SQLi
 - Live site: `https://stevenwinecellar.up.railway.app/`
 - GitHub: `https://github.com/stevenslywka/wine-tracker`
 - Railway deploys automatically from GitHub `main`
-- Latest production work noted in this guide: scan re-buy detection — merged label-scan AI helper with `SCAN_MODEL` constant, `/wine/scan-label` cellar matching with `match` payload, "Already in your cellar" banner in Add Wine scan UIs, and `/wine/<id>?rebuy=1` deep link that opens the mobile Add bottles sheet, pushed to GitHub `main` after local verification.
+- Latest production work noted in this guide: geolocation add-bottle default — nullable `user_locations.latitude/longitude` seeded for steven's Apt/House, mobile Add bottles sheet pre-selects the nearest saved location within 300 m when accuracy is <= 200 m (owner only, silent fallback, position never stored), pushed to GitHub `main` after local verification.
 
 ## Current Truth
 
@@ -18,6 +18,7 @@ Trust this section first when older notes or local Git disagree.
 - Drink history lives in `wine_drink_history`; `storage_location` snapshots where the bottle was consumed from, so history remains readable/editable even if lots are merged or deleted.
 - Mobile Wine Detail uses compact collapsible sections in this order: Bottles, Cellar, Drink History, Wine details, Purchase. The hero shows a stretched bottle image, editable auto-growing wine name, bottle count/location chips, and drinking window. The sticky header shows the wine name and delete lives in the hamburger menu. The Bottles section has a compact count preview, tinted two-column location stock cards with top-right manage (`...`) and a `- / count / +` stepper row, incoming `Receive Shipment`, compact Drink/Add/Manage sheets, and only shows the top-level `+ Add` button in the zero-inventory state. Drink History is its own line item with tappable rows for edit/delete in a centered dialog.
 - Detail-page `+ Add` adds bottles to an existing wine through `/wine/<id>/add-lot`.
+- Geolocation add-bottle default: when the mobile Add bottles sheet opens without an explicit location, the page asks the browser for position and pre-selects the nearest saved location only if reported accuracy is <= 200 m AND distance <= 300 m; a manual selection is never overridden, and denied/unavailable position falls back silently. Coordinates are rendered into the page for the owner only (`user_location_coords`); the device position is used client-side and discarded, never stored or sent to the server. The `+` on a location card still prefills that card's location explicitly.
 - Scan re-buy detection: both scan routes share `_scan_image_with_ai()` and the `SCAN_MODEL` constant (`claude-sonnet-4-6`, product runtime model). `POST /wine/scan-label` matches the scanned label against the user's cellar (`_match_scanned_wine`, `_looks_like_same_wine` plus vintage) and returns a `match` object (`id`, name, vintage, quantity, status, `location_summary`, `url`) or `match: null`. On match the Add Wine scan UIs show an "Already in your cellar" banner with "Add another bottle" deep-linking to `/wine/<id>?rebuy=1`, which auto-opens the mobile Add bottles sheet (add-lot flow) and strips the param from the URL; "Add as new wine" keeps the prefilled Add Wine flow. Batch scan keeps its `duplicate_warning`/`existing_id` response shape.
 - Wine-family grouping: `wines.family_key` (nullable TEXT) groups the same wine across vintages and bottle sizes. Auto-assigned from `db.wine_family_key()` (normalized name via `normalize_wine_match_text`, standalone 19xx/20xx year tokens and bottle-size wording like Magnum/375ml/1.5L stripped); `db.migrate()` backfills only NULL keys and re-normalizes existing key groups whole when the algorithm evolves, so manual assignments survive. Manual link adopts the target's key (`POST /wine/<id>/family/link`); unlink sets a unique `wine:<id>` key (`POST /wine/<id>/family/unlink`). Renaming a wine re-derives the key only if it was still the auto-assigned one. Mobile detail shows a collapsible "Vintages" section under the hero (preview `X different vintages`, one row per family member including the current wine); Link/Unlink live in the hamburger menu. Cellar sort/filter is unchanged.
 - Main Cellar mobile Cards/List and desktop views are separate work areas. Do not change them unless requested.
@@ -93,9 +94,9 @@ Lot status values: `in_collection`, `not_shipped`.
 
 ### `user_locations`
 
-`id, user_id, name, sort_order`
+`id, user_id, name, sort_order, latitude, longitude`
 
-Each user has their own saved locations.
+Each user has their own saved locations. `latitude`/`longitude` are nullable address-level coordinates used only client-side to pre-select the nearest location when adding bottles; steven's Apt/House are seeded by `db.migrate()` (NULL-only, so manual entries survive). Locations without coordinates never match.
 
 ## Schema Changes
 
@@ -228,7 +229,7 @@ deferred and out of scope for this build unless asked.
    `/wine/<id>` with an "Add another bottle?" action calling `/wine/<id>/add-lot`;
    on no match, prefill Add Wine.
 
-3. Geolocation location default. Add nullable `latitude` and `longitude` to
+3. DONE (2026-07-04, pushed to production). Geolocation location default. Add nullable `latitude` and `longitude` to
    `user_locations` via `db.migrate()` (Postgres and SQLite), seeded with the
    coordinates below. At add-bottle time, request device location and pre-select
    the nearest saved location only when within 300 m AND the reading's reported

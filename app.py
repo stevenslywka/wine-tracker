@@ -570,9 +570,18 @@ def wine_detail(wine_id):
     family_members = []
     family_vintage_count = 0
     family_link_candidates = []
+    user_location_coords = []
     if wine:
-        cur.execute(f"SELECT name FROM user_locations WHERE user_id = {p} ORDER BY sort_order", (wine["user_id"],))
-        user_locations = [r["name"] for r in cur.fetchall()]
+        cur.execute(f"SELECT name, latitude, longitude FROM user_locations WHERE user_id = {p} ORDER BY sort_order", (wine["user_id"],))
+        location_rows = cur.fetchall()
+        user_locations = [r["name"] for r in location_rows]
+        # Coordinates go to the page only for the owner (used client-side to
+        # pre-select the nearest location when adding bottles).
+        if wine["user_id"] == session.get("user_id"):
+            user_location_coords = [
+                {"name": r["name"], "latitude": r["latitude"], "longitude": r["longitude"]}
+                for r in location_rows
+            ]
         cur.execute(f"SELECT username, display_name FROM users WHERE id = {p}", (wine["user_id"],))
         user_row = cur.fetchone()
         cellar_username = user_row["username"] if user_row else session.get("username", "")
@@ -735,6 +744,7 @@ def wine_detail(wine_id):
             next_wine_url = url_for("wine_detail", wine_id=nav_ids[current_idx + 1], **nav_query)
     return render_template("detail.html", wine=wine,
                            user_locations=user_locations,
+                           user_location_coords=user_location_coords,
                            wine_types=WINE_TYPES,
                            bottle_sizes=BOTTLE_SIZES,
                            sticker_colors=("Red", "Blue", "Orange", "Yellow", "Green"),

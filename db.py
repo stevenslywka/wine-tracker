@@ -462,6 +462,20 @@ def migrate():
             )
         """)
 
+    # --- Add per-location coordinates for geolocation add-bottle defaults ---
+    # Nullable on purpose: locations without coordinates simply never match,
+    # and a later "Set location here" button / manual entry can fill them.
+    if pg:
+        cur.execute("ALTER TABLE user_locations ADD COLUMN IF NOT EXISTS latitude REAL")
+        cur.execute("ALTER TABLE user_locations ADD COLUMN IF NOT EXISTS longitude REAL")
+    else:
+        cur.execute("PRAGMA table_info(user_locations)")
+        loc_cols = {r['name'] for r in cur.fetchall()}
+        if 'latitude' not in loc_cols:
+            cur.execute("ALTER TABLE user_locations ADD COLUMN latitude REAL")
+        if 'longitude' not in loc_cols:
+            cur.execute("ALTER TABLE user_locations ADD COLUMN longitude REAL")
+
     # --- Create lot-aware inventory tables ---
     if pg:
         cur.execute("""
@@ -552,6 +566,20 @@ def migrate():
                     f"INSERT INTO user_locations (user_id, name, sort_order) VALUES ({p2},{p2},{p2})",
                     (uid2, loc_name, i)
                 )
+
+    # --- Seed steven's home-location coordinates; never overwrite manual entries ---
+    for loc_name, lat, lon in (
+        ("Apt", 40.7760223, -73.9839230),
+        ("House", 41.7911949, -74.2810933),
+    ):
+        cur.execute(
+            f"""UPDATE user_locations
+                SET latitude = {p2}, longitude = {p2}
+                WHERE name = {p2}
+                  AND latitude IS NULL AND longitude IS NULL
+                  AND user_id = (SELECT id FROM users WHERE username = 'steven')""",
+            (lat, lon, loc_name)
+        )
 
     # --- Mark steven's existing drinking windows as manually curated ---
     cur.execute("""
