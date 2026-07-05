@@ -1869,6 +1869,53 @@ def update_order_date(wine_id):
     return ("", 204)
 
 
+def _store_wine_image(uploaded):
+    """Persist an uploaded wine photo; returns its URL or None.
+
+    Uses Cloudinary when CLOUDINARY_* env vars are configured; otherwise
+    saves under static/uploads (which does not survive a Railway redeploy).
+    """
+    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME")
+    if cloud_name:
+        import cloudinary
+        import cloudinary.uploader
+        cloudinary.config(
+            cloud_name=cloud_name,
+            api_key=os.environ.get("CLOUDINARY_API_KEY"),
+            api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
+        )
+        result = cloudinary.uploader.upload(uploaded, folder="wine-tracker")
+        return result.get("secure_url")
+    import uuid
+    ext = os.path.splitext(uploaded.filename)[1] or ".jpg"
+    filename = f"{uuid.uuid4().hex}{ext}"
+    upload_dir = os.path.join(app.root_path, "static", "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
+    uploaded.save(os.path.join(upload_dir, filename))
+    return f"/static/uploads/{filename}"
+
+
+@app.route("/wine/<int:wine_id>/photo", methods=["POST"])
+@login_required
+def update_wine_photo(wine_id):
+    if not owns_wine(wine_id):
+        return jsonify({"error": "Not allowed"}), 403
+    uploaded = request.files.get("image")
+    if not uploaded or not uploaded.filename:
+        return jsonify({"error": "No image provided"}), 400
+    try:
+        image_url = _store_wine_image(uploaded)
+    except Exception as e:
+        print("photo upload error:", e)
+        image_url = None
+    if not image_url:
+        return jsonify({"error": "Upload failed"}), 500
+    p = ph(); conn = get_db(); cur = conn.cursor()
+    cur.execute(f"UPDATE wines SET image_url = {p} WHERE id = {p}", (image_url, wine_id))
+    conn.commit(); conn.close()
+    return jsonify({"ok": True, "image_url": image_url})
+
+
 @app.route("/wine/add", methods=["POST"])
 @login_required
 def add_wine():
@@ -1956,28 +2003,9 @@ def add_wine():
     conn.commit()
     conn.close()
 
-    image_url = None
     uploaded = request.files.get("image")
     if uploaded and uploaded.filename:
-        cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME")
-        if cloud_name:
-            import cloudinary
-            import cloudinary.uploader
-            cloudinary.config(
-                cloud_name=cloud_name,
-                api_key=os.environ.get("CLOUDINARY_API_KEY"),
-                api_secret=os.environ.get("CLOUDINARY_API_SECRET"),
-            )
-            result = cloudinary.uploader.upload(uploaded, folder="wine-tracker")
-            image_url = result.get("secure_url")
-        else:
-            import uuid
-            ext = os.path.splitext(uploaded.filename)[1] or ".jpg"
-            filename = f"{uuid.uuid4().hex}{ext}"
-            upload_dir = os.path.join(app.root_path, "static", "uploads")
-            os.makedirs(upload_dir, exist_ok=True)
-            uploaded.save(os.path.join(upload_dir, filename))
-            image_url = f"/static/uploads/{filename}"
+        image_url = _store_wine_image(uploaded)
     else:
         image_url = search_and_fetch_image(wine_name)
 

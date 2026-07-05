@@ -223,6 +223,31 @@
         flex-shrink: 0;
       }
       .mobile-bottle-wrap .mobile-bottle { border-radius: 8px; }
+      .mobile-bottle-tap {
+        display: block;
+        width: 100%;
+        height: 100%;
+        min-height: 160px;
+        margin: 0;
+        cursor: pointer;
+      }
+      .bottle-uploading {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(12,9,7,0.72);
+        color: var(--mobile-accent);
+        font-size: 0.7rem;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        text-align: center;
+        border-radius: 8px;
+        z-index: 3;
+      }
+      .bottle-uploading[hidden] { display: none; }
       .detail-type-sash {
         position: absolute; top: 9px; left: -34px; width: 118px;
         transform: rotate(-38deg); text-align: center; font-size: 0.62rem;
@@ -1864,10 +1889,22 @@
     <section class="mobile-hero">
       <div class="mobile-bottle-wrap">
         <span class="detail-type-sash mobile-sash-{{ wine.wine_type or 'none' }}">{{ wine.wine_type or '' }}</span>
+        {% if can_edit %}
+        <label class="mobile-bottle-tap" aria-label="Change wine photo">
+          {% if wine.image_url %}
+          <img class="mobile-bottle" id="wineBottleImage" src="{{ wine.image_url }}" alt="">
+          {% else %}
+          <div class="mobile-bottle placeholder" id="wineBottleImage">No photo<br>Tap to add</div>
+          {% endif %}
+          <input type="file" id="wineBottlePhotoInput" accept="image/*" capture="environment" style="display:none;">
+        </label>
+        <div class="bottle-uploading" id="bottleUploading" hidden>Uploading&hellip;</div>
+        {% else %}
         {% if wine.image_url %}
         <img class="mobile-bottle" src="{{ wine.image_url }}" alt="">
         {% else %}
         <div class="mobile-bottle placeholder">No photo</div>
+        {% endif %}
         {% endif %}
       </div>
       <div class="hero-copy">
@@ -3351,6 +3388,45 @@
         const body = new URLSearchParams({ storage_location: location, quantity: String(quantity) });
         const data = await postInventory('/wine/{{ wine.id }}/lot/add-location', body);
         if (data?.ok) window.location.reload();
+      });
+
+      // ── Tap-to-add photo ──
+      async function downscaleImage(file, maxDim = 1600, quality = 0.85) {
+        try {
+          const bitmap = await createImageBitmap(file);
+          const scale = Math.min(1, maxDim / Math.max(bitmap.width, bitmap.height));
+          if (scale >= 1 && file.size < 1.5 * 1024 * 1024) return file;
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+          canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+          canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+          return blob || file;
+        } catch (error) {
+          return file; // downscale is best-effort; upload the original instead
+        }
+      }
+      document.getElementById('wineBottlePhotoInput')?.addEventListener('change', async event => {
+        const input = event.currentTarget;
+        const file = input.files && input.files[0];
+        if (!file) return;
+        const overlay = document.getElementById('bottleUploading');
+        if (overlay) overlay.hidden = false;
+        setSaveState('Uploading photo...', 'saving');
+        try {
+          const scaled = await downscaleImage(file);
+          const formData = new FormData();
+          formData.append('image', scaled, scaled === file ? file.name : 'photo.jpg');
+          const response = await fetch('/wine/{{ wine.id }}/photo', { method: 'POST', body: formData });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !data.ok) throw new Error(data.error || 'Upload failed');
+          setSaveState('Saved', 'saved');
+          window.location.reload();
+        } catch (error) {
+          if (overlay) overlay.hidden = true;
+          input.value = '';
+          setSaveState('Photo upload failed', 'error');
+        }
       });
 
       // ── Vintage family link/unlink ──

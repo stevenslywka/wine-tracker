@@ -29,7 +29,7 @@ Project context:
 - Flask app: `app.py`; DB helpers/migrations: `db.py`; main cellar: `templates/index.html`; wine detail: `templates/detail.html`.
 - Local database is SQLite `wines.db`; production is PostgreSQL.
 - Schema changes must go through `db.py -> migrate()`.
-- Latest production UI work: geolocation add-bottle default — the mobile Add bottles sheet pre-selects the nearest saved location (300 m / 200 m accuracy gates, owner only, position never stored); `user_locations` now carries nullable coordinates seeded for steven's Apt/House.
+- Latest production UI work: tap-to-add photo — the mobile hero photo/placeholder is tappable for the owner, auto-uploads with client-side downscale via `POST /wine/<id>/photo`; Cloudinary is confirmed configured on the Railway web service, so live uploads persist. All four Mobile Enhancements sections are complete.
 
 Inventory truth:
 - Current inventory uses `wine_inventory_lots`, not individual bottle records.
@@ -38,6 +38,7 @@ Inventory truth:
 - Drink history lives in `wine_drink_history` and keeps a `storage_location` snapshot.
 - Mobile detail inventory changes usually stay in `templates/detail.html`; backend behavior is needed for inventory semantics such as partial Receive Shipment.
 - On mobile detail, Add bottles uses `Not Shipped` as a Location option that maps to lot status `not_shipped`; saved locations map to available inventory. Receive Shipment can partially receive incoming lots.
+- Tap-to-add photo: the mobile hero image/placeholder is tappable for the owner and auto-uploads (client-side downscale) via ownership-checked `POST /wine/<id>/photo`; `_store_wine_image()` is shared with `add_wine`. Live persistence needs `CLOUDINARY_*` env vars on Railway; otherwise uploads land in `static/uploads` and vanish on redeploy.
 - Geolocation default: `user_locations` has nullable `latitude`/`longitude` (steven's Apt/House seeded via `db.migrate()`). The mobile Add bottles sheet pre-selects the nearest saved location when opened without an explicit one (accuracy <= 200 m, distance <= 300 m, owner only, silent fallback); position is used client-side and discarded, never stored.
 - Scan re-buy: `POST /wine/scan-label` matches the scanned label against the cellar and returns `match` with a `/wine/<id>?rebuy=1` deep link that auto-opens the mobile Add bottles sheet; the Add Wine scan UIs show an "Already in your cellar" banner with "Add another bottle" / "Add as new wine". Both scan routes share one AI helper and the `SCAN_MODEL` constant.
 - Wine-family grouping: `wines.family_key` (nullable) groups the same wine across vintages and bottle sizes, auto-assigned from the normalized name ignoring vintage-year tokens and bottle-size wording (Magnum, 375ml, 1.5L, ...). Mobile detail shows a collapsible "Vintages" section under the hero — preview `X different vintages`, expanded rows for every family member including the current wine with availability/incoming/drank info. Link vintages / Unlink this vintage live in the hamburger menu (`POST /wine/<id>/family/link` and `/family/unlink`). Unlinked wines get a unique `wine:<id>` key so migration backfill never re-links them; migration re-normalizes existing key groups whole when the key algorithm changes.
