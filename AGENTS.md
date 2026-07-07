@@ -6,7 +6,7 @@ Personal Flask wine cellar app replacing Vivino. Multi-user. Local dev uses SQLi
 - Live site: `https://stevenwinecellar.up.railway.app/`
 - GitHub: `https://github.com/stevenslywka/wine-tracker`
 - Railway deploys automatically from GitHub `main`
-- Latest production work noted in this guide: home-screen PWA — manifest + generated wine-glass icons, standalone/iOS meta tags on every template, 90-day persistent login sessions, plus a fix for the long-broken Analytics page (`by_location` chart used the old `location` attribute; now `origin`), pushed to GitHub `main` after local verification.
+- Latest production work noted in this guide: packing-list bulk move — mobile cellar `Move` button with From/To, batch-scan photo pre-selection, search, per-wine steppers, and one-transaction `POST /wines/move-bulk`, pushed to GitHub `main` after local verification. This completed all three Cellar Usability sections.
 
 ## Current Truth
 
@@ -19,6 +19,7 @@ Trust this section first when older notes or local Git disagree.
 - Mobile Wine Detail uses compact collapsible sections in this order: Bottles, Cellar, Drink History, Wine details, Purchase. The hero shows a stretched bottle image, editable auto-growing wine name, bottle count/location chips, and drinking window. The sticky header shows the wine name and delete lives in the hamburger menu. The Bottles section has a compact count preview, tinted two-column location stock cards with top-right manage (`...`) and a `- / count / +` stepper row, incoming `Receive Shipment`, compact Drink/Add/Manage sheets, and only shows the top-level `+ Add` button in the zero-inventory state. Drink History is its own line item with tappable rows for edit/delete in a centered dialog.
 - Detail-page `+ Add` adds bottles to an existing wine through `/wine/<id>/add-lot`.
 - Tap-to-add photo: the mobile hero image and "No photo" placeholder are tappable for the owner (a `<label>` wrapping a hidden `<input type="file" accept="image/*" capture="environment">`). Selection auto-uploads with an "Uploading…" overlay after best-effort client-side downscale (canvas, max 1600 px, JPEG 0.85). `POST /wine/<id>/photo` (ownership-checked) stores the file via the shared `_store_wine_image()` helper (also used by `add_wine`) and updates `wines.image_url`. Cloudinary env vars (`CLOUDINARY_*`) on Railway are required for live-site persistence; without them uploads land in `static/uploads` and are lost on redeploy.
+- Packing-list bulk move: the mobile cellar command row has a `Move` button (owner only) opening `#moveBottlesModal` — From/To selects (From defaults to the geo-filtered residence, else the location with the most bottles; picking matching From/To swaps the other), a `Scan packed bottles` photo input that reuses `/wine/scan-batch-labels` matching to pre-select recognized wines (unmatched are ignored, `Matched X of Y` shown), a search box, and tap-to-select rows with per-wine quantity steppers capped at availability. Confirm posts JSON to `POST /wines/move-bulk` (`{from_location, to_location, items:[{wine_id, quantity}]}`), which validates both locations, checks ownership per wine, moves through the shared `_move_wine_available_bottles()` helper (also used by the single-wine location move), syncs each wine's summary, and commits once. The owner-only `move_inventory` JSON (per-wine per-location availability) feeds the modal.
 - Home-screen app (PWA): `static/manifest.json` (name `Wine Cellar`, standalone display, start URL `/`, theme/background `#1a0a00`) plus generated icons in `static/icons/` (`icon-192.png`, `icon-512.png`, `apple-touch-icon.png` — gold wine glass on dark brown, full bleed so also used as maskable). Every template's `<head>` links the manifest, theme-color, apple-touch-icon, and iOS standalone meta tags. No service worker / offline support. Login sets `session.permanent = True` with a 90-day `PERMANENT_SESSION_LIFETIME` so the installed app stays signed in.
 - Location-aware cellar default: when the owner opens their own cellar on mobile (<= 767 px) with no `storage_location` in the URL, the page geolocates (same 300 m / 200 m accuracy gates) and reloads with `storage_location=<residence>&geoloc=1`. The active-filters row shows the filter as a pin chip (📍 Apt); its ✕ removes both params and sets `sessionStorage.geoLocDismissed` so the auto-filter stays off for the rest of the browser session. Explicit filters are never overridden; away from both residences or on permission denial the cellar is unfiltered. Coordinates render for the owner only; position is used client-side and discarded. Bottles still labeled `Cellar` (legacy catch-all) only appear in the unfiltered view.
 - Geolocation add-bottle default: when the mobile Add bottles sheet opens without an explicit location, the page asks the browser for position and pre-selects the nearest saved location only if reported accuracy is <= 200 m AND distance <= 300 m; a manual selection is never overridden, and denied/unavailable position falls back silently. Coordinates are rendered into the page for the owner only (`user_location_coords`); the device position is used client-side and discarded, never stored or sent to the server. The `+` on a location card still prefills that card's location explicitly.
@@ -132,6 +133,7 @@ For migrations, handle PostgreSQL and SQLite separately with `information_schema
 - `POST /wine/<id>/family/link` - link this wine into another wine's vintage family (form `target_wine_id`)
 - `POST /wine/<id>/family/unlink` - remove this wine from its vintage family
 - `POST /wine/<id>/photo` - upload/replace the wine photo (multipart `image`), updates `wines.image_url`
+- `POST /wines/move-bulk` - packing-list move of several wines between locations in one transaction (JSON body)
 
 ### Other important routes
 
@@ -209,14 +211,11 @@ Rules:
 
 For `AGENTS.md` and `NEW_CHAT_PROMPT.md`, prefer scripted stable-prefix replacements or a deliberate full rewrite. Avoid repeated fragile `apply_patch` attempts against prose containing emoji/mojibake. Verify with `rg`.
 
-## Current Build - Cellar Usability (in progress)
+## Completed Build - Cellar Usability (all three sections pushed 2026-07-05)
 
-Build these three sections in order, one at a time. Fully finish a section (code
-plus `scripts/verify_detail.py` passing) then stop and report before starting the
-next; do not run ahead across sections. Follow "Inventory Rules", "Schema Changes",
-and "Do Not Touch Unless Asked" above. Do not commit, push, or deploy unless
-explicitly asked. Overriding design rule from Steve: keep the mobile UI very
-clean, uncluttered, and easy to figure out — prefer fewer, clearer controls.
+Kept for reference; current behavior is summarized in "Current Truth" above.
+Standing design rule from Steve that applies to all future work: keep the mobile
+UI very clean, uncluttered, and easy to figure out — prefer fewer, clearer controls.
 
 1. DONE (2026-07-05, pushed to production). Location-aware cellar default. When the owner opens their own cellar on
    mobile with no explicit location filter in the URL, geolocate (same client
@@ -235,7 +234,7 @@ clean, uncluttered, and easy to figure out — prefer fewer, clearer controls.
    this pass. Verify "Add to Home Screen" produces a full-screen app with icon
    on iOS Safari.
 
-3. Packing list / bulk move between residences. Mobile flow for moving 6-12
+3. DONE (2026-07-05, pushed to production). Packing list / bulk move between residences. Mobile flow for moving 6-12
    bottles at once (today's per-wine Move flow is the pain point): choose
    source and destination locations, build the list by tapping wines from
    source-location inventory AND optionally by photographing the packed

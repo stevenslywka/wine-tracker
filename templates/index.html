@@ -937,6 +937,7 @@
         </div>
         {% if access_level == 'edit' %}
         <button type="button" class="mobile-select-trigger" data-mobile-action="select">Select</button>
+        <button type="button" class="mobile-select-trigger" data-bs-toggle="modal" data-bs-target="#moveBottlesModal">Move</button>
         {% endif %}
       </div>
       {% set current_bottle_count = namespace(total=0) %}
@@ -1584,6 +1585,47 @@
   </div>
 
   <!-- Add Wine Modal -->
+  {% if access_level == 'edit' %}
+  <!-- Packing list / bulk move modal -->
+  <div class="modal fade" id="moveBottlesModal" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content" style="background:#2a1200; border:1px solid #5a2d0c; color:#f5e6d3;">
+        <div class="modal-header" style="border-bottom:1px solid #5a2d0c;">
+          <h5 class="modal-title" style="color:#c9a96e;">Move bottles</h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body d-flex flex-column gap-3">
+          <div class="d-flex align-items-end gap-2">
+            <div class="flex-fill">
+              <label class="form-label fw-bold mb-1" style="color:#c9a96e;font-size:0.85em;">From</label>
+              <select id="moveFromSelect" class="form-select form-select-sm">
+                {% for loc in user_locations %}<option value="{{ loc }}">{{ loc }}</option>{% endfor %}
+              </select>
+            </div>
+            <div style="color:#c9a96e;font-weight:bold;padding-bottom:7px;">&rarr;</div>
+            <div class="flex-fill">
+              <label class="form-label fw-bold mb-1" style="color:#c9a96e;font-size:0.85em;">To</label>
+              <select id="moveToSelect" class="form-select form-select-sm">
+                {% for loc in user_locations %}<option value="{{ loc }}">{{ loc }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+          <label class="btn btn-sm w-100" style="background:#1a2a3a;border:1px solid #3a6a9a;color:#c0d8f5;cursor:pointer;margin:0;">
+            &#128247; Scan packed bottles to select them
+            <input type="file" id="movePhotoInput" accept="image/*" capture="environment" style="display:none;">
+          </label>
+          <div id="moveScanStatus" style="display:none;text-align:center;font-size:0.85rem;color:#c9a96e;"></div>
+          <input type="search" id="moveSearchInput" class="form-control form-control-sm" placeholder="Search wines at this location" autocomplete="off">
+          <div id="moveWineList" style="max-height:44vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid #5a2d0c;">
+          <button type="button" class="btn btn-wine w-100" id="confirmBulkMove" disabled>Move bottles</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <div class="modal fade" id="addWineModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
       <div class="modal-content" style="background:#2a1200; border:1px solid #5a2d0c; color:#f5e6d3;">
@@ -2649,6 +2691,160 @@
         window.location.replace(url);
       }, () => { /* denied or unavailable: show the normal unfiltered cellar */ },
       { timeout: 5000, maximumAge: 120000 });
+    })();
+
+    // ── Packing list / bulk move ──
+    (function() {
+      const modalEl = document.getElementById('moveBottlesModal');
+      if (!modalEl) return;
+      const moveInventory = {{ move_inventory | tojson }};
+      const fromSelect = document.getElementById('moveFromSelect');
+      const toSelect = document.getElementById('moveToSelect');
+      const listEl = document.getElementById('moveWineList');
+      const searchInput = document.getElementById('moveSearchInput');
+      const confirmBtn = document.getElementById('confirmBulkMove');
+      const scanStatus = document.getElementById('moveScanStatus');
+      const selections = new Map(); // wine id -> quantity to move
+
+      function availableAt(location) {
+        return moveInventory.filter(item => item.location === location);
+      }
+      function updateConfirm() {
+        let total = 0;
+        selections.forEach(qty => { total += qty; });
+        confirmBtn.disabled = total === 0;
+        confirmBtn.textContent = total > 0
+          ? `Move ${total} bottle${total !== 1 ? 's' : ''} to ${toSelect.value}`
+          : 'Move bottles';
+      }
+      function renderList() {
+        const query = (searchInput.value || '').trim().toLowerCase();
+        const rows = availableAt(fromSelect.value)
+          .filter(item => !query || `${item.name || ''} ${item.vintage || ''}`.toLowerCase().includes(query));
+        if (!rows.length) {
+          listEl.innerHTML = '<div style="color:#aaa;font-size:0.85rem;text-align:center;padding:14px 0;">No bottles at this location.</div>';
+          updateConfirm();
+          return;
+        }
+        listEl.innerHTML = rows.map(item => {
+          const qty = selections.get(item.id) || 0;
+          return `
+          <div data-move-id="${item.id}" data-move-max="${item.qty}"
+               style="display:flex;align-items:center;gap:10px;border:1px solid ${qty ? '#c9a96e' : '#3a1a00'};border-radius:8px;background:${qty ? '#3d1a00' : '#1a0a00'};padding:8px 10px;">
+            <div style="flex:1;min-width:0;" data-move-toggle>
+              <div style="font-size:0.86rem;font-weight:bold;color:#f5e6d3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(item.name || 'Unknown')}</div>
+              <div style="font-size:0.76rem;color:#aaa;">${item.vintage || 'NV'} &middot; ${item.qty} at ${escapeHtml(fromSelect.value)}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <button type="button" data-move-minus style="width:30px;height:30px;border-radius:50%;border:1px solid #5a2d0c;background:#2a1200;color:#c9a96e;font-weight:bold;line-height:1;">&minus;</button>
+              <span style="min-width:18px;text-align:center;font-weight:bold;color:${qty ? '#c9a96e' : '#6b5d4f'};">${qty}</span>
+              <button type="button" data-move-plus style="width:30px;height:30px;border-radius:50%;border:1px solid #5a2d0c;background:#2a1200;color:#c9a96e;font-weight:bold;line-height:1;">+</button>
+            </div>
+          </div>`;
+        }).join('');
+        updateConfirm();
+      }
+      function setQty(id, max, next) {
+        const clamped = Math.max(0, Math.min(max, next));
+        if (clamped === 0) selections.delete(id); else selections.set(id, clamped);
+        renderList();
+      }
+      listEl.addEventListener('click', event => {
+        const row = event.target.closest('[data-move-id]');
+        if (!row) return;
+        const id = parseInt(row.dataset.moveId, 10);
+        const max = parseInt(row.dataset.moveMax, 10);
+        const current = selections.get(id) || 0;
+        if (event.target.closest('[data-move-plus]')) setQty(id, max, current + 1);
+        else if (event.target.closest('[data-move-minus]')) setQty(id, max, current - 1);
+        else if (event.target.closest('[data-move-toggle]')) setQty(id, max, current ? 0 : 1);
+      });
+      searchInput.addEventListener('input', renderList);
+      function otherLocation(name) {
+        const options = [...toSelect.options].map(option => option.value);
+        return options.find(value => value !== name) || name;
+      }
+      fromSelect.addEventListener('change', () => {
+        selections.clear();
+        if (toSelect.value === fromSelect.value) toSelect.value = otherLocation(fromSelect.value);
+        renderList();
+      });
+      toSelect.addEventListener('change', () => {
+        if (toSelect.value === fromSelect.value) fromSelect.value = otherLocation(toSelect.value);
+        selections.clear();
+        renderList();
+      });
+      modalEl.addEventListener('show.bs.modal', () => {
+        selections.clear();
+        searchInput.value = '';
+        scanStatus.style.display = 'none';
+        // Default From: the geo-filtered residence when present, otherwise
+        // the location holding the most bottles.
+        const params = new URLSearchParams(window.location.search);
+        let from = params.get('storage_location');
+        if (!from || ![...fromSelect.options].some(option => option.value === from)) {
+          const totals = {};
+          moveInventory.forEach(item => { totals[item.location] = (totals[item.location] || 0) + item.qty; });
+          from = Object.keys(totals).sort((a, b) => totals[b] - totals[a])[0] || fromSelect.value;
+        }
+        fromSelect.value = from;
+        toSelect.value = otherLocation(from);
+        renderList();
+      });
+      document.getElementById('movePhotoInput').addEventListener('change', async event => {
+        const input = event.currentTarget;
+        const file = input.files && input.files[0];
+        if (!file) return;
+        scanStatus.style.display = 'block';
+        scanStatus.style.color = '#c9a96e';
+        scanStatus.textContent = 'Scanning bottles…';
+        const formData = new FormData();
+        formData.append('image', file);
+        try {
+          const response = await fetch('/wine/scan-batch-labels', { method: 'POST', body: formData });
+          const results = await response.json();
+          if (!response.ok || results.error) throw new Error(results.error || 'Scan failed');
+          const atFrom = new Map(availableAt(fromSelect.value).map(item => [item.id, item]));
+          let matched = 0;
+          results.forEach(item => {
+            const found = item && item.existing_id != null ? atFrom.get(item.existing_id) : null;
+            if (found) {
+              matched += 1;
+              if (!selections.has(found.id)) selections.set(found.id, 1);
+            }
+          });
+          scanStatus.textContent = `Matched ${matched} of ${results.length} scanned bottle${results.length !== 1 ? 's' : ''}.`;
+          scanStatus.style.color = matched ? '#7ecb7e' : '#e0a050';
+          renderList();
+        } catch (error) {
+          scanStatus.textContent = 'Scan failed — select bottles by hand.';
+          scanStatus.style.color = '#e05050';
+        } finally {
+          input.value = '';
+        }
+      });
+      confirmBtn.addEventListener('click', async () => {
+        const items = [...selections.entries()].map(([wineId, quantity]) => ({ wine_id: wineId, quantity }));
+        if (!items.length) return;
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Moving…';
+        try {
+          const response = await fetch('/wines/move-bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ from_location: fromSelect.value, to_location: toSelect.value, items })
+          });
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok || !data.ok) throw new Error(data.error || 'Move failed');
+          window.location.reload();
+        } catch (error) {
+          confirmBtn.disabled = false;
+          updateConfirm();
+          scanStatus.style.display = 'block';
+          scanStatus.style.color = '#e05050';
+          scanStatus.textContent = 'Move failed — try again.';
+        }
+      });
     })();
 
     // Filter category picker

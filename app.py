@@ -530,6 +530,27 @@ def cellar(username):
     cur.execute(f"SELECT DISTINCT retailer FROM wines WHERE user_id = {p} AND retailer IS NOT NULL ORDER BY retailer", (cellar_user["id"],))
     retailers = [r["retailer"] for r in cur.fetchall()]
 
+    # Per-wine per-location availability for the packing-list Move flow (owner only)
+    move_inventory = []
+    if can_edit:
+        cur.execute(f"""
+            SELECT w.id, w.wine_name, w.vintage, l.storage_location AS location,
+                   SUM(l.quantity) AS qty
+            FROM wine_inventory_lots l
+            JOIN wines w ON w.id = l.wine_id
+            WHERE w.user_id = {p}
+              AND l.status = 'in_collection'
+              AND l.quantity > 0
+              AND l.storage_location IS NOT NULL
+            GROUP BY w.id, w.wine_name, w.vintage, l.storage_location
+            ORDER BY w.wine_name, w.vintage
+        """, (cellar_user["id"],))
+        move_inventory = [
+            {"id": r["id"], "name": r["wine_name"], "vintage": r["vintage"],
+             "location": r["location"], "qty": r["qty"]}
+            for r in cur.fetchall()
+        ]
+
     conn.close()
     return render_template("index.html", wines=wines, stats=stats,
                            search=search, status_filter=status_filter,
@@ -553,6 +574,7 @@ def cellar(username):
                            cellar_username=cellar_user["username"],
                            cellar_display_name=cellar_user["display_name"],
                            is_own_cellar=can_edit,
+                           move_inventory=move_inventory,
                            fuzzy_used=fuzzy_used)
 
 
@@ -1079,6 +1101,60 @@ def add_inventory_location(wine_id):
     return jsonify({"ok": True})
 
 
+def _move_wine_available_bottles(conn, wine_id, from_location, to_location, qty_to_move):
+    """Move up to qty_to_move available bottles between locations for one wine.
+
+    Shared by the single-wine and bulk move routes. Does not commit or close;
+    returns the number of bottles actually moved (0 when nothing was at the
+    source location).
+    """
+    p = ph()
+    cur = conn.cursor()
+    cur.execute(
+        f"""SELECT *
+            FROM wine_inventory_lots
+            WHERE wine_id = {p}
+              AND status = 'in_collection'
+              AND quantity > 0
+              AND COALESCE(storage_location, 'Unassigned') = {p}
+            ORDER BY order_date DESC, id DESC""",
+        (wine_id, from_location)
+    )
+    lots = cur.fetchall()
+    if not lots:
+        return 0
+
+    remaining = min(qty_to_move, sum((lot["quantity"] or 0) for lot in lots))
+    moved = 0
+    for lot in lots:
+        if remaining <= 0:
+            break
+        move_qty = min(remaining, lot["quantity"] or 0)
+        if move_qty <= 0:
+            continue
+        if move_qty >= (lot["quantity"] or 0):
+            cur.execute(
+                f"DELETE FROM wine_inventory_lots WHERE id = {p} AND wine_id = {p}",
+                (lot["id"], wine_id)
+            )
+        else:
+            cur.execute(
+                f"""UPDATE wine_inventory_lots
+                    SET quantity = quantity - {p}, updated_at = CURRENT_TIMESTAMP
+                    WHERE id = {p} AND wine_id = {p}""",
+                (move_qty, lot["id"], wine_id)
+            )
+        upsert_inventory_lot(
+            conn, wine_id, move_qty, "in_collection", to_location,
+            lot["retailer"], lot["order_date"], lot["unit_price"], lot["notes"]
+        )
+        remaining -= move_qty
+        moved += move_qty
+
+    sync_wine_summary(conn, wine_id)
+    return moved
+
+
 @app.route("/wine/<int:wine_id>/location/move", methods=["POST"])
 @login_required
 def move_inventory_location(wine_id):
@@ -1106,50 +1182,64 @@ def move_inventory_location(wine_id):
         conn.close()
         return ("", 400)
 
-    cur.execute(
-        f"""SELECT *
-            FROM wine_inventory_lots
-            WHERE wine_id = {p}
-              AND status = 'in_collection'
-              AND quantity > 0
-              AND COALESCE(storage_location, 'Unassigned') = {p}
-            ORDER BY order_date DESC, id DESC""",
-        (wine_id, from_location)
-    )
-    lots = cur.fetchall()
-    if not lots:
+    moved = _move_wine_available_bottles(conn, wine_id, from_location, to_location, qty_to_move)
+    if not moved:
         conn.close()
         return jsonify({"error": "Location not found"}), 404
-
-    remaining = min(qty_to_move, sum((lot["quantity"] or 0) for lot in lots))
-    for lot in lots:
-        if remaining <= 0:
-            break
-        move_qty = min(remaining, lot["quantity"] or 0)
-        if move_qty <= 0:
-            continue
-        if move_qty >= (lot["quantity"] or 0):
-            cur.execute(
-                f"DELETE FROM wine_inventory_lots WHERE id = {p} AND wine_id = {p}",
-                (lot["id"], wine_id)
-            )
-        else:
-            cur.execute(
-                f"""UPDATE wine_inventory_lots
-                    SET quantity = quantity - {p}, updated_at = CURRENT_TIMESTAMP
-                    WHERE id = {p} AND wine_id = {p}""",
-                (move_qty, lot["id"], wine_id)
-            )
-        upsert_inventory_lot(
-            conn, wine_id, move_qty, "in_collection", to_location,
-            lot["retailer"], lot["order_date"], lot["unit_price"], lot["notes"]
-        )
-        remaining -= move_qty
-
-    sync_wine_summary(conn, wine_id)
     conn.commit()
     conn.close()
     return jsonify({"ok": True})
+
+
+@app.route("/wines/move-bulk", methods=["POST"])
+@login_required
+def move_bulk_wines():
+    """Packing-list move: shift several wines between locations in one transaction."""
+    data = request.get_json(silent=True) or {}
+    from_location = (data.get("from_location") or "").strip()
+    to_location = (data.get("to_location") or "").strip()
+    items = data.get("items")
+    if not from_location or not to_location or from_location == to_location:
+        return jsonify({"error": "Pick two different locations"}), 400
+    if not isinstance(items, list) or not items or len(items) > 200:
+        return jsonify({"error": "Nothing to move"}), 400
+
+    p = ph()
+    conn = get_db()
+    cur = conn.cursor()
+    for name in (from_location, to_location):
+        cur.execute(
+            f"SELECT 1 FROM user_locations WHERE user_id = {p} AND name = {p}",
+            (session["user_id"], name)
+        )
+        if not cur.fetchone():
+            conn.close()
+            return jsonify({"error": f"Unknown location {name}"}), 400
+
+    moved_bottles = 0
+    moved_wines = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        try:
+            wine_id = int(item.get("wine_id"))
+            quantity = max(1, int(item.get("quantity", 1)))
+        except (TypeError, ValueError):
+            continue
+        cur.execute(f"SELECT user_id FROM wines WHERE id = {p}", (wine_id,))
+        row = cur.fetchone()
+        if not row or row["user_id"] != session["user_id"]:
+            conn.rollback()
+            conn.close()
+            return jsonify({"error": "Not allowed"}), 403
+        moved = _move_wine_available_bottles(conn, wine_id, from_location, to_location, quantity)
+        if moved:
+            moved_wines += 1
+            moved_bottles += moved
+
+    conn.commit()
+    conn.close()
+    return jsonify({"ok": True, "moved_bottles": moved_bottles, "moved_wines": moved_wines})
 
 
 @app.route("/wine/<int:wine_id>/location/correct", methods=["POST"])
